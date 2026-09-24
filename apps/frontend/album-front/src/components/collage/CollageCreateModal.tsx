@@ -15,7 +15,9 @@ import {
   InputAdornment,
   CircularProgress,
   Alert,
-  Chip
+  Chip,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { CollageInput } from '../../types/collage';
@@ -47,6 +49,8 @@ const defaultConfig = {
 const suggestedTitle = () => new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
 export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, onClose, onCreate }) => {
+  // A phone: the whole screen, with room for the keyboard.
+  const fullScreen = useMediaQuery(useTheme().breakpoints.down('sm'));
   const [title, setTitle] = useState(suggestedTitle);
   const [subtitle, setSubtitle] = useState('');
   const [albumIds, setAlbumIds] = useState<string[]>([]);
@@ -113,13 +117,14 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
   return (
     <Dialog
       open={open}
+      fullScreen={fullScreen}
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
       slotProps={{
         paper: {
           sx: {
-            borderRadius: 4,
+            borderRadius: fullScreen ? 0 : 4,
             background: 'color-mix(in srgb, var(--mui-palette-background-paper) 90%, transparent)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',

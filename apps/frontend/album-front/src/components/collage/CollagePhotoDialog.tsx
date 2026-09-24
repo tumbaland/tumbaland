@@ -10,7 +10,9 @@ import {
   Slider,
   TextField,
   Tooltip,
-  Typography
+  Typography,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import Rotate90DegreesCcwIcon from '@mui/icons-material/Rotate90DegreesCcw';
 import Rotate90DegreesCwIcon from '@mui/icons-material/Rotate90DegreesCw';
@@ -69,6 +71,8 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
   onSave,
   onDelete
 }) => {
+  // A phone: the whole screen, with room for the keyboard.
+  const fullScreen = useMediaQuery(useTheme().breakpoints.down('sm'));
   const [caption, setCaption] = useState('');
   const [rotation, setRotation] = useState(0);
   const [frame, setFrame] = useState<string>(INHERIT);
@@ -118,7 +122,7 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} fullScreen={fullScreen} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Photo settings</DialogTitle>
       <DialogContent>
         {photoSrc && (

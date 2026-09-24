@@ -5,7 +5,6 @@ dotenv.config();
 
 import { connectDB, logger, registerShutdown, requireEnv } from '@tumbaland/backend-core';
 import app from './app';
-import { closeAll as closeCollageStreams } from './collage/collageLive';
 
 // Fail fast if the JWT secret is missing — auth must never run with a default
 requireEnv('JWT_SECRET');
@@ -20,10 +19,9 @@ const start = async (): Promise<void> => {
 
   const server = app.listen(PORT, () => logger.info('Album service started successfully', { port: PORT }));
 
-  // Graceful shutdown (SIGINT + SIGTERM: drain HTTP, then close the DB)
-  // Open collage streams never end by themselves; closing them lets the
-  // server drain instead of timing out on every deploy.
-  registerShutdown({ serviceName: 'album-service', server, onShutdown: closeCollageStreams });
+  // Graceful shutdown (SIGINT + SIGTERM: end the collage streams, drain HTTP,
+  // then close the DB)
+  registerShutdown({ serviceName: 'album-service', server });
 };
 
 start().catch((error: Error) => {

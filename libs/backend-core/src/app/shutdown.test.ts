@@ -9,9 +9,11 @@ jest.mock('../database/connection', () => ({
 }));
 
 import type { Server } from 'http';
+import type { Response } from 'express';
 import logger from '../logging/logger';
 import { disconnectDB } from '../database/connection';
 import { registerShutdown } from './shutdown';
+import { openSseStream, openSseStreamCount } from '../sse/sseStream';
 
 /** Minimal fake http.Server whose close() invokes its callback. */
 function fakeServer(closeErr?: Error): Server {
@@ -88,6 +90,25 @@ describe('registerShutdown', () => {
 
     expect(order).toEqual(['hook', 'server']);
     expect(exitSpy).toHaveBeenCalledWith(0);
+  });
+
+  it('ends open event streams before closing the server, which would wait for them', async () => {
+    const res = { writeHead: jest.fn(), write: jest.fn(), end: jest.fn(), on: jest.fn() };
+    openSseStream(res as unknown as Response);
+    const server = {
+      close: jest.fn((cb?: (err?: Error) => void) => {
+        expect(res.end).toHaveBeenCalled();
+        cb?.();
+        return undefined as unknown as Server;
+      })
+    } as unknown as Server;
+
+    registerShutdown({ serviceName: 'svc', server });
+    listeners.SIGTERM();
+    await flush();
+
+    expect(server.close).toHaveBeenCalled();
+    expect(openSseStreamCount()).toBe(0);
   });
 
   it('skips the DB disconnect when disconnectDatabase is false', async () => {

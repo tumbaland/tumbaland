@@ -22,11 +22,13 @@ import { TypingIndicator } from '../components/thread/TypingIndicator';
 import { ScreenEffect } from '../components/thread/ScreenEffect';
 import { ThreadHeader } from '../components/thread/ThreadHeader';
 import { AlbumPicker } from '../components/thread/AlbumPicker';
+import { CollageStartDialog } from '../components/thread/CollageStartDialog';
 import { ThemePicker } from '../components/thread/ThemePicker';
 import { chatColors, chatThemeVars, themeById } from '../components/thread/themes';
 import { surface } from '@tumbaland/frontend-core';
 import { recordEmoji } from '../components/thread/recentEmoji';
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
+import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import { chatApi } from '../services/chatApi';
 import { requestCall } from '../services/callBus';
 import { Lightbox } from '../components/thread/Lightbox';
@@ -61,6 +63,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
   const [actionError, setActionError] = useState<string | null>(null);
   const [choosingAlbum, setChoosingAlbum] = useState(false);
   const [choosingTheme, setChoosingTheme] = useState(false);
+  const [startingCollage, setStartingCollage] = useState(false);
   const navigate = useNavigate();
 
   const thread = useChatThread(conversationId, user?.id ?? '');
@@ -206,6 +209,14 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         ? 'Not saving to Album'
         : 'Not chosen yet';
 
+  const openCollage = (collageId: string) => navigate(`/album/collages/${collageId}`);
+
+  // The card is in the thread for the others; the one who made it goes straight in.
+  const startCollage = async (title: string, clientId: string) => {
+    const card = await thread.startCollage(title, clientId);
+    if (card?.collage) openCollage(card.collage.id);
+  };
+
   const openMedia = (message: ThreadMessage, index: number) => setViewing({ messageId: message.id, index });
 
   if (loadingUser || (thread.loading && thread.messages.length === 0)) {
@@ -271,6 +282,11 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
             secondary: thread.appearance.backgroundFileId ? `${theme.name}, with a photo` : theme.name,
             icon: <PaletteOutlinedIcon fontSize="small" />,
             onClick: () => setChoosingTheme(true)
+          },
+          {
+            label: 'Make a collage together',
+            icon: <DashboardOutlinedIcon fontSize="small" />,
+            onClick: () => setStartingCollage(true)
           }
         ]}
       />
@@ -306,6 +322,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         onOpenMedia={openMedia}
         onOpenAlbum={(albumId) => navigate(`/album/albums/${albumId}`)}
         onEditAlbum={(messageId) => setPlacing({ messageId })}
+        onOpenCollage={openCollage}
         accent={chatColors.bubble}
         members={thread.members}
         reads={thread.reads}
@@ -342,6 +359,14 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         onClose={() => setChoosingTheme(false)}
         appearance={thread.appearance}
         onChange={thread.setAppearance}
+      />
+
+      <CollageStartDialog
+        open={startingCollage}
+        onClose={() => setStartingCollage(false)}
+        photoAlbum={thread.photoAlbum}
+        onChooseAlbum={() => setChoosingAlbum(true)}
+        onStart={startCollage}
       />
 
       <AlbumPicker

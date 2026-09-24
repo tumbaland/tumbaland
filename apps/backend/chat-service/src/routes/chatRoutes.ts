@@ -16,6 +16,7 @@ import {
   pushSubscriptionSchema,
   reactionSchema,
   sendMessageSchema,
+  startCollageSchema,
   thumbnailSchema,
   unsubscribeSchema,
   uploadUrlSchema
@@ -97,6 +98,7 @@ router.post('/calls/:callId/signal', signalLimiter, validate(callSignalSchema), 
 router.get('/conversations/:id', ctrl.getConversation);
 router.get('/conversations/:id/messages', ctrl.listMessages);
 router.post('/conversations/:id/messages', sendLimiter, validate(sendMessageSchema), ctrl.sendMessage);
+router.post('/conversations/:id/collages', sendLimiter, validate(startCollageSchema), ctrl.startCollage);
 router.patch('/conversations/:id/messages/:messageId', validate(editMessageSchema), ctrl.editMessage);
 router.delete('/conversations/:id/messages/:messageId', ctrl.deleteMessage);
 router.put('/conversations/:id/messages/:messageId/reactions', validate(reactionSchema), ctrl.toggleReaction);

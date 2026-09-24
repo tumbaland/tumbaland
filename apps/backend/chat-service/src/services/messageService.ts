@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { Types } from 'mongoose';
 import { BadRequestError, ForbiddenError, NotFoundError, logger } from '@tumbaland/backend-core';
 import { Conversation, IConversation } from '../models/Conversation';
-import { IAttachment, IMessage, Message, MessageEffect } from '../models/Message';
+import { IAttachment, ICollageCard, IMessage, Message, MessageEffect } from '../models/Message';
 import { belongsToConversation, bytesOf, fileIdsOf, folderFor, withDownloadUrls, withStoredSizes } from './attachmentService';
 import { deleteFolder } from './fileServiceClient';
 import { recordStoredBytes, releaseStoredBytes } from './storageUsage';
@@ -39,6 +39,7 @@ export interface MessageView {
   attachments: AttachmentView[];
   replyTo: string | null;
   effect: MessageEffect | null;
+  collage: ICollageCard | null;
   reactions: Array<{ userId: string; name: string; emoji: string; at: Date }>;
   clientId: string;
   editedAt: Date | null;
@@ -64,6 +65,7 @@ export function toView(document: IMessage): MessageView {
     attachments: message.deletedAt ? [] : message.attachments,
     replyTo: message.replyTo ?? null,
     effect: message.deletedAt ? null : (message.effect ?? null),
+    collage: message.deletedAt ? null : (message.collage ?? null),
     reactions: message.deletedAt ? [] : message.reactions,
     clientId: message.clientId,
     editedAt: message.editedAt ?? null,
@@ -173,13 +175,32 @@ export async function sendMessage(
     return { message: view!, created: false };
   }
 
-  await touchConversation(conversationId, preview(body, attachments), person.name, message.createdAt);
-
   // The bytes are already in storage by now: the browser PUT them to the
   // signed URL before this call. Recorded rather than re-checked, because the
   // gate ran when the URL was minted and refusing here would mean paying for
   // an object and then declining to record it.
   await recordStoredBytes(conversation.groupId, bytesOf(message));
+
+  const view = await announceNewMessage(person, conversation, message, preview(body, attachments));
+
+  // After the reply, like the push: Album being slow must not hold up a send.
+  if (!input.skipAlbum) void saveToAlbum(conversation, message);
+
+  return { message: view, created };
+}
+
+/**
+ * Everything after a message is stored: the conversation list, the sender's
+ * own read mark, the stream, and the push.
+ */
+export async function announceNewMessage(
+  person: Caller,
+  conversation: IConversation,
+  message: IMessage,
+  previewText: string
+): Promise<MessageView> {
+  const conversationId = conversation._id.toString();
+  await touchConversation(conversationId, previewText, person.name, message.createdAt);
 
   // A sender has read their own message by definition. Without this their own
   // send would come back as one unread.
@@ -196,12 +217,8 @@ export async function sendMessage(
   // Push is best-effort and must never fail a send: the message is already
   // stored and the recipient's app will show it from the stream or the next
   // fetch regardless.
-  void notifyNewMessage(conversation, person, view);
-
-  // After the reply, like the push: Album being slow must not hold up a send.
-  if (!input.skipAlbum) void saveToAlbum(conversation, message);
-
-  return { message: view!, created };
+  void notifyNewMessage(conversation, person, view!);
+  return view!;
 }
 
 /**

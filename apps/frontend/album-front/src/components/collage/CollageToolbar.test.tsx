@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { afterEach, beforeEach, describe, vi } from 'vitest';
 import CollageToolbar from './CollageToolbar';
 
 function baseProps() {
@@ -144,4 +144,53 @@ it('shows and wires the selection-only actions when hasSelection is true', async
 
   await userEvent.click(screen.getByRole('button', { name: /delete item/i }));
   expect(props.onDeleteSelected).toHaveBeenCalledTimes(1);
+});
+
+describe('on a phone', () => {
+  // Every `max-width` breakpoint matches, as on a narrow screen.
+  beforeEach(() => {
+    const narrow = window.matchMedia;
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) => ({ ...narrow(query), matches: query.includes('max-width') }) as MediaQueryList
+    );
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it('keeps the everyday actions on one row, big enough for a finger, and the rest in the menu', async () => {
+    const props = baseProps();
+    render(<CollageToolbar {...props} canUndo />);
+
+    expect(screen.getByRole('status')).toHaveAccessibleName('Saved');
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(props.onUndo).toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'More' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Download as PNG' }));
+    expect(props.onExport).toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'More' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Photo frames: on' }));
+    expect(props.onFrameEnabledChange).toHaveBeenCalledWith(false);
+  });
+
+  it('changes the background colour from the menu', async () => {
+    const props = baseProps();
+    render(<CollageToolbar {...props} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'More' }));
+    fireEvent.change(screen.getByLabelText('Background color'), { target: { value: '#ff0000' } });
+
+    expect(props.onBackgroundChange).toHaveBeenCalledWith('#ff0000');
+  });
+
+  it('puts labelled actions for the selected item on a row of their own', async () => {
+    const props = baseProps();
+    render(<CollageToolbar {...props} hasSelection />);
+
+    const row = screen.getByRole('toolbar', { name: 'Selected item' });
+    expect(row).toHaveTextContent(/Edit.*Forward.*Back.*Delete/);
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(props.onDeleteSelected).toHaveBeenCalled();
+  });
 });

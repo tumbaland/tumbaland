@@ -8,7 +8,9 @@ import {
   DialogTitle,
   Slider,
   TextField,
-  Typography
+  Typography,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { CollageTextItem } from './collageDoc';
 
@@ -21,6 +23,8 @@ interface CollageTextDialogProps {
 }
 
 const CollageTextDialog: React.FC<CollageTextDialogProps> = ({ open, text, onClose, onSave, onDelete }) => {
+  // A phone: the whole screen, with room for the keyboard.
+  const fullScreen = useMediaQuery(useTheme().breakpoints.down('sm'));
   const [value, setValue] = useState('');
   const [fontSize, setFontSize] = useState(32);
   const [color, setColor] = useState('#e91e63');
@@ -39,7 +43,7 @@ const CollageTextDialog: React.FC<CollageTextDialogProps> = ({ open, text, onClo
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+    <Dialog open={open} fullScreen={fullScreen} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle>Edit text</DialogTitle>
       <DialogContent>
         <TextField

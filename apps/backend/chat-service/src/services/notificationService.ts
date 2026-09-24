@@ -83,6 +83,7 @@ export async function notifyNewMessage(
 
 /** What the notification says. Kept short: a lock screen truncates anyway. */
 function notificationBody(message: MessageView): string {
+  if (message.collage) return `Started a collage: ${message.collage.title}`;
   if (message.body.trim()) return message.body.trim().slice(0, 140);
   if (message.attachments.length === 0) return 'New message';
 

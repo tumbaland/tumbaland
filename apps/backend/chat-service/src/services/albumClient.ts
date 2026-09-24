@@ -98,3 +98,15 @@ export const removeChatPhotos = (messageId: string, fileId?: string) =>
     'DELETE',
     `/internal/chat-photos/${encodeURIComponent(messageId)}${fileId ? `?fileId=${encodeURIComponent(fileId)}` : ''}`
   );
+
+export interface ChatCollageInput {
+  clientId: string;
+  userId: string;
+  albumId: string;
+  conversationId: string;
+  title: string;
+}
+
+/** A collage on the chat's album; throws AlbumGoneError when that album has been deleted. */
+export const createCollage = (groupId: string, input: ChatCollageInput) =>
+  call<{ id: string; title: string }>('POST', `/internal/groups/${encodeURIComponent(groupId)}/collages`, input);

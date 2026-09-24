@@ -1,5 +1,4 @@
-import { Response } from 'express';
-import { logger } from '@tumbaland/backend-core';
+import { formatSseFrame, logger, type SseStream } from '@tumbaland/backend-core';
 
 /**
  * Who has a collage open right now, and a way to tell them what changed.
@@ -13,19 +12,10 @@ import { logger } from '@tumbaland/backend-core';
  * already has them, and applying them twice would fight its undo.
  */
 
-export const HEARTBEAT_MS = 25_000;
-
-/**
- * How long one stream runs before the server closes it and the browser
- * reconnects. Access is checked when a stream opens, so this bounds how long
- * someone taken out of a group could keep watching.
- */
-export const MAX_STREAM_AGE_MS = 30 * 60 * 1000;
-
 /** More than anyone needs on one collage; stops a leaking page filling memory. */
 export const MAX_VIEWERS_PER_COLLAGE = 20;
 
-export type LiveEvent = 'ready' | 'changes' | 'presence' | 'reload' | 'moving';
+export type LiveEvent = 'ready' | 'changes' | 'presence' | 'reload' | 'moving' | 'photos';
 
 export interface ViewerInfo {
   session: string;
@@ -37,33 +27,17 @@ export interface ViewerInfo {
 }
 
 interface Viewer extends ViewerInfo {
-  res: Response;
+  stream: SseStream;
 }
 
 const rooms = new Map<string, Map<string, Viewer>>();
 
 export function formatFrame(event: LiveEvent, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-}
-
-function write(collageId: string, viewer: Viewer, frame: string): void {
-  try {
-    viewer.res.write(frame);
-  } catch (error) {
-    // A half-closed socket throws. One dead viewer must not stop the rest.
-    logger.warn('Dropping collage viewer after a failed write', {
-      collageId,
-      error: (error as Error).message
-    });
-    // Only this entry: the same tab may already have reconnected under the
-    // same session, and that newer stream is alive.
-    const room = rooms.get(collageId);
-    if (room?.get(viewer.session) === viewer) room.delete(viewer.session);
-  }
+  return formatSseFrame(event, data);
 }
 
 /** Adds a viewer. Returns how to remove it, or null when the collage is full. */
-export function join(collageId: string, viewer: ViewerInfo & { res: Response }): (() => void) | null {
+export function join(collageId: string, viewer: ViewerInfo & { stream: SseStream }): (() => void) | null {
   let room = rooms.get(collageId);
   if (!room) {
     room = new Map();
@@ -85,9 +59,14 @@ export function join(collageId: string, viewer: ViewerInfo & { res: Response }):
   };
 }
 
+/** The collages someone has open right now. */
+export function openCollageIds(): string[] {
+  return [...rooms.keys()];
+}
+
 /** Everyone with the collage open. */
 export function viewersOf(collageId: string): ViewerInfo[] {
-  return [...(rooms.get(collageId)?.values() ?? [])].map(({ res: _res, ...info }) => info);
+  return [...(rooms.get(collageId)?.values() ?? [])].map(({ stream: _stream, ...info }) => info);
 }
 
 /** Sends an event to everyone with the collage open, except the tab it came from. */
@@ -95,8 +74,10 @@ export function publish(collageId: string, event: LiveEvent, data: unknown, exce
   const room = rooms.get(collageId);
   if (!room) return;
   const frame = formatFrame(event, data);
+  // A failed write closes that viewer's stream, which takes them out of the
+  // room; the rest are still served.
   for (const viewer of [...room.values()]) {
-    if (viewer.session !== exceptSession) write(collageId, viewer, frame);
+    if (viewer.session !== exceptSession) viewer.stream.send(frame);
   }
 }
 
@@ -121,23 +102,4 @@ export function setSelection(collageId: string, session: string, userId: string,
   viewer.selection = selection;
   publishPresence(collageId);
   return true;
-}
-
-/**
- * Ends every stream, for shutdown. An open stream never finishes by itself,
- * so without this the server cannot drain; the browsers reconnect to the new
- * container on their own.
- */
-export function closeAll(): void {
-  for (const room of rooms.values()) {
-    for (const viewer of room.values()) {
-      try {
-        viewer.res.write('retry: 2000\n\n');
-        viewer.res.end();
-      } catch {
-        // Already gone.
-      }
-    }
-  }
-  rooms.clear();
 }

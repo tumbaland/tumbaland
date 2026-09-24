@@ -43,6 +43,10 @@ export interface ICollage extends Document {
    * people editing at once cannot overwrite each other.
    */
   revision: number;
+  /** The chat it was made from with "Make a collage together", if any. */
+  conversationId?: string;
+  /** Durable idempotency key for requests from chat-service. */
+  chatRequestKey?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,7 +58,9 @@ const CollageSchema = new Schema<ICollage>(
     albumIds: { type: [String], required: true }, // Updated: albumIds as array
     userId: { type: String, index: true },
     groupId: { type: String, index: true },
-    revision: { type: Number, default: 0 }
+    revision: { type: Number, default: 0 },
+    conversationId: { type: String },
+    chatRequestKey: { type: String, unique: true, sparse: true }
   },
   { timestamps: true }
 );

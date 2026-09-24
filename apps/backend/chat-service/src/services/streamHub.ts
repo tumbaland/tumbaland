@@ -1,8 +1,8 @@
-import { Response } from 'express';
-import { logger } from '@tumbaland/backend-core';
+import { formatSseFrame, logger, type SseStream } from '@tumbaland/backend-core';
 
 /**
- * In-process fan-out for the SSE stream.
+ * In-process fan-out for the SSE stream. The stream itself (headers,
+ * heartbeat, lifetime, shutdown) is backend-core's `openSseStream`.
  *
  * Deliberately not backed by Redis or a message bus. Every service in this repo
  * runs as a single replica, so a second process to coordinate with does not
@@ -44,7 +44,7 @@ interface Subscriber {
   userId: string;
   /** The groups this connection authenticated with, from `req.userGroups`. */
   groups: Set<string>;
-  res: Response;
+  stream: SseStream;
   /** The tab's call device id, when the stream says (only the call listener does). */
   deviceId: string | null;
 }
@@ -58,26 +58,6 @@ interface Subscriber {
  * connect over polling, so the cap sits well clear of ordinary use.
  */
 export const MAX_STREAMS_PER_USER = 12;
-
-/**
- * Heartbeat interval. The proxy closes an idle connection at its read timeout,
- * and a client that reconnects every time that happens looks to the server like
- * a client in a reconnect loop. A comment line keeps the connection warm and
- * costs three bytes.
- */
-export const HEARTBEAT_MS = 25_000;
-
-/**
- * How long one stream may run before the server closes it and makes the client
- * reconnect.
- *
- * A stream carries the group membership it authenticated with, for its whole
- * life. Membership is otherwise re-read on every request, so an hours-long
- * stream is the one place a removed group member could keep receiving
- * messages. Recycling the connection bounds that window: the reconnect is
- * automatic, re-authenticates, and re-reads membership.
- */
-export const MAX_STREAM_AGE_MS = 30 * 60 * 1000;
 
 const subscribers = new Map<string, Set<Subscriber>>();
 
@@ -101,7 +81,7 @@ function bucket(userId: string): Set<Subscriber> {
 export function subscribe(
   userId: string,
   groups: string[],
-  res: Response,
+  stream: SseStream,
   deviceId: string | null = null
 ): (() => void) | null {
   const set = bucket(userId);
@@ -110,7 +90,7 @@ export function subscribe(
     return null;
   }
 
-  const subscriber: Subscriber = { userId, groups: new Set(groups), res, deviceId };
+  const subscriber: Subscriber = { userId, groups: new Set(groups), stream, deviceId };
   set.add(subscriber);
 
   return () => {
@@ -159,12 +139,8 @@ export function openStreamCount(): number {
 
 /** Serialises one event in the SSE wire format. */
 export function formatEvent(event: ChatEvent): string {
-  return `id: ${event.at}\nevent: ${event.type}\ndata: ${JSON.stringify({
-    type: event.type,
-    conversationId: event.conversationId,
-    at: event.at,
-    payload: event.payload
-  })}\n\n`;
+  const { type, conversationId, at, payload } = event;
+  return formatSseFrame(type, { type, conversationId, at, payload }, at);
 }
 
 /**
@@ -172,9 +148,8 @@ export function formatEvent(event: ChatEvent): string {
  * those held by `exceptUserId` where given (a sender does not need their own
  * typing indicator echoed back).
  *
- * A write to a half-closed socket throws rather than returning an error, and
- * one dead subscriber must not stop the others from being served, so each write
- * is isolated.
+ * One dead subscriber must not stop the others from being served: a failed
+ * write drops that one and carries on.
  */
 export function publishToGroup(groupId: string, event: ChatEvent, exceptUserId?: string): void {
   const frame = formatEvent(event);
@@ -184,15 +159,8 @@ export function publishToGroup(groupId: string, event: ChatEvent, exceptUserId?:
 
     for (const subscriber of set) {
       if (!subscriber.groups.has(groupId)) continue;
-      try {
-        subscriber.res.write(frame);
-      } catch (error) {
-        logger.warn('Dropping chat subscriber after a failed write', {
-          userId,
-          error: (error as Error).message
-        });
-        set.delete(subscriber);
-      }
+      // A failed write has already closed that stream.
+      if (!subscriber.stream.send(frame)) set.delete(subscriber);
     }
     if (set.size === 0) subscribers.delete(userId);
   }
@@ -212,44 +180,11 @@ export function publishToUsers(userIds: string[], groupId: string, event: ChatEv
 
     for (const subscriber of set) {
       if (!subscriber.groups.has(groupId)) continue;
-      try {
-        subscriber.res.write(frame);
-      } catch (error) {
-        logger.warn('Dropping chat subscriber after a failed write', {
-          userId,
-          error: (error as Error).message
-        });
-        set.delete(subscriber);
-      }
+      // A failed write has already closed that stream.
+      if (!subscriber.stream.send(frame)) set.delete(subscriber);
     }
     if (set.size === 0) subscribers.delete(userId);
   }
-}
-
-/**
- * Ends every open stream, for shutdown.
- *
- * Without this a rollout hangs: `server.close()` waits for in-flight responses
- * to finish and an SSE response never finishes on its own, so the graceful
- * shutdown times out and force-exits with a failure code on every deploy.
- * Closing the streams first lets the server drain normally, and the clients
- * reconnect to the new container a second later, which is what EventSource
- * does by itself.
- */
-export function closeAll(): void {
-  for (const set of subscribers.values()) {
-    for (const subscriber of set) {
-      try {
-        // `retry:` tells the browser how long to wait before reconnecting.
-        // Staggering is not worth it for a deployment of this size.
-        subscriber.res.write('retry: 2000\n\n');
-        subscriber.res.end();
-      } catch {
-        // Already gone; nothing to do.
-      }
-    }
-  }
-  subscribers.clear();
 }
 
 /** Test seam: drops every subscriber. Never called in normal operation. */

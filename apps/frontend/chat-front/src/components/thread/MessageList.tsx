@@ -7,6 +7,7 @@ import Typography from '@mui/material/Typography';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { ink } from '@tumbaland/frontend-core';
 import type { ConversationMember, ReadReceipt, ThreadMessage } from '../../types';
+import { CollageCard } from './CollageCard';
 import { DaySeparator } from './DaySeparator';
 import { MessageBubble } from './MessageBubble';
 import { SeenMarker, placeSeenMarkers } from './SeenMarker';
@@ -24,6 +25,8 @@ export interface MessageListProps {
   onOpenMedia: (message: ThreadMessage, index: number) => void;
   onOpenAlbum?: (albumId: string) => void;
   onEditAlbum?: (messageId: string) => void;
+  /** Join on a collage card: opens that collage in Album. */
+  onOpenCollage?: (collageId: string) => void;
   /** Your own bubbles' colour, from the conversation's theme. */
   accent?: string;
   /** For senders' pictures and the "seen" markers. */
@@ -68,6 +71,7 @@ export function MessageList({
   onOpenMedia,
   onOpenAlbum,
   onEditAlbum,
+  onOpenCollage,
   accent,
   members = NO_MEMBERS,
   reads = NO_READS
@@ -254,11 +258,25 @@ export function MessageList({
                 </Box>
               );
             }
+            if (message.kind === 'collage' && message.collage && !message.deletedAt) {
+              return (
+                <Box key={message.clientId || message.id}>
+                  {newDay && <DaySeparator iso={message.createdAt} />}
+                  <CollageCard
+                    message={message}
+                    mine={message.senderId === currentUserId}
+                    onJoin={(collageId) => onOpenCollage?.(collageId)}
+                  />
+                  {seen.has(message.id) && <SeenMarker seers={seen.get(message.id)!} />}
+                </Box>
+              );
+            }
 
             const showSender =
               newDay ||
               !previous ||
               previous.kind === 'system' ||
+              previous.kind === 'collage' ||
               previous.senderId !== message.senderId ||
               new Date(message.createdAt).getTime() - new Date(previous.createdAt).getTime() > GROUP_WINDOW_MS;
 

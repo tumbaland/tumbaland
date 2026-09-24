@@ -37,9 +37,18 @@ const moveSchema = z.object({
   fileIds: z.array(z.string().min(1).max(512)).max(20).optional()
 });
 
+const chatCollageSchema = z.object({
+  clientId: z.string().min(8).max(100),
+  userId: z.string().min(1),
+  albumId: z.string().min(1),
+  conversationId: z.string().min(1),
+  title: z.string().trim().min(1, 'title required').max(100)
+});
+
 router.get('/groups/:groupId/albums', ctrl.listGroupAlbums);
 router.get('/groups/:groupId/albums/:albumId', ctrl.getGroupAlbum);
 router.post('/groups/:groupId/albums', validate(createAlbumSchema), ctrl.createGroupAlbum);
+router.post('/groups/:groupId/collages', validate(chatCollageSchema), ctrl.createChatCollage);
 router.post('/chat-photos', validate(chatPhotoSchema), ctrl.addChatPhoto);
 router.post('/chat-photos/:messageId/move', validate(moveSchema), ctrl.moveChatPhotos);
 router.delete('/chat-photos/:messageId', ctrl.removeChatPhotos);

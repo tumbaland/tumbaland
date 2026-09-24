@@ -35,6 +35,8 @@ function isGroup(conversation: Conversation, currentUserId: string): boolean {
 
 /** The list's one-line summary of a message, matching what the server stores. */
 function previewOf(message: Message): string {
+  // As the server words it, so the line does not change on the next reload.
+  if (message.collage) return `Collage: ${message.collage.title}`;
   if (message.body.trim()) return message.body.trim();
   if (message.attachments.length === 0) return '';
   const video = message.attachments.some((attachment) => attachment.mimetype.startsWith('video/'));

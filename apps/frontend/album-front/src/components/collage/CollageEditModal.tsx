@@ -12,7 +12,9 @@ import {
   Select,
   MenuItem,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { Collage } from '../../types/collage';
@@ -38,6 +40,8 @@ interface CollageEditModalProps {
 }
 
 export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClose, onSave, initialData }) => {
+  // A phone: the whole screen, with room for the keyboard.
+  const fullScreen = useMediaQuery(useTheme().breakpoints.down('sm'));
   const [title, setTitle] = useState(initialData.title);
   const [subtitle, setSubtitle] = useState(initialData.config?.title?.subtitle || '');
   const [albumIds, setAlbumIds] = useState<string[]>(initialData.albumIds || []);
@@ -83,7 +87,7 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+    <Dialog open={open} fullScreen={fullScreen} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle>Edit Collage</DialogTitle>
       <DialogContent>
         <FormControl fullWidth margin="dense" disabled={albumsLoading || loading}>

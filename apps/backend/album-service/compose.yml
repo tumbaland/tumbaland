@@ -26,6 +26,9 @@ services:
       # variables are the ones the frontends hand to the browser.
       - PAYMENT_INTERNAL_URL=${PAYMENT_INTERNAL_URL}
       - GROUP_INTERNAL_URL=${GROUP_INTERNAL_URL}
+      # For the push when someone opens a collage made from a chat. Optional:
+      # without it the collage works, and nobody is nudged.
+      - CHAT_INTERNAL_URL=${CHAT_INTERNAL_URL}
       # File service configuration
       - FILE_SERVICE_URL=${FILE_SERVICE_URL}
       - FILE_SERVICE_API_KEY=${FILE_SERVICE_API_KEY}

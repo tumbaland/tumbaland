@@ -63,6 +63,11 @@ export interface UseChatThreadResult {
   appearance: Appearance;
   setAppearance: (change: { theme?: string; backgroundFileId?: string | null }) => Promise<void>;
   setPhotoAlbum: (choice: PhotoAlbumChoice) => Promise<void>;
+  /**
+   * Makes a collage on the chat's album and posts its card; answers with the
+   * card. `clientId` is kept across retries, so a retry cannot make a second.
+   */
+  startCollage: (title: string, clientId: string) => Promise<Message | null>;
   removeFromAlbum: (messageId: string, fileId?: string) => Promise<void>;
   placeInAlbum: (messageId: string, placement: AlbumPlacement, fileId?: string) => Promise<void>;
   send: (body: string, attachments?: Attachment[], options?: SendOptions) => Promise<void>;
@@ -392,6 +397,16 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     [conversationId]
   );
 
+  const startCollage = useCallback(
+    async (title: string, clientId: string) => {
+      if (!conversationId) return null;
+      const message = await chatApi.startCollage(conversationId, { clientId, title });
+      dispatch({ type: 'received', message });
+      return message;
+    },
+    [conversationId]
+  );
+
   // Both answer with the updated message, which is shown straight away; the
   // stream brings the same change to everyone else.
   const setAppearance = useCallback(
@@ -443,6 +458,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     title,
     photoAlbum,
     setPhotoAlbum,
+    startCollage,
     appearance,
     setAppearance,
     removeFromAlbum,

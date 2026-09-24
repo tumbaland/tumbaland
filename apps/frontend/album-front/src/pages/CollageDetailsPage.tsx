@@ -1,7 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { logger } from '@tumbaland/frontend-core';
-import { Alert, Box, CircularProgress, IconButton, Snackbar, Tooltip, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  CircularProgress,
+  IconButton,
+  Snackbar,
+  Tooltip,
+  Typography,
+  useMediaQuery,
+  useTheme
+} from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -65,12 +75,17 @@ const othersIn = (viewers: CollageViewer[], session: string): CollagePerson[] =>
 const needsIds = (config?: CollageConfig | null): boolean =>
   (config?.photos ?? []).some((photo) => !photo.id) || (config?.texts ?? []).some((text) => !text.id);
 
+/** How long the tray waits for more new photos before fetching them all at once. */
+const PHOTOS_REFETCH_DELAY_MS = 800;
+
 /** Full-screen collage editor / viewer. Route: /collages/:id[?mode=view] */
 const CollageDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const isViewMode = searchParams.get('mode') === 'view';
+  // A phone held upright: the photo tray goes under the canvas, not beside it.
+  const phone = useMediaQuery(useTheme().breakpoints.down('sm'));
 
   const collageQuery = useCollageDetails(id);
   const { updateCollage } = useCollageMutations();
@@ -115,6 +130,23 @@ const CollageDetailsPage: React.FC = () => {
       };
     },
     [photoById]
+  );
+
+  // Batched: a message with ten photos arrives as ten announcements in a second.
+  const { refetch } = collageQuery;
+  const photosTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refetchPhotos = useCallback(() => {
+    if (photosTimer.current) clearTimeout(photosTimer.current);
+    photosTimer.current = setTimeout(() => {
+      photosTimer.current = null;
+      void refetch();
+    }, PHOTOS_REFETCH_DELAY_MS);
+  }, [refetch]);
+  useEffect(
+    () => () => {
+      if (photosTimer.current) clearTimeout(photosTimer.current);
+    },
+    []
   );
 
   const usedPhotoIds = useMemo(() => new Set((doc?.photos ?? []).map((p) => p.photoId)), [doc?.photos]);
@@ -194,7 +226,9 @@ const CollageDetailsPage: React.FC = () => {
     onChanges,
     onPresence: setViewers,
     onRevision: sync.checkRevision,
-    onMoving: motion.onMoving
+    onMoving: motion.onMoving,
+    // New photos in the tray, such as one just sent in the chat.
+    onPhotos: refetchPhotos
   });
 
   const people = useMemo(() => othersIn(viewers, session), [viewers, session]);
@@ -397,7 +431,9 @@ const CollageDetailsPage: React.FC = () => {
             gap: 0.5,
             opacity: 0.35,
             transition: 'opacity 0.2s',
-            '&:hover': { opacity: 1 }
+            '&:hover': { opacity: 1 },
+            // No hovering on a touch screen to bring them up.
+            '@media (hover: none)': { opacity: 1 }
           }}
         >
           <Tooltip title="Edit collage">
@@ -422,8 +458,15 @@ const CollageDetailsPage: React.FC = () => {
         </Box>
       )}
 
-      <Box sx={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        {!isViewMode && <CollagePhotoTray photos={albumPhotos} usedPhotoIds={usedPhotoIds} onAddPhoto={placePhoto} />}
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: phone ? 'column-reverse' : 'row', minHeight: 0 }}>
+        {!isViewMode && (
+          <CollagePhotoTray
+            photos={albumPhotos}
+            usedPhotoIds={usedPhotoIds}
+            onAddPhoto={placePhoto}
+            layout={phone ? 'bottom' : 'side'}
+          />
+        )}
         <CollageStage
           editor={editor}
           resolvePhoto={resolvePhoto}

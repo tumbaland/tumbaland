@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import { BadRequestError, NotFoundError } from '@tumbaland/backend-core';
+import { BadRequestError, NotFoundError, SSE_HEARTBEAT_MS, openSseStream } from '@tumbaland/backend-core';
 import * as collageService from './collage.service';
 import * as live from './collageLive';
+import { noteLeft, nudgeChat } from './chatCollage';
 
 /** A tab's own made-up id: letters, digits and dashes, like a UUID. */
 const SESSION = /^[A-Za-z0-9-]{8,64}$/;
@@ -63,8 +64,8 @@ export const applyCollageChanges = async (req: Request, res: Response): Promise<
  *
  * A Server-Sent Events stream of what the other people with this collage open
  * are doing: their saved changes, who is here, and what each has selected.
- * The same shape as chat's stream, and the same three essentials: no proxy
- * buffering, a heartbeat, and a bounded lifetime.
+ * The stream itself (headers, heartbeat, lifetime, cleanup) is backend-core's,
+ * shared with chat.
  */
 export const liveStream = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
@@ -76,13 +77,7 @@ export const liveStream = async (req: Request, res: Response): Promise<void> => 
   const collage = await collageService.getCollageById(id, user.id, req.userGroups || []);
   if (!collage) throw new NotFoundError('Collage not found');
 
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream; charset=utf-8',
-    'Cache-Control': 'no-cache, no-transform',
-    Connection: 'keep-alive',
-    'X-Accel-Buffering': 'no'
-  });
-  res.flushHeaders?.();
+  const stream = openSseStream(res);
 
   const leave = live.join(id, {
     session,
@@ -90,50 +85,27 @@ export const liveStream = async (req: Request, res: Response): Promise<void> => 
     name: user.name || user.email,
     picture: user.picture ?? null,
     selection: null,
-    res
+    stream
   });
   if (!leave) {
-    res.write(live.formatFrame('ready', { error: 'too_many_viewers' }));
-    res.end();
+    stream.end(live.formatFrame('ready', { error: 'too_many_viewers' }));
     return;
   }
 
   // The revision lets the editor see whether anything was saved between its
   // loading the collage and this stream opening, and fetch it if so.
-  res.write(live.formatFrame('ready', { heartbeatMs: live.HEARTBEAT_MS, revision: collage.revision ?? 0 }));
+  stream.send(live.formatFrame('ready', { heartbeatMs: SSE_HEARTBEAT_MS, revision: collage.revision ?? 0 }));
   live.publishPresence(id);
 
-  const heartbeat = setInterval(() => {
-    try {
-      res.write('event: heartbeat\ndata: {}\n\n');
-    } catch {
-      close();
-    }
-  }, live.HEARTBEAT_MS);
+  const chatCollage = { id, title: collage.title, conversationId: collage.conversationId };
+  const present = live.viewersOf(id).map((viewer) => viewer.userId);
+  nudgeChat(chatCollage, { id: user.id, name: user.name || user.email }, present);
 
-  const recycle = setTimeout(() => {
-    try {
-      res.write('retry: 1000\n\n');
-      res.end();
-    } catch {
-      // Already gone.
-    }
-  }, live.MAX_STREAM_AGE_MS);
-
-  let closed = false;
-  const close = (): void => {
-    if (closed) return;
-    closed = true;
-    clearInterval(heartbeat);
-    clearTimeout(recycle);
+  stream.onClose(() => {
     leave();
     live.publishPresence(id);
-  };
-
-  // The response, not the request: a GET's request side can report closed as
-  // soon as its empty body has been read.
-  res.on('close', close);
-  res.on('error', close);
+    noteLeft(chatCollage, user.id);
+  });
 };
 
 /**

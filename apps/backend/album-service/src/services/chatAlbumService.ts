@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import { NotFoundError } from '@tumbaland/backend-core';
 import Album from '../models/Album';
 import Photo from '../models/Photo';
+import { announceAlbumPhotos } from '../collage/albumPhotosLive';
 
 /**
  * What chat-service needs from Album, and nothing more.
@@ -103,6 +104,7 @@ export async function addChatPhoto(input: ChatPhotoInput): Promise<ChatPhotoResu
     // Guarded on the cover still being empty: two sends at once set it once.
     await Album.updateOne({ _id: album._id, coverPhotoId: null }, { $set: { coverPhotoId: photo._id.toString() } });
   }
+  void announceAlbumPhotos([album._id.toString()]);
 
   return { photoId: photo._id.toString(), albumId: album._id.toString(), albumName: album.name };
 }
@@ -128,9 +130,11 @@ export async function moveChatPhotos(input: {
   });
 
   let moved = 0;
+  const touched = new Set<string>([target]);
   for (const photo of photos) {
     const from = String(photo.albumId);
     if (from === target) continue;
+    touched.add(from);
     await Photo.updateOne({ _id: photo._id }, { $set: { albumId: target } });
     await Album.updateOne({ _id: from }, { $inc: { photoCount: -1 } });
     await Album.updateOne({ _id: from, coverPhotoId: photo._id.toString() }, { $unset: { coverPhotoId: 1 } });
@@ -138,6 +142,7 @@ export async function moveChatPhotos(input: {
     await Album.updateOne({ _id: target, coverPhotoId: null }, { $set: { coverPhotoId: photo._id.toString() } });
     moved++;
   }
+  if (moved > 0) void announceAlbumPhotos([...touched]);
 
   return { moved, albumId: target, albumName: album.name };
 }
@@ -154,5 +159,6 @@ export async function removeChatPhotos(messageId: string, fileId?: string): Prom
     await Album.updateOne({ _id: photo.albumId }, { $inc: { photoCount: -1 } });
     await Album.updateOne({ coverPhotoId: photo._id.toString() }, { $unset: { coverPhotoId: 1 } });
   }
+  if (photos.length > 0) void announceAlbumPhotos([...new Set(photos.map((photo) => String(photo.albumId)))]);
   return photos.length;
 }

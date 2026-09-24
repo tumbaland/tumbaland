@@ -18,6 +18,12 @@ interface CollagePhotoTrayProps {
   photos: AlbumPhoto[];
   usedPhotoIds: Set<string>;
   onAddPhoto: (photo: AlbumPhoto) => void;
+  /**
+   * `side`: a column beside the canvas. `bottom`: a strip under it that
+   * scrolls sideways, for a phone held upright, where a column would leave the
+   * canvas half the screen's width.
+   */
+  layout?: 'side' | 'bottom';
 }
 
 /**
@@ -41,7 +47,8 @@ const collectTags = (photos: AlbumPhoto[]): { tag: string; count: number }[] => 
  * Left-hand tray listing all photos from the collage's source albums.
  * Click to add a photo to the canvas center, or drag it onto the canvas.
  */
-const CollagePhotoTray: React.FC<CollagePhotoTrayProps> = ({ photos, usedPhotoIds, onAddPhoto }) => {
+const CollagePhotoTray: React.FC<CollagePhotoTrayProps> = ({ photos, usedPhotoIds, onAddPhoto, layout = 'side' }) => {
+  const bottom = layout === 'bottom';
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [matchAll, setMatchAll] = useState(true);
 
@@ -63,19 +70,26 @@ const CollagePhotoTray: React.FC<CollagePhotoTrayProps> = ({ photos, usedPhotoId
 
   return (
     <Box
+      data-testid="collage-photo-tray"
       sx={{
-        width: 196,
         flexShrink: 0,
         bgcolor: '#1c1c1e',
         color: '#fff',
-        borderRight: '1px solid rgba(255,255,255,0.08)',
-        overflowY: 'auto',
-        p: 1
+        p: 1,
+        ...(bottom
+          ? {
+              width: '100%',
+              borderTop: '1px solid rgba(255,255,255,0.08)',
+              // Clear of the home indicator on a phone with no home button.
+              pb: 'max(8px, env(safe-area-inset-bottom))'
+            }
+          : { width: 196, borderRight: '1px solid rgba(255,255,255,0.08)', overflowY: 'auto' })
       }}
     >
       <Typography variant="caption" sx={{ px: 0.5, color: 'rgba(255,255,255,0.6)' }}>
         Photos ({visiblePhotos.length}
-        {visiblePhotos.length !== photos.length ? ` of ${photos.length}` : ''}) — click or drag to add
+        {visiblePhotos.length !== photos.length ? ` of ${photos.length}` : ''}) —{' '}
+        {bottom ? 'tap to add' : 'click or drag to add'}
       </Typography>
 
       {tags.length > 0 && (
@@ -94,7 +108,13 @@ const CollagePhotoTray: React.FC<CollagePhotoTrayProps> = ({ photos, usedPhotoId
               </Button>
             )}
           </Box>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5, maxHeight: 132, overflowY: 'auto' }}>
+          <Box
+            sx={
+              bottom
+                ? { display: 'flex', flexWrap: 'nowrap', gap: 0.5, mt: 0.5, overflowX: 'auto', pb: 0.5 }
+                : { display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5, maxHeight: 132, overflowY: 'auto' }
+            }
+          >
             {tags.map(({ tag, count }) => {
               const active = selectedTags.includes(tag);
               return (
@@ -104,7 +124,8 @@ const CollagePhotoTray: React.FC<CollagePhotoTrayProps> = ({ photos, usedPhotoId
                   size="small"
                   onClick={() => toggleTag(tag)}
                   sx={{
-                    height: 20,
+                    flexShrink: 0,
+                    height: bottom ? 28 : 20,
                     fontSize: '0.65rem',
                     borderRadius: 1,
                     color: active ? '#fff' : 'rgba(255,255,255,0.75)',
@@ -134,12 +155,11 @@ const CollagePhotoTray: React.FC<CollagePhotoTrayProps> = ({ photos, usedPhotoId
         </Box>
       )}
       <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: 1,
-          mt: 1
-        }}
+        sx={
+          bottom
+            ? { display: 'flex', gap: 1, mt: 1, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }
+            : { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1, mt: 1 }
+        }
       >
         {visiblePhotos.map((photo) => {
           const used = usedPhotoIds.has(photo._id);
@@ -152,7 +172,7 @@ const CollagePhotoTray: React.FC<CollagePhotoTrayProps> = ({ photos, usedPhotoId
                   ? `${photo.title || photo.filename} — ${photo.tags.join(', ')}`
                   : photo.title || photo.filename
               }
-              placement="right"
+              placement={bottom ? 'top' : 'right'}
             >
               <Box
                 draggable
@@ -164,6 +184,7 @@ const CollagePhotoTray: React.FC<CollagePhotoTrayProps> = ({ photos, usedPhotoId
                 sx={{
                   position: 'relative',
                   aspectRatio: '1',
+                  ...(bottom ? { width: 72, flexShrink: 0 } : {}),
                   borderRadius: 1,
                   overflow: 'hidden',
                   cursor: 'pointer',

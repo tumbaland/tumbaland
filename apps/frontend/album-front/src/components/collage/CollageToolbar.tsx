@@ -1,5 +1,24 @@
-import React from 'react';
-import { Box, CircularProgress, Divider, IconButton, MenuItem, Paper, Select, Tooltip, Typography } from '@mui/material';
+import React, { useState } from 'react';
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Divider,
+  IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Paper,
+  Select,
+  Tooltip,
+  Typography,
+  useMediaQuery,
+  useTheme
+} from '@mui/material';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import FormatColorFillIcon from '@mui/icons-material/FormatColorFill';
+import BorderStyleIcon from '@mui/icons-material/BorderStyle';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudDoneOutlinedIcon from '@mui/icons-material/CloudDoneOutlined';
 import CloudOffOutlinedIcon from '@mui/icons-material/CloudOffOutlined';
@@ -74,12 +93,14 @@ interface CollageToolbarProps {
  * Where the save stands. There is no Save button: every change is saved a
  * moment after it is made, and this says whether that has happened.
  */
-const SaveIndicator: React.FC<{ status: SaveStatus }> = ({ status }) => {
+const SaveIndicator: React.FC<{ status: SaveStatus; iconOnly?: boolean }> = ({ status, iconOnly }) => {
   const label = status === 'saved' ? 'Saved' : status === 'saving' ? 'Saving…' : 'Not saved, retrying';
   return (
     <Box
       role="status"
       aria-live="polite"
+      aria-label={iconOnly ? label : undefined}
+      title={iconOnly ? label : undefined}
       sx={{
         display: 'flex',
         alignItems: 'center',
@@ -97,12 +118,138 @@ const SaveIndicator: React.FC<{ status: SaveStatus }> = ({ status }) => {
       ) : (
         <CloudOffOutlinedIcon sx={{ fontSize: 16 }} />
       )}
-      {label}
+      {!iconOnly && label}
     </Box>
   );
 };
 
+/** A colour picker as a menu row: the native picker opens from the swatch. */
+const ColorMenuItem: React.FC<ColorSwatchProps & { icon: React.ReactNode }> = ({ label, value, onChange, icon }) => (
+  <MenuItem component="label" sx={{ minHeight: 48 }}>
+    <ListItemIcon>{icon}</ListItemIcon>
+    <ListItemText primary={label} />
+    <Box
+      component="input"
+      type="color"
+      aria-label={label}
+      value={value}
+      onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+      sx={{ width: 32, height: 32, p: 0, ml: 2, border: '1px solid rgba(128,128,128,0.5)', borderRadius: 1, bgcolor: 'transparent' }}
+    />
+  </MenuItem>
+);
+
+/**
+ * The toolbar on a narrow screen. One row of what is used all the time, at a
+ * size for fingers, with the rest behind the ⋯ menu; and, while something is
+ * selected, a second row of what can be done to it, labelled, since there is
+ * no hovering over an icon to learn what it does.
+ */
+const CompactToolbar: React.FC<CollageToolbarProps> = (props) => {
+  const { title, saveStatus, canUndo, canRedo, background, frameColor, frameEnabled, hasSelection } = props;
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const closeThen = (action: () => void) => () => {
+    setMenuAnchor(null);
+    action();
+  };
+
+  return (
+    <Paper
+      square
+      elevation={4}
+      sx={{ zIndex: 50, pt: 'env(safe-area-inset-top)', px: 'env(safe-area-inset-left)' }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, px: 0.5, minHeight: 52 }}>
+        <IconButton onClick={props.onBack} aria-label="Back to collages">
+          <ArrowBackIcon />
+        </IconButton>
+        <Typography
+          variant="subtitle1"
+          sx={{ fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+        >
+          {title}
+        </Typography>
+        <SaveIndicator status={saveStatus} iconOnly />
+        <CollagePeopleFaces people={props.people ?? []} />
+        <IconButton onClick={props.onUndo} disabled={!canUndo} aria-label="Undo">
+          <UndoIcon />
+        </IconButton>
+        <IconButton onClick={props.onRedo} disabled={!canRedo} aria-label="Redo">
+          <RedoIcon />
+        </IconButton>
+        <IconButton onClick={props.onAddText} aria-label="Add text">
+          <TextFieldsIcon />
+        </IconButton>
+        <IconButton onClick={(e) => setMenuAnchor(e.currentTarget)} aria-label="More">
+          <MoreVertIcon />
+        </IconButton>
+      </Box>
+
+      {hasSelection && (
+        <Box
+          role="toolbar"
+          aria-label="Selected item"
+          sx={{ display: 'flex', justifyContent: 'space-around', borderTop: 1, borderColor: 'divider', py: 0.25 }}
+        >
+          <Button size="small" startIcon={<TuneIcon />} onClick={props.onEditSelected}>
+            Edit
+          </Button>
+          <Button size="small" startIcon={<FlipToFrontIcon />} onClick={props.onBringForward}>
+            Forward
+          </Button>
+          <Button size="small" startIcon={<FlipToBackIcon />} onClick={props.onSendBackward}>
+            Back
+          </Button>
+          <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={props.onDeleteSelected}>
+            Delete
+          </Button>
+        </Box>
+      )}
+
+      <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
+        <ColorMenuItem
+          label="Background color"
+          value={background}
+          onChange={props.onBackgroundChange}
+          icon={<FormatColorFillIcon fontSize="small" />}
+        />
+        <ColorMenuItem
+          label="Frame color"
+          value={frameColor}
+          onChange={props.onFrameColorChange}
+          icon={<BorderStyleIcon fontSize="small" />}
+        />
+        <MenuItem onClick={() => props.onFrameEnabledChange(!frameEnabled)} sx={{ minHeight: 48 }}>
+          <ListItemIcon>
+            <FilterFramesIcon fontSize="small" color={frameEnabled ? 'primary' : undefined} />
+          </ListItemIcon>
+          <ListItemText primary={frameEnabled ? 'Photo frames: on' : 'Photo frames: off'} />
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={closeThen(props.onPreview)} sx={{ minHeight: 48 }}>
+          <ListItemIcon>
+            <VisibilityIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Preview" />
+        </MenuItem>
+        <MenuItem onClick={closeThen(props.onExport)} sx={{ minHeight: 48 }}>
+          <ListItemIcon>
+            <DownloadIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Download as PNG" />
+        </MenuItem>
+      </Menu>
+    </Paper>
+  );
+};
+
 const CollageToolbar: React.FC<CollageToolbarProps> = (props) => {
+  const theme = useTheme();
+  const compact = useMediaQuery(theme.breakpoints.down('md'));
+  return compact ? <CompactToolbar {...props} /> : <WideToolbar {...props} />;
+};
+
+const WideToolbar: React.FC<CollageToolbarProps> = (props) => {
   const { title, saveStatus, canUndo, canRedo, background, frameColor, frameEnabled, zoom, hasSelection } = props;
 
   return (

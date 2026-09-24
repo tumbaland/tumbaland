@@ -49,6 +49,14 @@ export async function setPhotoAlbum(
   conversation: IConversation,
   choice: PhotoAlbumChoice
 ): Promise<PhotoAlbumView> {
+  // Choosing what is already chosen changes nothing: no line in the thread
+  // saying it did, and nothing sent to anyone.
+  const current = conversation.photoAlbum;
+  const unchanged =
+    (choice.mode === 'off' && current?.mode === 'off') ||
+    ('albumId' in choice && current?.mode === 'album' && current.albumId === choice.albumId);
+  if (unchanged) return photoAlbumView(current);
+
   let setting: IPhotoAlbumSetting;
 
   if (choice.mode === 'off') {

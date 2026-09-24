@@ -15,6 +15,7 @@ import { assertHeadroom } from '../services/storageUsage';
 import { presenceFor } from '../services/presenceService';
 import { listAlbums as listGroupAlbums } from '../services/albumClient';
 import * as photoAlbums from '../services/photoAlbumService';
+import * as collages from '../services/collageService';
 import { setAppearance as changeAppearance, type AppearanceChange } from '../services/appearanceService';
 
 /** The list with who is online, for the dots on its avatars. Never the caller. */
@@ -111,6 +112,14 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
   // A retry answers 200 with the message that was already stored. 201 would
   // claim a second message exists; an error would tell the user a delivered
   // message failed.
+  sendSuccess(res, message, undefined, created ? 201 : 200);
+};
+
+/** "Make a collage together": makes it in Album and posts its card. */
+export const startCollage = async (req: Request, res: Response): Promise<void> => {
+  const person = caller(req);
+  const conversation = await requireConversation(person, req.params.id as string);
+  const { message, created } = await collages.startCollage(person, conversation, req.body as collages.StartCollageInput);
   sendSuccess(res, message, undefined, created ? 201 : 200);
 };
 

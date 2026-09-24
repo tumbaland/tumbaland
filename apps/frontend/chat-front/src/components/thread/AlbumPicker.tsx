@@ -4,6 +4,7 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
@@ -79,6 +80,14 @@ export function AlbumPicker({ open, onClose, current, purpose = 'conversation', 
   }, [open, loadAlbums]);
 
   const choose = async (choice: PhotoAlbumChoice) => {
+    // Picking what is already chosen changes nothing, so it says nothing either.
+    const unchanged =
+      (choice.mode === 'off' && current.mode === 'off') ||
+      (choice.mode === 'album' && 'albumId' in choice && current.mode === 'album' && current.albumId === choice.albumId);
+    if (unchanged) {
+      onClose();
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -180,6 +189,11 @@ export function AlbumPicker({ open, onClose, current, purpose = 'conversation', 
           </List>
         )}
       </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={busy}>
+          Cancel
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 }

@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { closeAllSseStreams } from '@tumbaland/backend-core';
 import { stream } from './streamController';
 import { MAX_STREAMS_PER_USER, clearSubscribers, openStreamCount, publishToGroup } from '../services/streamHub';
 
@@ -16,17 +17,13 @@ import { listMessages } from '../services/messageService';
 
 const USER = { id: 'u1', email: 'tom@example.com', name: 'Tom' };
 
-/** A request with an authenticated user and the close/error hooks the handler wires. */
+/** A request with an authenticated user. */
 function fakeReq(headers: Record<string, string> = {}, query: Record<string, string> = {}) {
-  const handlers = new Map<string, () => void>();
   return {
     user: USER,
     userGroups: ['g1'],
     query,
-    header: (name: string) => headers[name],
-    on: (event: string, handler: () => void) => handlers.set(event, handler),
-    fire: (event: string) => handlers.get(event)?.(),
-    has: (event: string) => handlers.has(event)
+    header: (name: string) => headers[name]
   };
 }
 
@@ -67,6 +64,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  closeAllSseStreams();
   jest.clearAllTimers();
   jest.useRealTimers();
   clearSubscribers();
@@ -115,22 +113,12 @@ describe('subscription lifecycle', () => {
     expect(res.written.at(-1)).toContain('event: message.created');
   });
 
-  it('unsubscribes when the client goes away', async () => {
-    const req = fakeReq();
-    await run(req, fakeRes());
-    expect(openStreamCount()).toBe(1);
-
-    req.fire('close');
-
-    expect(openStreamCount()).toBe(0);
-  });
-
   it('unsubscribes if the phone disconnects while replay is still loading', async () => {
     let finish!: (rows: unknown[]) => void;
     (listConversations as jest.Mock).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
-    const req = fakeReq({ 'Last-Event-ID': String(Date.now() - 1000) });
-    const pending = run(req, fakeRes());
-    req.fire('close');
+    const res = fakeRes();
+    const pending = run(fakeReq({ 'Last-Event-ID': String(Date.now() - 1000) }), res);
+    res.fire('close');
     expect(openStreamCount()).toBe(0);
     finish([]);
     await pending;
@@ -148,10 +136,9 @@ describe('subscription lifecycle', () => {
   });
 
   it('stops the heartbeat once the client disconnects', async () => {
-    const req = fakeReq();
     const res = fakeRes();
-    await run(req, res);
-    req.fire('close');
+    await run(fakeReq(), res);
+    res.fire('close');
     const before = res.written.length;
 
     jest.advanceTimersByTime(100_000);
@@ -170,9 +157,8 @@ describe('subscription lifecycle', () => {
   });
 
   it('unsubscribes when the response closes', async () => {
-    const req = fakeReq();
     const res = fakeRes();
-    await run(req, res);
+    await run(fakeReq(), res);
     expect(openStreamCount()).toBe(1);
 
     res.fire('close');
@@ -248,13 +234,12 @@ describe('Last-Event-ID replay', () => {
 describe('presence', () => {
   it('counts opening and closing a stream as signs of life', async () => {
     touch.mockClear();
-    const req = fakeReq();
     const res = fakeRes();
 
-    await stream(req as unknown as Request, res as unknown as Response);
+    await run(fakeReq(), res);
     expect(touch).toHaveBeenCalledTimes(1);
 
-    req.fire('close');
+    res.fire('close');
     expect(touch).toHaveBeenCalledTimes(2);
   });
 });

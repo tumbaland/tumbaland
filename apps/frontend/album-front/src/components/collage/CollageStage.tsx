@@ -41,15 +41,83 @@ interface CollageStageProps {
 
 type GestureMode = 'move' | 'resize' | 'rotate';
 
+interface Geometry {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+}
+
+interface Point {
+  x: number;
+  y: number;
+}
+
 interface Gesture {
-  mode: GestureMode;
+  mode: GestureMode | 'pinch';
   itemId: string;
   isText: boolean;
+  /** The finger or mouse that started it; other pointers' moves are not this gesture's. */
+  pointerId: number;
   startClientX: number;
   startClientY: number;
-  start: { x: number; y: number; width: number; height: number; rotation: number };
+  /** Where that pointer is now, so a second finger can turn this into a pinch. */
+  last: Point;
+  start: Geometry;
   scale: number;
+  /** Pinch only: the second finger, and where both started. */
+  secondId?: number;
+  second?: Point;
+  pinchFrom?: { a: Point; b: Point };
 }
+
+/** Smallest an item can be made, in canvas units. */
+const MIN_SIZE = 40;
+
+/** Handles on a touch screen: a fingertip, not a cursor. */
+const coarsePointer = () =>
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+
+const distance = (a: Point, b: Point) => Math.hypot(b.x - a.x, b.y - a.y);
+const angleOf = (a: Point, b: Point) => (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+
+/** An angle in (-180, 180], the range rotations are stored in. */
+const normalizeAngle = (angle: number) => {
+  let a = angle % 360;
+  if (a > 180) a -= 360;
+  if (a <= -180) a += 360;
+  return a;
+};
+
+/**
+ * Two fingers on an item: spreading them resizes it about its centre, turning
+ * them turns it (photos; text does not rotate), and moving both moves it.
+ */
+export const pinchGeometry = (
+  start: Geometry,
+  from: { a: Point; b: Point },
+  to: { a: Point; b: Point },
+  scale: number,
+  rotates: boolean
+): Geometry => {
+  const startDistance = distance(from.a, from.b);
+  let factor = startDistance > 0 ? distance(to.a, to.b) / startDistance : 1;
+  factor = Math.max(factor, MIN_SIZE / Math.max(1, Math.min(start.width, start.height)));
+  const width = start.width * factor;
+  const height = start.height * factor;
+
+  const mid = (p: { a: Point; b: Point }) => ({ x: (p.a.x + p.b.x) / 2, y: (p.a.y + p.b.y) / 2 });
+  const fromMid = mid(from);
+  const toMid = mid(to);
+  const centerX = start.x + start.width / 2 + (toMid.x - fromMid.x) / scale;
+  const centerY = start.y + start.height / 2 + (toMid.y - fromMid.y) / scale;
+
+  const rotation = rotates
+    ? Math.round(normalizeAngle(start.rotation + angleOf(to.a, to.b) - angleOf(from.a, from.b)))
+    : start.rotation;
+  return { x: centerX - width / 2, y: centerY - height / 2, width, height, rotation };
+};
 
 const SNAP_THRESHOLD = 8;
 const FRAME_PADDING = 12;
@@ -250,7 +318,9 @@ const SelectionHandles: React.FC<{
   onResizeDown: (e: React.PointerEvent) => void;
   onRotateDown: (e: React.PointerEvent) => void;
 }> = ({ item, scale, showRotate, onResizeDown, onRotateDown }) => {
-  const handleSize = Math.max(14, 14 / scale);
+  // On screen: 14px under a mouse, 32px under a finger.
+  const onScreen = coarsePointer() ? 32 : 14;
+  const handleSize = Math.max(onScreen, onScreen / scale);
   return (
     <Box
       sx={{
@@ -271,7 +341,7 @@ const SelectionHandles: React.FC<{
           sx={{
             position: 'absolute',
             left: '50%',
-            top: -28 / scale,
+            top: -(onScreen + 14) / scale,
             transform: 'translateX(-50%)',
             width: handleSize,
             height: handleSize,
@@ -303,6 +373,20 @@ const SelectionHandles: React.FC<{
       />
     </Box>
   );
+};
+
+/** An item's geometry as it is now in the doc. */
+const findCurrent = (doc: CollageDoc, id: string): Geometry | null => {
+  const item: (CollagePhotoItem | CollageTextItem) | undefined =
+    doc.photos.find((p) => p.id === id) ?? doc.texts.find((t) => t.id === id);
+  if (!item) return null;
+  return {
+    x: item.x,
+    y: item.y,
+    width: item.width,
+    height: item.height,
+    rotation: (item as CollagePhotoItem).rotation || 0
+  };
 };
 
 const CollageStage: React.FC<CollageStageProps> = ({
@@ -380,10 +464,48 @@ const CollageStage: React.FC<CollageStageProps> = ({
     [doc]
   );
 
+  const geometryOf = useCallback((id: string) => (doc ? findCurrent(doc, id) : null), [doc]);
+
+  /**
+   * A second finger while one is already on an item: the rest of the gesture
+   * is a pinch of that item, wherever the second finger landed. Still one
+   * gesture, so it is one step to undo and one save.
+   */
+  const joinSecondFinger = useCallback(
+    (e: React.PointerEvent): boolean => {
+      const g = gestureRef.current;
+      if (!g || e.pointerType !== 'touch' || e.pointerId === g.pointerId) return false;
+      // Extra fingers must not start a new gesture or clear the selection.
+      if (g.mode === 'pinch') {
+        e.preventDefault();
+        e.stopPropagation();
+        return true;
+      }
+      const start = geometryOf(g.itemId);
+      if (!start) return false;
+      e.preventDefault();
+      e.stopPropagation();
+      const second = { x: e.clientX, y: e.clientY };
+      setSnapLines({ v: false, h: false });
+      gestureRef.current = {
+        ...g,
+        mode: 'pinch',
+        start,
+        secondId: e.pointerId,
+        second,
+        pinchFrom: { a: g.last, b: second }
+      };
+      return true;
+    },
+    [geometryOf]
+  );
+
   const startGesture = useCallback(
     (e: React.PointerEvent, id: string, mode: GestureMode) => {
+      if (joinSecondFinger(e)) return;
       const found = findItem(id);
-      if (!found) return;
+      const start = geometryOf(id);
+      if (!found || !start) return;
       e.preventDefault();
       e.stopPropagation();
       editor.select(id);
@@ -392,19 +514,15 @@ const CollageStage: React.FC<CollageStageProps> = ({
         mode,
         itemId: id,
         isText: found.isText,
+        pointerId: e.pointerId,
         startClientX: e.clientX,
         startClientY: e.clientY,
-        start: {
-          x: found.item.x,
-          y: found.item.y,
-          width: found.item.width,
-          height: found.item.height,
-          rotation: (found.item as CollagePhotoItem).rotation || 0
-        },
+        last: { x: e.clientX, y: e.clientY },
+        start,
         scale
       };
     },
-    [editor, findItem, scale]
+    [editor, findItem, geometryOf, joinSecondFinger, scale]
   );
 
   useEffect(() => {
@@ -413,6 +531,19 @@ const CollageStage: React.FC<CollageStageProps> = ({
     const onMove = (e: PointerEvent) => {
       const g = gestureRef.current;
       if (!g || !doc) return;
+
+      if (g.mode === 'pinch') {
+        const point = { x: e.clientX, y: e.clientY };
+        if (e.pointerId === g.pointerId) g.last = point;
+        else if (e.pointerId === g.secondId) g.second = point;
+        else return;
+        const next = pinchGeometry(g.start, g.pinchFrom!, { a: g.last, b: g.second! }, g.scale, !g.isText);
+        editor.gesturePatchItem(g.itemId, g.isText ? { x: next.x, y: next.y, width: next.width, height: next.height } : next);
+        return;
+      }
+
+      if (e.pointerId !== g.pointerId) return;
+      g.last = { x: e.clientX, y: e.clientY };
       const dx = (e.clientX - g.startClientX) / g.scale;
       const dy = (e.clientY - g.startClientY) / g.scale;
 
@@ -451,8 +582,32 @@ const CollageStage: React.FC<CollageStageProps> = ({
       }
     };
 
-    const onUp = () => {
-      if (!gestureRef.current) return;
+    const onUp = (e: PointerEvent) => {
+      const g = gestureRef.current;
+      if (!g) return;
+
+      if (g.mode === 'pinch' && (e.pointerId === g.pointerId || e.pointerId === g.secondId)) {
+        // One finger lifted: the other carries on moving the item from here.
+        const remaining = e.pointerId === g.pointerId ? { id: g.secondId!, at: g.second! } : { id: g.pointerId, at: g.last };
+        const start = doc ? findCurrent(doc, g.itemId) : null;
+        if (start) {
+          gestureRef.current = {
+            mode: 'move',
+            itemId: g.itemId,
+            isText: g.isText,
+            pointerId: remaining.id,
+            startClientX: remaining.at.x,
+            startClientY: remaining.at.y,
+            last: remaining.at,
+            start,
+            scale: g.scale
+          };
+          return;
+        }
+      } else if (e.pointerId !== g.pointerId) {
+        return;
+      }
+
       gestureRef.current = null;
       setSnapLines({ v: false, h: false });
       editor.endGesture();
@@ -495,9 +650,13 @@ const CollageStage: React.FC<CollageStageProps> = ({
         overflow: 'auto',
         display: 'flex',
         minWidth: 0,
-        bgcolor: readOnly ? EDITOR_BACKDROP : 'rgba(0,0,0,0.25)'
+        bgcolor: readOnly ? EDITOR_BACKDROP : 'rgba(0,0,0,0.25)',
+        // One finger still scrolls a zoomed-in canvas; two are the editor's
+        // (a pinch of the item being held), never the browser's page zoom.
+        touchAction: readOnly ? undefined : 'pan-x pan-y'
       }}
       onPointerDown={(e) => {
+        if (joinSecondFinger(e)) return;
         if (e.target === e.currentTarget && !readOnly) editor.select(null);
       }}
     >
@@ -511,6 +670,7 @@ const CollageStage: React.FC<CollageStageProps> = ({
             boxShadow: '0 8px 40px rgba(0,0,0,0.5)'
           }}
           onPointerDown={(e) => {
+            if (joinSecondFinger(e)) return;
             // clicking canvas background clears selection
             if (!readOnly && (e.target as HTMLElement).closest('[data-item-id]') === null) {
               editor.select(null);

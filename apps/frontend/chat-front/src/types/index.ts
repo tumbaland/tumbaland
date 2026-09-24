@@ -116,18 +116,26 @@ export interface SendOptions {
   effect?: MessageEffect;
 }
 
+/** "Make a collage together": the collage a card invites the others to. */
+export interface CollageCard {
+  id: string;
+  title: string;
+}
+
 export interface Message {
   id: string;
   conversationId: string;
   senderId: string;
   senderEmail: string;
   senderName: string;
-  kind: 'text' | 'media' | 'system';
+  kind: 'text' | 'media' | 'system' | 'collage';
   body: string;
   attachments: Attachment[];
   replyTo: string | null;
   /** Absent from a server older than effects. */
   effect?: MessageEffect | null;
+  /** On a `collage` message: the collage in Album that "Join" opens. */
+  collage?: CollageCard | null;
   reactions: Reaction[];
   clientId: string;
   editedAt: string | null;

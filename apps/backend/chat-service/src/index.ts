@@ -4,7 +4,6 @@ dotenv.config();
 
 import { connectDB, logger, registerShutdown, requireEnv } from '@tumbaland/backend-core';
 import app from './app';
-import { closeAll } from './services/streamHub';
 import { startPresenceSweep } from './services/presenceService';
 import { startCallSweep } from './services/callService';
 
@@ -29,8 +28,9 @@ const start = async (): Promise<void> => {
   server.requestTimeout = 0;
 
   // Graceful shutdown (SIGINT + SIGTERM: end the streams, drain HTTP, close the
-  // DB). `closeAll` runs first because `server.close()` waits for in-flight
-  // responses, and an SSE response never completes on its own.
+  // DB). registerShutdown ends the event streams itself, first, because
+  // `server.close()` waits for in-flight responses and a stream never completes
+  // on its own.
   const stopPresence = startPresenceSweep();
   const stopCalls = startCallSweep();
   registerShutdown({
@@ -39,7 +39,6 @@ const start = async (): Promise<void> => {
     onShutdown: () => {
       stopPresence();
       stopCalls();
-      closeAll();
     }
   });
 };

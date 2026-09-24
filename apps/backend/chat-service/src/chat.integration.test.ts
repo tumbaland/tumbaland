@@ -1,5 +1,6 @@
 process.env.SERVICE_NAME = 'chat-service';
 process.env.JWT_SECRET = 'test-secret';
+process.env.INTERNAL_SERVICE_TOKEN = 'internal-test-token';
 
 /**
  * The whole chain: a signed request, the real middleware stack, real
@@ -36,7 +37,8 @@ const albumCalls = {
   createAlbum: jest.fn(async (_groupId: string, _userId: string, name: string) => ({ id: 'a-new', name, photoCount: 0 })),
   addChatPhoto: jest.fn(async (input: { albumId: string }) => ({ photoId: 'p1', albumId: input.albumId, albumName: 'Rome' })),
   removeChatPhotos: jest.fn(async () => ({ removed: 1 })),
-  moveChatPhotos: jest.fn(async (_messageId: string, input: { albumId: string }) => ({ moved: 1, albumId: input.albumId, albumName: 'Home' }))
+  moveChatPhotos: jest.fn(async (_messageId: string, input: { albumId: string }) => ({ moved: 1, albumId: input.albumId, albumName: 'Home' })),
+  createCollage: jest.fn(async (_groupId: string, input: { title: string }) => ({ id: 'k-1', title: input.title }))
 };
 jest.mock('./services/albumClient', () => ({
   AlbumGoneError: FakeAlbumGone,
@@ -45,7 +47,8 @@ jest.mock('./services/albumClient', () => ({
   createAlbum: (...args: unknown[]) => (albumCalls.createAlbum as jest.Mock)(...args),
   addChatPhoto: (...args: unknown[]) => (albumCalls.addChatPhoto as jest.Mock)(...args),
   removeChatPhotos: (...args: unknown[]) => (albumCalls.removeChatPhotos as jest.Mock)(...args),
-  moveChatPhotos: (...args: unknown[]) => (albumCalls.moveChatPhotos as jest.Mock)(...args)
+  moveChatPhotos: (...args: unknown[]) => (albumCalls.moveChatPhotos as jest.Mock)(...args),
+  createCollage: (...args: unknown[]) => (albumCalls.createCollage as jest.Mock)(...args)
 }));
 
 const assertHeadroom = jest.fn();
@@ -1137,6 +1140,98 @@ describe('presence', () => {
   });
 });
 
+describe('making a collage together', () => {
+  async function withAlbum(): Promise<string> {
+    const id = await conversationInG1();
+    await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
+    return id;
+  }
+
+  it('makes the collage on the chat’s album and posts a card both people see', async () => {
+    const id = await withAlbum();
+
+    const res = await as(TOM).post(`/api/chat/conversations/${id}/collages`).send({ clientId: clientId(), title: 'Rome' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data).toMatchObject({ kind: 'collage', collage: { id: 'k-1', title: 'Rome' }, senderName: 'Tom' });
+    expect(albumCalls.createCollage).toHaveBeenCalledWith('g1', {
+      clientId: res.body.data.clientId,
+      userId: 'u-tom',
+      albumId: 'a-rome',
+      conversationId: id,
+      title: 'Rome'
+    });
+    const page = await as(IRJA).get(`/api/chat/conversations/${id}/messages`);
+    expect(page.body.data.messages[0]).toMatchObject({ kind: 'collage', collage: { id: 'k-1', title: 'Rome' } });
+    const list = await as(IRJA).get('/api/chat/conversations');
+    expect(list.body.data[0]).toMatchObject({ lastMessagePreview: 'Collage: Rome', unreadCount: 1 });
+  });
+
+  it('makes one collage for a retried request, not two', async () => {
+    const id = await withAlbum();
+    const key = clientId();
+
+    const first = await as(TOM).post(`/api/chat/conversations/${id}/collages`).send({ clientId: key, title: 'Rome' });
+    const again = await as(TOM).post(`/api/chat/conversations/${id}/collages`).send({ clientId: key, title: 'Rome' });
+
+    expect(first.status).toBe(201);
+    expect(again.status).toBe(200);
+    expect(again.body.data.id).toBe(first.body.data.id);
+    expect(albumCalls.createCollage).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks for an album first when the chat has none', async () => {
+    const id = await conversationInG1();
+
+    const res = await as(TOM).post(`/api/chat/conversations/${id}/collages`).send({ clientId: clientId(), title: 'Rome' });
+
+    expect(res.status).toBe(400);
+    expect(albumCalls.createCollage).not.toHaveBeenCalled();
+  });
+
+  it('says so when the chat’s album has been deleted in Album', async () => {
+    const id = await withAlbum();
+    albumCalls.createCollage.mockRejectedValueOnce(new FakeAlbumGone());
+
+    const res = await as(TOM).post(`/api/chat/conversations/${id}/collages`).send({ clientId: clientId(), title: 'Rome' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toContain('no longer exists');
+  });
+
+  it('keeps people outside the group out', async () => {
+    const id = await withAlbum();
+
+    const res = await as(PERSIK).post(`/api/chat/conversations/${id}/collages`).send({ clientId: clientId(), title: 'Rome' });
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('the internal route for Album', () => {
+  it('refuses a caller without the service token', async () => {
+    const res = await request(app).post('/internal/collage-activity').send({});
+    expect(res.status).toBe(401);
+  });
+
+  it('refuses a person’s own session, which is not a service', async () => {
+    const res = await as(TOM).post('/internal/collage-activity').send({});
+    expect(res.status).toBe(401);
+  });
+
+  it('takes Album’s collage activity, and nudges nobody while push is not set up', async () => {
+    const id = await conversationInG1();
+
+    const res = await request(app)
+      .post('/internal/collage-activity')
+      .set('x-internal-token', 'internal-test-token')
+      .send({ conversationId: id, collageId: 'k-1', title: 'Rome', userId: 'u-tom', name: 'Tom', presentUserIds: ['u-tom'] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ notified: 0 });
+  });
+});
+
 describe('saving photos to Album', () => {
   /** Album work runs after the reply, so give it a moment. */
   const settle = () => new Promise((resolve) => setTimeout(resolve, 100));
@@ -1158,6 +1253,19 @@ describe('saving photos to Album', () => {
     const res = await as(TOM).get(`/api/chat/conversations/${id}/albums`);
     expect(res.body.data).toEqual([{ id: 'a-rome', name: 'Rome', photoCount: 3 }]);
     expect(albumCalls.listAlbums).toHaveBeenCalledWith('g1');
+  });
+
+  it('says nothing when someone picks the album already chosen', async () => {
+    const id = await conversationInG1();
+    await as(IRJA).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
+
+    const res = await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ mode: 'album', albumId: 'a-rome', albumName: 'Rome' });
+    const page = await as(TOM).get(`/api/chat/conversations/${id}/messages`);
+    // Only Irja's line, from when it really changed.
+    expect(page.body.data.messages.filter((m: { kind: string }) => m.kind === 'system')).toHaveLength(1);
   });
 
   it('sets the album for both people, and says so in the thread without counting it unread', async () => {
@@ -1649,7 +1757,7 @@ describe('calls', () => {
 
   it('keeps a call whose two tabs are still connected, however the people are', async () => {
     const { callId } = await answered();
-    const fakeStream = () => ({ write: () => true }) as unknown as import('express').Response;
+    const fakeStream = () => ({ send: () => true }) as unknown as import('@tumbaland/backend-core').SseStream;
     subscribe('u-tom', ['g1'], fakeStream(), 'tom-phone-1');
     subscribe('u-irja', ['g1'], fakeStream(), 'irja-phone-1');
     const now = Date.now();
@@ -1662,7 +1770,7 @@ describe('calls', () => {
 
   it('drops a call when the phone on it is gone, even with the same person on a laptop', async () => {
     const { callId } = await answered();
-    const fakeStream = () => ({ write: () => true }) as unknown as import('express').Response;
+    const fakeStream = () => ({ send: () => true }) as unknown as import('@tumbaland/backend-core').SseStream;
     subscribe('u-tom', ['g1'], fakeStream(), 'tom-phone-1');
     // Irja's phone took the call and went away; her laptop is still open.
     subscribe('u-irja', ['g1'], fakeStream(), 'irja-laptop-1');

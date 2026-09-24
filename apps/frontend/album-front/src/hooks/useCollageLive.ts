@@ -28,6 +28,11 @@ export interface UseCollageLiveOptions {
   onRevision: (revision: number) => void;
   /** Where someone's item is mid-drag; `item: null` once they let go. */
   onMoving?: (event: { userId: string; name: string; item: MovingItem | null }) => void;
+  /**
+   * The collage's albums may have new photos: one was sent in the chat, say,
+   * or the stream reopened and may have missed that.
+   */
+  onPhotos?: () => void;
 }
 
 /** Missed heartbeats before the connection is assumed dead. */
@@ -50,19 +55,22 @@ export function useCollageLive({
   onChanges,
   onPresence,
   onRevision,
-  onMoving
+  onMoving,
+  onPhotos
 }: UseCollageLiveOptions): { connected: boolean } {
   const [connected, setConnected] = useState(false);
   const onChangesRef = useRef(onChanges);
   const onPresenceRef = useRef(onPresence);
   const onRevisionRef = useRef(onRevision);
   const onMovingRef = useRef(onMoving);
+  const onPhotosRef = useRef(onPhotos);
 
   useInsertionEffect(() => {
     onChangesRef.current = onChanges;
     onPresenceRef.current = onPresence;
     onRevisionRef.current = onRevision;
     onMovingRef.current = onMoving;
+    onPhotosRef.current = onPhotos;
   });
 
   useEffect(() => {
@@ -136,6 +144,9 @@ export function useCollageLive({
         if (data?.heartbeatMs) heartbeatMs = data.heartbeatMs;
         armWatchdog();
         if (typeof data?.revision === 'number') onRevisionRef.current(data.revision);
+        // Even the first connection can miss photos added after the initial
+        // fetch but before the stream joined. Photos have no revision to compare.
+        onPhotosRef.current?.();
       });
       stream.addEventListener('heartbeat', () => {
         if (current()) armWatchdog();
@@ -159,6 +170,11 @@ export function useCollageLive({
         armWatchdog();
         const data = read<{ userId: string; name: string; item: MovingItem | null }>(event as MessageEvent);
         if (data) onMovingRef.current?.(data);
+      });
+      stream.addEventListener('photos', () => {
+        if (!current()) return;
+        armWatchdog();
+        onPhotosRef.current?.();
       });
       stream.addEventListener('reload', (event) => {
         if (!current()) return;

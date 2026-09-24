@@ -40,6 +40,9 @@ export * from './fileService';
 export * from './oauth';
 export * from './audit';
 
+// Server-Sent Events streams (headers, heartbeat, lifetime, shutdown)
+export * from './sse';
+
 // Middleware
 export { authenticateToken, optionalAuth } from './middleware/authMiddleware';
 export { USER_SESSIONS_COLLECTION, isCurrentSession, isLegacySessionlessToken } from './auth/session';

@@ -7,6 +7,7 @@ import { generateThumbnailFromBuffer, isSupportedImageFormat } from './thumbnail
 import { assertPhotoReachable, canReachAlbum, PhotoAccessContext } from './photoAccess';
 import { bulkUpdateTags, BulkTagInput, getAlbumTags, normalizeTags, TagCount, TagMatch } from './photoTags';
 import { attachSignedUrls, enrichPhotoWithSignedUrl, PhotoWithSignedUrls } from './photoUrls';
+import { announceAlbumPhotos } from '../collage/albumPhotosLive';
 
 export type { PhotoWithSignedUrls } from './photoUrls';
 
@@ -126,6 +127,7 @@ class PhotoService {
     // and dashboard pages can read them directly instead of aggregating
     // across every photo on each request.
     await Album.updateOne({ _id: albumId }, { $inc: { photoCount: 1, totalSize: storedBytes } });
+    void announceAlbumPhotos([albumId]);
 
     // Generate thumbnail asynchronously for supported image formats (don't block photo creation)
     if (isSupportedImageFormat(mimetype)) {

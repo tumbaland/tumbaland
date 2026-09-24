@@ -1,5 +1,6 @@
 process.env.SERVICE_NAME = 'album-service';
 process.env.JWT_SECRET = 'test-secret';
+process.env.INTERNAL_SERVICE_TOKEN = 'internal-test-token';
 
 /**
  * Two people with the same collage open, over real HTTP connections: what one
@@ -15,6 +16,11 @@ jest.mock('./services/fileServiceClient', () => ({
   generateFileId: jest.fn()
 }));
 
+const reportCollageActivity = jest.fn(async () => undefined);
+jest.mock('./services/chatClient', () => ({
+  reportCollageActivity: (...args: unknown[]) => reportCollageActivity(...(args as []))
+}));
+
 import http from 'http';
 import { AddressInfo } from 'net';
 import mongoose from 'mongoose';
@@ -23,7 +29,10 @@ import jwt from 'jsonwebtoken';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import app from './app';
 import { CollageModel } from './collage/collage.model';
-import { closeAll } from './collage/collageLive';
+import { clearNudges } from './collage/chatCollage';
+import Album from './models/Album';
+import Photo from './models/Photo';
+import { closeAllSseStreams } from '@tumbaland/backend-core';
 
 let mongo: MongoMemoryServer;
 let server: http.Server;
@@ -43,15 +52,17 @@ beforeAll(async () => {
 }, 60_000);
 
 afterAll(async () => {
-  closeAll();
+  closeAllSseStreams();
   await new Promise((resolve) => server.close(resolve));
   await mongoose.disconnect();
   await mongo.stop();
 });
 
 afterEach(async () => {
-  closeAll();
-  await CollageModel.deleteMany({});
+  closeAllSseStreams();
+  clearNudges();
+  reportCollageActivity.mockClear();
+  await Promise.all([CollageModel.deleteMany({}), Album.deleteMany({}), Photo.deleteMany({})]);
 });
 
 async function groupCollage(): Promise<string> {
@@ -285,5 +296,123 @@ describe('collage live', () => {
     const id = await groupCollage();
     const res = await request(app).get(`/api/collages/${id}/live`).set('Authorization', TOM);
     expect(res.status).toBe(400);
+  });
+});
+
+describe('a collage made from a chat', () => {
+  const internal = (path: string) => request(app).post(path).set('x-internal-token', 'internal-test-token');
+
+  async function chatCollage(): Promise<{ id: string; albumId: string }> {
+    const album = await Album.create({ name: 'Rome', groupId: 'g1', userId: 'u-tom', isPublic: false, tags: [] });
+    const albumId = album._id.toString();
+    const res = await internal('/internal/groups/g1/collages').send({
+      clientId: 'collage-request-1',
+      userId: 'u-tom',
+      albumId,
+      conversationId: 'c1',
+      title: 'Our Rome'
+    });
+    expect(res.status).toBe(201);
+    return { id: res.body.data.id as string, albumId };
+  }
+
+  it('is made on the chat’s album, in its group, and remembers the chat', async () => {
+    const { id, albumId } = await chatCollage();
+
+    const stored = await CollageModel.findById(id);
+    expect(stored).toMatchObject({ title: 'Our Rome', groupId: 'g1', conversationId: 'c1', albumIds: [albumId] });
+    // Both people in the group can open it.
+    expect((await request(app).get(`/api/collages/${id}`).set('Authorization', IRJA)).status).toBe(200);
+  });
+
+  it('returns one collage for concurrent requests and a retry after a lost response', async () => {
+    const album = await Album.create({ name: 'Rome', groupId: 'g1', userId: 'u-tom' });
+    const payload = {
+      clientId: 'collage-request-1',
+      userId: 'u-tom',
+      albumId: album._id.toString(),
+      conversationId: 'c1',
+      title: 'Our Rome'
+    };
+    const [first, concurrent] = await Promise.all([
+      internal('/internal/groups/g1/collages').send(payload),
+      internal('/internal/groups/g1/collages').send(payload)
+    ]);
+    expect(first.status).toBe(201);
+    expect(concurrent.status).toBe(201);
+    expect(concurrent.body.data).toEqual(first.body.data);
+    const retry = await internal('/internal/groups/g1/collages').send({ ...payload, title: 'Changed on retry' });
+    expect(retry.body.data).toEqual(first.body.data);
+    expect(await CollageModel.countDocuments()).toBe(1);
+
+    const another = await internal('/internal/groups/g1/collages').send({ ...payload, clientId: 'collage-request-2' });
+    expect(another.status).toBe(201);
+    expect(another.body.data.id).not.toBe(first.body.data.id);
+  });
+
+  it('refuses an album from another group', async () => {
+    const album = await Album.create({ name: 'Theirs', groupId: 'g9', userId: 'u-x', isPublic: false, tags: [] });
+    const res = await internal('/internal/groups/g1/collages').send({
+      clientId: 'collage-request-1',
+      userId: 'u-tom',
+      albumId: album._id.toString(),
+      conversationId: 'c1',
+      title: 'Nope'
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('tells whoever has it open when a photo sent in the chat lands in its album', async () => {
+    const { id, albumId } = await chatCollage();
+    const tom = open(TOM, id, 'tom-session-1');
+    await tom.next((f) => f.event === 'ready');
+
+    const res = await internal('/internal/chat-photos').send({
+      groupId: 'g1',
+      albumId,
+      conversationId: 'c1',
+      messageId: 'm1',
+      fileId: 'chat/g1/c1/abc/original.jpg',
+      mimetype: 'image/jpeg',
+      size: 1000,
+      takenAt: '2026-09-24T10:00:00.000Z'
+    });
+    expect(res.status).toBe(201);
+
+    await tom.next((f) => f.event === 'photos');
+  });
+
+  it('nudges the chat when someone opens it, once per person, saying who is already there', async () => {
+    const { id } = await chatCollage();
+
+    const tom = open(TOM, id, 'tom-session-1');
+    await tom.next((f) => f.event === 'ready');
+    expect(reportCollageActivity).toHaveBeenCalledWith({
+      conversationId: 'c1',
+      collageId: id,
+      title: 'Our Rome',
+      userId: 'u-tom',
+      name: 'Tom',
+      presentUserIds: ['u-tom']
+    });
+
+    const irja = open(IRJA, id, 'irja-session-1');
+    await irja.next((f) => f.event === 'ready');
+    expect(reportCollageActivity).toHaveBeenLastCalledWith(
+      expect.objectContaining({ userId: 'u-irja', presentUserIds: expect.arrayContaining(['u-tom', 'u-irja']) })
+    );
+
+    // Tom in a second tab is the same session of work.
+    const again = open(TOM, id, 'tom-session-2');
+    await again.next((f) => f.event === 'ready');
+    expect(reportCollageActivity).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not nudge anyone about a collage that was not made from a chat', async () => {
+    const id = await groupCollage();
+    const tom = open(TOM, id, 'tom-session-1');
+    await tom.next((f) => f.event === 'ready');
+
+    expect(reportCollageActivity).not.toHaveBeenCalled();
   });
 });

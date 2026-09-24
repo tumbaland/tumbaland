@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { describe, vi } from 'vitest';
 import CollagePhotoTray, { AlbumPhoto } from './CollagePhotoTray';
 
 const photos: AlbumPhoto[] = [
@@ -139,5 +139,23 @@ describe('tag filtering', () => {
     await userEvent.hover(screen.getByRole('img', { name: 'Beach day' }));
 
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Beach day — beach, summer');
+  });
+});
+
+describe('as a strip under the canvas', () => {
+  it('lays the photos out in one row that scrolls sideways, and says to tap', async () => {
+    const onAddPhoto = vi.fn();
+    render(
+      <CollagePhotoTray
+        layout="bottom"
+        photos={[{ _id: 'p1', filename: 'a.jpg', thumbnailSignedUrl: 'https://cdn.example/a.jpg' }]}
+        usedPhotoIds={new Set()}
+        onAddPhoto={onAddPhoto}
+      />
+    );
+
+    expect(screen.getByText(/tap to add/)).toBeInTheDocument();
+    await userEvent.click(screen.getByAltText('a.jpg'));
+    expect(onAddPhoto).toHaveBeenCalledWith(expect.objectContaining({ _id: 'p1' }));
   });
 });

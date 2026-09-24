@@ -125,6 +125,15 @@ export const chatApi = {
     return json.data;
   },
 
+  /** "Make a collage together": makes it on the chat's album and posts its card. */
+  async startCollage(conversationId: string, payload: { clientId: string; title: string }): Promise<Message> {
+    const json = await client.post<{ data: Message }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/collages`,
+      payload
+    );
+    return json.data;
+  },
+
   async editMessage(conversationId: string, messageId: string, body: string): Promise<Message> {
     const json = await client.patch<{ data: Message }>(
       `/api/chat/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}`,

@@ -172,3 +172,19 @@ export const callSignalSchema = z.object({
       message: 'A signal needs a description or a candidate'
     })
 });
+
+/** "Make a collage together": the card's idempotency key, as for a send, and a title. */
+export const startCollageSchema = z.object({
+  clientId: z.string().min(8, 'clientId required').max(100),
+  title: z.string().trim().min(1, 'Name the collage').max(100)
+});
+
+/** album-service, when someone opens a collage made from a chat. */
+export const collageActivitySchema = z.object({
+  conversationId: z.string().min(1).max(64),
+  collageId: z.string().min(1).max(64),
+  title: z.string().max(200),
+  userId: z.string().min(1).max(64),
+  name: z.string().max(200),
+  presentUserIds: z.array(z.string().max(64)).max(50)
+});

@@ -179,6 +179,20 @@ describe('live', () => {
     expect(screen.getByLabelText('1 unread')).toBeInTheDocument();
   });
 
+  it('previews a collage card by its name, as the server does', async () => {
+    ensureMyConversations.mockResolvedValue([conversation()]);
+    renderPage();
+    await screen.findByText('Irja');
+
+    play({
+      type: 'message.created',
+      conversationId: 'c1',
+      payload: { ...message(), kind: 'collage', body: '', collage: { id: 'k1', title: 'Rome' } }
+    });
+
+    expect(screen.getByText('Collage: Rome')).toBeInTheDocument();
+  });
+
   it('shows typing in place of the preview, and drops it when the message lands', async () => {
     ensureMyConversations.mockResolvedValue([conversation({ lastMessagePreview: 'hei' })]);
     renderPage();

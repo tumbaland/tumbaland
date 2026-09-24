@@ -121,4 +121,26 @@ describe('MessageList scrolling', () => {
 
     expect(list.scrollTop).toBe(bottom());
   });
+
+  it('shows a collage card that opens the collage', () => {
+    const onOpenCollage = vi.fn();
+    render(
+      <MessageList
+        messages={[{ ...message(1), kind: 'collage', body: '', collage: { id: 'k1', title: 'Rome' } }]}
+        currentUserId="u-irja"
+        hasOlder={false}
+        loadingOlder={false}
+        onLoadOlder={() => {}}
+        onReact={() => {}}
+        onRetry={() => {}}
+        onPickEmoji={() => {}}
+        onOpenMedia={() => {}}
+        onOpenCollage={onOpenCollage}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Join' }));
+
+    expect(onOpenCollage).toHaveBeenCalledWith('k1');
+  });
 });

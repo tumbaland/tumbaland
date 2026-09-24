@@ -3,6 +3,7 @@ import { ipKeyGenerator } from 'express-rate-limit';
 import path from 'path';
 import { authenticateToken, createBaseApp, createRateLimiter, errorHandler, metricsHandler } from '@tumbaland/backend-core';
 import chatRoutes from './routes/chatRoutes';
+import internalRoutes from './routes/internalRoutes';
 import { stream } from './controllers/streamController';
 import { healthCheck } from './controllers/healthController';
 
@@ -31,6 +32,10 @@ app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 // Registered before the limiter, so it is exempt. It still authenticates, and
 // it never calls next(), so nothing below sees the request.
 app.get('/api/chat/stream', authenticateToken, stream);
+
+// album-service, not a browser: the internal token is the gate, ahead of the
+// limiters, which count browsers.
+app.use('/internal', internalRoutes);
 
 /**
  * Two limits rather than the usual one per address.

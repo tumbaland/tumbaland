@@ -99,6 +99,28 @@ describe('useCollageLive', () => {
     expect(onMoving).toHaveBeenCalledWith({ userId: 'u2', name: 'Irja', item });
   });
 
+  it('says when the collage’s albums have new photos, for the tray to fetch again', () => {
+    const onPhotos = vi.fn();
+    renderHook(() => useCollageLive({ collageId: 'c1', session: 'tab-1', ...handlers(), onPhotos }));
+
+    act(() => FakeEventSource.latest().emit('photos', {}));
+
+    expect(onPhotos).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes photos on the first connection and reconnection to cover missed events', () => {
+    const onPhotos = vi.fn();
+    renderHook(() => useCollageLive({ collageId: 'c1', session: 'tab-1', ...handlers(), onPhotos }));
+    act(() => FakeEventSource.latest().emit('ready', { heartbeatMs: 25_000, revision: 1 }));
+    expect(onPhotos).toHaveBeenCalledTimes(1);
+
+    act(() => setVisibility('hidden'));
+    act(() => setVisibility('visible'));
+    act(() => FakeEventSource.latest().emit('ready', { heartbeatMs: 25_000, revision: 1 }));
+
+    expect(onPhotos).toHaveBeenCalledTimes(2);
+  });
+
   it('treats a whole-collage save as a revision to catch up to', () => {
     const on = handlers();
     renderHook(() => useCollageLive({ collageId: 'c1', session: 'tab-1', ...on }));

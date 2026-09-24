@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
-import { logger } from '@tumbaland/backend-core';
+import { SSE_HEARTBEAT_MS, logger, openSseStream, type SseStream } from '@tumbaland/backend-core';
 import { caller } from '../services/accessService';
 import { listConversations } from '../services/conversationService';
 import { listMessages } from '../services/messageService';
 import { touch } from '../services/presenceService';
-import { HEARTBEAT_MS, MAX_STREAM_AGE_MS, formatEvent, subscribe } from '../services/streamHub';
+import { formatEvent, subscribe } from '../services/streamHub';
 
 /**
  * GET /api/chat/stream
@@ -15,39 +15,27 @@ import { HEARTBEAT_MS, MAX_STREAM_AGE_MS, formatEvent, subscribe } from '../serv
  * `authenticateToken` untouched, and because reconnection and `Last-Event-ID`
  * resume are the browser's job rather than ours.
  *
- * Three things here are not optional:
- *
- * - `X-Accel-Buffering: no` plus `flushHeaders()`. Without them nginx holds the
- *   response in its buffer and the client sees an open connection that never
- *   delivers anything, which looks exactly like a broken server.
- * - The heartbeat. The proxy closes an idle connection at `proxy_read_timeout`,
- *   and a client reconnecting every time looks like a reconnect loop.
- * - The `Last-Event-ID` replay below. Without it, a message sent during a
- *   five-second tunnel drop is never delivered to that client at all, and the
- *   thread silently misses it until the page is reloaded.
+ * The stream itself (headers, heartbeat, lifetime, shutdown) is backend-core's
+ * `openSseStream`. What is chat's own and not optional is the `Last-Event-ID`
+ * replay below. Without it, a message sent during a five-second tunnel drop is
+ * never delivered to that client at all, and the thread silently misses it
+ * until the page is reloaded.
  */
 export const stream = async (req: Request, res: Response): Promise<void> => {
   const person = caller(req);
 
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream; charset=utf-8',
-    'Cache-Control': 'no-cache, no-transform',
-    Connection: 'keep-alive',
-    // nginx buffers proxied responses by default, which breaks SSE entirely.
-    'X-Accel-Buffering': 'no'
-  });
-  res.flushHeaders?.();
+  const sse = openSseStream(res);
 
   // Only the call listener sends one; it lets a dropped call be told apart from
   // the same person still having another tab open.
   const rawDevice = req.query.deviceId;
   const deviceId = typeof rawDevice === 'string' && rawDevice.length <= 64 ? rawDevice : null;
-  const unsubscribe = subscribe(person.id, person.groups, res, deviceId);
+  const unsubscribe = subscribe(person.id, person.groups, sse, deviceId);
   if (!unsubscribe) {
     // Already at the per-user cap. Answered on the stream rather than as a
     // status code, because the headers are out: the client reads the reason
     // and stops retrying instead of hammering.
-    res.write(
+    sse.end(
       formatEvent({
         type: 'conversation.updated',
         conversationId: '',
@@ -55,7 +43,6 @@ export const stream = async (req: Request, res: Response): Promise<void> => {
         payload: { error: 'too_many_streams' }
       })
     );
-    res.end();
     return;
   }
 
@@ -63,60 +50,26 @@ export const stream = async (req: Request, res: Response): Promise<void> => {
   // it can declare the connection dead without waiting for a TCP timeout. iOS
   // suspends a backgrounded EventSource without closing it, so a client that
   // waits for an error event waits forever.
-  res.write(
+  sse.send(
     formatEvent({
       type: 'conversation.updated',
       conversationId: '',
       at: Date.now(),
-      payload: { ready: true, heartbeatMs: HEARTBEAT_MS }
+      payload: { ready: true, heartbeatMs: SSE_HEARTBEAT_MS }
     })
   );
 
-  const heartbeat = setInterval(() => {
-    // Comments are invisible to browser JavaScript. A named event keeps both
-    // the proxy and the client's watchdog alive without advancing the cursor.
-    try {
-      res.write('event: heartbeat\ndata: {}\n\n');
-    } catch {
-      close();
-    }
-  }, HEARTBEAT_MS);
-
-  /**
-   * A stream carries the group membership it authenticated with for its whole
-   * life, and membership is re-read on every ordinary request. Recycling the
-   * connection bounds how long a removed group member could keep receiving
-   * messages; EventSource reconnects on its own, so the client sees nothing.
-   */
-  const recycle = setTimeout(() => {
-    try {
-      res.write('retry: 1000\n\n');
-      res.end();
-    } catch {
-      // Already gone.
-    }
-  }, MAX_STREAM_AGE_MS);
-
-  let closed = false;
-  const close = (): void => {
-    if (closed) return;
-    closed = true;
-    clearInterval(heartbeat);
-    clearTimeout(recycle);
+  sse.onClose(() => {
     unsubscribe();
     // Leaving counts as the last sign of life, so "Active now" lingers for the
     // short window rather than the time since the stream opened.
     void touch(person);
-  };
+  });
 
   void touch(person);
 
-  req.on('close', close);
-  res.on('close', close);
-  res.on('error', close);
-
   // Install cleanup before any I/O: a phone can disappear during replay.
-  await replayMissed(req, res, person);
+  await replayMissed(req, sse, person);
 };
 
 /**
@@ -131,7 +84,7 @@ const MAX_REPLAY_MS = 5 * 60 * 1000;
 
 async function replayMissed(
   req: Request,
-  res: Response,
+  sse: SseStream,
   person: ReturnType<typeof caller>
 ): Promise<void> {
   const header = req.header('Last-Event-ID') ?? (req.query.lastEventId as string | undefined);
@@ -144,12 +97,12 @@ async function replayMissed(
   try {
     const reachable = await listConversations(person);
     for (const conversation of reachable) {
-      if (res.destroyed || res.writableEnded) return;
+      if (sse.closed) return;
       const page = await listMessages(conversation.id, { after: new Date(since).toISOString(), limit: 100 });
       // listMessages returns newest first; replay in the order they happened.
       for (const message of [...page.messages].reverse()) {
-        if (res.destroyed || res.writableEnded) return;
-        res.write(
+        if (sse.closed) return;
+        sse.send(
           formatEvent({
             type: 'message.created',
             conversationId: conversation.id,

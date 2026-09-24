@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { useEffect } from 'react';
 import { describe, vi } from 'vitest';
 import { useCollageEditor } from '../../hooks/useCollageEditor';
-import CollageStage, { ResolvePhoto } from './CollageStage';
+import CollageStage, { ResolvePhoto, pinchGeometry } from './CollageStage';
 import { CollageDoc } from './collageDoc';
 import type { StageMotion } from './CollagePeople';
 
@@ -173,6 +173,88 @@ it('drags an item via pointer move/up, repositioning it', () => {
   fireEvent.pointerUp(window);
 
   expect(getComputedStyle(photoBox).left).not.toBe('100px');
+});
+
+describe('two fingers on a photo', () => {
+  const touch = (pointerId: number, clientX: number, clientY: number) => ({ pointerId, pointerType: 'touch', clientX, clientY });
+  const box = (container: HTMLElement) => container.querySelector('[data-item-id="photo-item-1"]') as HTMLElement;
+
+  it('spreads to resize it about its centre and turns to rotate it', () => {
+    const { container } = render(<Harness doc={baseDoc} />);
+    const photo = box(container);
+    const canvas = photo.parentElement as HTMLElement;
+
+    fireEvent.pointerDown(photo, touch(1, 150, 175));
+    // The second finger may land beside the photo, on the empty canvas.
+    fireEvent.pointerDown(canvas, touch(2, 250, 175));
+    // Twice as far apart, and turned a quarter.
+    fireEvent.pointerMove(window, touch(2, 200, 275));
+    fireEvent.pointerMove(window, touch(1, 200, 75));
+    fireEvent.pointerUp(window, touch(2, 200, 275));
+    fireEvent.pointerUp(window, touch(1, 200, 75));
+
+    expect(photo).toHaveStyle({ width: '400px', height: '300px', left: '0px', top: '25px' });
+    expect(photo.style.transform || getComputedStyle(photo).transform).toContain('rotate(90deg)');
+  });
+
+  it('keeps the photo selected when the second finger lands on the canvas', () => {
+    const { container } = render(<Harness doc={baseDoc} />);
+    const photo = box(container);
+
+    fireEvent.pointerDown(photo, touch(1, 150, 175));
+    fireEvent.pointerDown(photo.parentElement as HTMLElement, touch(2, 250, 175));
+
+    expect(findByComputedStyle(container, 'cursor', 'nwse-resize')).not.toBeNull();
+  });
+
+  it.each(['photo', 'canvas'])('ignores a third finger on the %s without interrupting the pinch', (target) => {
+    const { container } = render(<Harness doc={baseDoc} />);
+    const photo = box(container);
+    fireEvent.pointerDown(photo, touch(1, 150, 175));
+    fireEvent.pointerDown(photo, touch(2, 250, 175));
+    fireEvent.pointerDown(target === 'photo' ? photo : photo.parentElement!, touch(3, 300, 175));
+    fireEvent.pointerMove(window, touch(3, 350, 175));
+    fireEvent.pointerUp(window, touch(3, 350, 175));
+    fireEvent.pointerMove(window, touch(2, 350, 175));
+
+    expect(photo).toHaveStyle({ width: '400px', height: '300px' });
+    expect(findByComputedStyle(container, 'cursor', 'nwse-resize')).not.toBeNull();
+    fireEvent.pointerUp(window, touch(2, 350, 175));
+    fireEvent.pointerUp(window, touch(1, 150, 175));
+  });
+
+  it('carries on moving with the finger left after the other lifts', () => {
+    const { container } = render(<Harness doc={baseDoc} />);
+    const photo = box(container);
+
+    fireEvent.pointerDown(photo, touch(1, 150, 175));
+    fireEvent.pointerDown(photo, touch(2, 250, 175));
+    fireEvent.pointerUp(window, touch(2, 250, 175));
+    fireEvent.pointerMove(window, touch(1, 170, 195));
+    fireEvent.pointerUp(window, touch(1, 170, 195));
+
+    expect(photo).toHaveStyle({ left: '120px', top: '120px', width: '200px' });
+  });
+});
+
+describe('pinchGeometry', () => {
+  const start = { x: 100, y: 100, width: 200, height: 100, rotation: 0 };
+  const from = { a: { x: 0, y: 0 }, b: { x: 100, y: 0 } };
+
+  it('never makes an item smaller than it can be picked up again', () => {
+    const tiny = pinchGeometry(start, from, { a: { x: 0, y: 0 }, b: { x: 1, y: 0 } }, 1, true);
+    expect(Math.min(tiny.width, tiny.height)).toBe(40);
+  });
+
+  it('follows both fingers moving together, scaled to the canvas', () => {
+    const moved = pinchGeometry(start, from, { a: { x: 50, y: 20 }, b: { x: 150, y: 20 } }, 0.5, true);
+    expect(moved).toEqual({ x: 200, y: 140, width: 200, height: 100, rotation: 0 });
+  });
+
+  it('leaves the rotation alone for text', () => {
+    const turned = pinchGeometry(start, from, { a: { x: 0, y: 0 }, b: { x: 0, y: 100 } }, 1, false);
+    expect(turned.rotation).toBe(0);
+  });
 });
 
 it('resizes an item via the resize handle', () => {

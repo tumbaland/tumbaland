@@ -1,6 +1,7 @@
 import type { Server } from 'http';
 import logger from '../logging/logger';
 import { disconnectDB } from '../database/connection';
+import { closeAllSseStreams } from '../sse/sseStream';
 
 export interface RegisterShutdownOptions {
   /** Service name, used for log context and the DB disconnect. */
@@ -23,9 +24,9 @@ export interface RegisterShutdownOptions {
 
 /**
  * Registers `SIGINT` and `SIGTERM` handlers that drain the service before the
- * process exits: run the optional cleanup hook, stop accepting new HTTP
- * connections, then close the MongoDB connection. `SIGTERM` matters most —
- * it's the signal Docker/Kubernetes send on stop and rollout, and without a
+ * process exits: end any open event streams, run the optional cleanup hook,
+ * stop accepting new HTTP connections, then close the MongoDB connection.
+ * `SIGTERM` matters most — it's the signal Docker/Kubernetes send on stop and rollout, and without a
  * handler the process is force-killed with its DB connection still open.
  *
  * The handler is idempotent (a second signal while shutting down is ignored)
@@ -54,6 +55,8 @@ export const registerShutdown = ({
     forceExit.unref?.();
 
     try {
+      // An event stream never finishes by itself, and server.close() waits for it.
+      closeAllSseStreams();
       if (onShutdown) await onShutdown();
 
       if (server) {

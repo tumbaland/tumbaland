@@ -1,8 +1,8 @@
 import { Response } from 'express';
+import { closeAllSseStreams, openSseStream } from '@tumbaland/backend-core';
 import {
   MAX_STREAMS_PER_USER,
   clearSubscribers,
-  closeAll,
   formatEvent,
   isOnline,
   onlineInGroup,
@@ -11,24 +11,26 @@ import {
   subscribe
 } from './streamHub';
 
-/** Just enough of a Response for the hub, which only ever writes and ends. */
+/** Just enough of a Response for a real stream to write to. */
 function fakeRes() {
   return {
     written: [] as string[],
-    ended: false,
+    writeHead() {},
     write(chunk: string) {
       this.written.push(chunk);
       return true;
     },
-    end() {
-      this.ended = true;
-    }
+    end() {},
+    on() {}
   };
 }
 
-const asResponse = (res: ReturnType<typeof fakeRes>) => res as unknown as Response;
+const asStream = (res: ReturnType<typeof fakeRes>) => openSseStream(res as unknown as Response);
 
-afterEach(() => clearSubscribers());
+afterEach(() => {
+  closeAllSseStreams();
+  clearSubscribers();
+});
 
 describe('formatEvent', () => {
   it('emits id, event and data lines terminated by a blank line', () => {
@@ -45,7 +47,7 @@ describe('formatEvent', () => {
 
 describe('subscribe', () => {
   it('registers a subscriber and reports them online', () => {
-    const unsubscribe = subscribe('u1', ['g1'], asResponse(fakeRes()));
+    const unsubscribe = subscribe('u1', ['g1'], asStream(fakeRes()));
 
     expect(unsubscribe).toBeTruthy();
     expect(isOnline('u1')).toBe(true);
@@ -53,7 +55,7 @@ describe('subscribe', () => {
   });
 
   it('forgets the user entirely once their last stream closes', () => {
-    const unsubscribe = subscribe('u1', ['g1'], asResponse(fakeRes()))!;
+    const unsubscribe = subscribe('u1', ['g1'], asStream(fakeRes()))!;
     unsubscribe();
 
     expect(isOnline('u1')).toBe(false);
@@ -62,17 +64,17 @@ describe('subscribe', () => {
 
   it('refuses past the per-user cap rather than letting one client exhaust the pool', () => {
     for (let i = 0; i < MAX_STREAMS_PER_USER; i++) {
-      expect(subscribe('u1', ['g1'], asResponse(fakeRes()))).toBeTruthy();
+      expect(subscribe('u1', ['g1'], asStream(fakeRes()))).toBeTruthy();
     }
 
-    expect(subscribe('u1', ['g1'], asResponse(fakeRes()))).toBeNull();
+    expect(subscribe('u1', ['g1'], asStream(fakeRes()))).toBeNull();
     expect(openStreamCount()).toBe(MAX_STREAMS_PER_USER);
   });
 
   it('caps per user, not globally', () => {
-    for (let i = 0; i < MAX_STREAMS_PER_USER; i++) subscribe('u1', ['g1'], asResponse(fakeRes()));
+    for (let i = 0; i < MAX_STREAMS_PER_USER; i++) subscribe('u1', ['g1'], asStream(fakeRes()));
 
-    expect(subscribe('u2', ['g1'], asResponse(fakeRes()))).toBeTruthy();
+    expect(subscribe('u2', ['g1'], asStream(fakeRes()))).toBeTruthy();
   });
 });
 
@@ -82,8 +84,8 @@ describe('publishToGroup', () => {
   it('delivers to every stream the recipient holds', () => {
     const phone = fakeRes();
     const laptop = fakeRes();
-    subscribe('u1', ['g1'], asResponse(phone));
-    subscribe('u1', ['g1'], asResponse(laptop));
+    subscribe('u1', ['g1'], asStream(phone));
+    subscribe('u1', ['g1'], asStream(laptop));
 
     publishToGroup('g1', { ...event });
 
@@ -94,8 +96,8 @@ describe('publishToGroup', () => {
   it('delivers to everyone in the group', () => {
     const tom = fakeRes();
     const irja = fakeRes();
-    subscribe('u-tom', ['g1'], asResponse(tom));
-    subscribe('u-irja', ['g1'], asResponse(irja));
+    subscribe('u-tom', ['g1'], asStream(tom));
+    subscribe('u-irja', ['g1'], asStream(irja));
 
     publishToGroup('g1', { ...event });
 
@@ -105,7 +107,7 @@ describe('publishToGroup', () => {
 
   it('does not deliver to a stream authenticated for a different group', () => {
     const outsider = fakeRes();
-    subscribe('u-persik', ['g9'], asResponse(outsider));
+    subscribe('u-persik', ['g9'], asStream(outsider));
 
     publishToGroup('g1', { ...event });
 
@@ -114,7 +116,7 @@ describe('publishToGroup', () => {
 
   it('delivers to a subscriber who is in several groups including this one', () => {
     const res = fakeRes();
-    subscribe('u1', ['g9', 'g1'], asResponse(res));
+    subscribe('u1', ['g9', 'g1'], asStream(res));
 
     publishToGroup('g1', { ...event });
 
@@ -124,8 +126,8 @@ describe('publishToGroup', () => {
   it('skips the excluded user, so nobody gets their own typing indicator back', () => {
     const sender = fakeRes();
     const other = fakeRes();
-    subscribe('u-tom', ['g1'], asResponse(sender));
-    subscribe('u-irja', ['g1'], asResponse(other));
+    subscribe('u-tom', ['g1'], asStream(sender));
+    subscribe('u-irja', ['g1'], asStream(other));
 
     publishToGroup('g1', { type: 'typing', conversationId: 'c1', at: 1, payload: {} }, 'u-tom');
 
@@ -139,8 +141,8 @@ describe('publishToGroup', () => {
       throw new Error('EPIPE');
     };
     const alive = fakeRes();
-    subscribe('u1', ['g1'], asResponse(dead));
-    subscribe('u1', ['g1'], asResponse(alive));
+    subscribe('u1', ['g1'], asStream(dead));
+    subscribe('u1', ['g1'], asStream(alive));
 
     publishToGroup('g1', { ...event });
 
@@ -155,45 +157,21 @@ describe('publishToGroup', () => {
 
 describe('onlineInGroup', () => {
   it('lists the connected members of one group and nobody else', () => {
-    subscribe('u-tom', ['g1'], asResponse(fakeRes()));
-    subscribe('u-irja', ['g1'], asResponse(fakeRes()));
-    subscribe('u-persik', ['g9'], asResponse(fakeRes()));
+    subscribe('u-tom', ['g1'], asStream(fakeRes()));
+    subscribe('u-irja', ['g1'], asStream(fakeRes()));
+    subscribe('u-persik', ['g9'], asStream(fakeRes()));
 
     expect(onlineInGroup('g1')).toEqual(new Set(['u-tom', 'u-irja']));
   });
 
   it('counts someone once however many devices they have open', () => {
-    subscribe('u-tom', ['g1'], asResponse(fakeRes()));
-    subscribe('u-tom', ['g1'], asResponse(fakeRes()));
+    subscribe('u-tom', ['g1'], asStream(fakeRes()));
+    subscribe('u-tom', ['g1'], asStream(fakeRes()));
 
     expect(onlineInGroup('g1')).toEqual(new Set(['u-tom']));
   });
 
   it('is empty when nobody is connected', () => {
     expect(onlineInGroup('g1').size).toBe(0);
-  });
-});
-
-describe('closeAll', () => {
-  it('ends every stream so a rollout can drain', () => {
-    const res = fakeRes();
-    subscribe('u1', ['g1'], asResponse(res));
-
-    closeAll();
-
-    expect(res.ended).toBe(true);
-    expect(res.written.join('')).toContain('retry:');
-    expect(openStreamCount()).toBe(0);
-  });
-
-  it('survives a socket that throws on the way out', () => {
-    const res = fakeRes();
-    res.end = () => {
-      throw new Error('already destroyed');
-    };
-    subscribe('u1', ['g1'], asResponse(res));
-
-    expect(() => closeAll()).not.toThrow();
-    expect(openStreamCount()).toBe(0);
   });
 });

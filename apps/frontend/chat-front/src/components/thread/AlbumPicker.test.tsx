@@ -36,6 +36,24 @@ describe('AlbumPicker', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
+  it('just closes when the album already chosen is picked again', async () => {
+    const { onChoose, onClose } = renderPicker({ current: { mode: 'album', albumId: 'a-rome', albumName: 'Rome' } });
+
+    await userEvent.click(await screen.findByText('Rome'));
+
+    expect(onChoose).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('can be left without choosing anything', async () => {
+    const { onChoose, onClose } = renderPicker();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(onChoose).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+  });
+
   it('makes a new album by name', async () => {
     const { onChoose } = renderPicker();
 

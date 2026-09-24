@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { NotFoundError, sendSuccess } from '@tumbaland/backend-core';
 import * as chatAlbums from '../services/chatAlbumService';
+import { createChatCollage as createCollageFromChat, type ChatCollageInput } from '../collage/chatCollage';
 
 /** `GET /internal/groups/:groupId/albums` */
 export const listGroupAlbums = async (req: Request, res: Response): Promise<void> => {
@@ -18,6 +19,12 @@ export const getGroupAlbum = async (req: Request, res: Response): Promise<void> 
 export const createGroupAlbum = async (req: Request, res: Response): Promise<void> => {
   const { name, userId } = req.body as { name: string; userId: string };
   sendSuccess(res, await chatAlbums.createGroupAlbum(req.params.groupId as string, userId, name), undefined, 201);
+};
+
+/** `POST /internal/groups/:groupId/collages`: "Make a collage together" from a chat. */
+export const createChatCollage = async (req: Request, res: Response): Promise<void> => {
+  const input = { ...(req.body as Omit<ChatCollageInput, 'groupId'>), groupId: req.params.groupId as string };
+  sendSuccess(res, await createCollageFromChat(input), undefined, 201);
 };
 
 /** `POST /internal/chat-photos` */
