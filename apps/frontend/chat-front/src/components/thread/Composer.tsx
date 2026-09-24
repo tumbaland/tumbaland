@@ -46,9 +46,10 @@ export interface ComposerProps {
   accent?: string;
   /**
    * Text put in the box for the person to send or change: a link shared from
-   * another app. Applied each time it changes, never while an edit has the box.
+   * another app. Applied once per `key`, so the same link shared twice fills
+   * the box twice; never while an edit has the box.
    */
-  prefill?: string;
+  prefill?: { text: string; key: number } | null;
 }
 
 /**
@@ -119,8 +120,8 @@ export function Composer({
   }, [editingId]);
 
   useEffect(() => {
-    if (!prefill || wasEditing.current) return;
-    setValue(prefill);
+    if (!prefill?.text || wasEditing.current) return;
+    setValue(prefill.text);
     inputRef.current?.focus();
   }, [prefill]);
 

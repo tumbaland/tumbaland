@@ -5,7 +5,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Fab from '@mui/material/Fab';
 import Typography from '@mui/material/Typography';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import { ink } from '@tumbaland/frontend-core';
+import { keyframes } from '@mui/material/styles';
+import { brand, ink } from '@tumbaland/frontend-core';
 import type { ConversationMember, ReadReceipt, ThreadMessage } from '../../types';
 import { CollageCard } from './CollageCard';
 import { DaySeparator } from './DaySeparator';
@@ -33,6 +34,11 @@ export interface MessageListProps {
   members?: ConversationMember[];
   /** How far each of the others has read. */
   reads?: Record<string, ReadReceipt>;
+  /**
+   * A message to bring into view and flash, such as a search result. A new
+   * `key` repeats it for the same message.
+   */
+  focus?: { id: string; key: number } | null;
 }
 
 const NO_MEMBERS: ConversationMember[] = [];
@@ -40,6 +46,13 @@ const NO_READS: Record<string, ReadReceipt> = {};
 
 /** How close to the bottom still counts as "following the conversation". */
 const NEAR_BOTTOM_PX = 120;
+
+/** The flash on a message opened from search, so the eye finds it among the rest. */
+const focusFlash = keyframes`
+  0%, 60% { background-color: color-mix(in srgb, ${brand.pinkInk} 22%, transparent); }
+  100% { background-color: transparent; }
+`;
+const FOCUS_FLASH_MS = 2000;
 
 const sameDay = (a: string, b: string) => new Date(a).toDateString() === new Date(b).toDateString();
 
@@ -74,7 +87,8 @@ export function MessageList({
   onOpenCollage,
   accent,
   members = NO_MEMBERS,
-  reads = NO_READS
+  reads = NO_READS,
+  focus = null
 }: MessageListProps) {
   const scroller = useRef<HTMLDivElement | null>(null);
   const content = useRef<HTMLDivElement | null>(null);
@@ -178,6 +192,45 @@ export function MessageList({
     }
   }, [messages, scrollToBottom]);
 
+  /**
+   * Brings the focused message to the middle of the list once it is there.
+   *
+   * After the prepend handling above, which may have just followed the
+   * bottom; this then lets go of the bottom, so photos loading below do not
+   * pull the list back down past the message being looked for.
+   */
+  const handledFocus = useRef<number | null>(null);
+  const [flashing, setFlashing] = useState<string | null>(null);
+  useLayoutEffect(() => {
+    const element = scroller.current;
+    if (!focus || !element || handledFocus.current === focus.key) return;
+    const target = element.querySelector<HTMLElement>(`[data-message-id="${focus.id}"]`);
+    if (!target) return;
+    handledFocus.current = focus.key;
+
+    atBottomRef.current = false;
+    setAtBottom(false);
+    const offset = target.getBoundingClientRect().top - element.getBoundingClientRect().top;
+    element.scrollTop += offset - (element.clientHeight - target.offsetHeight) / 2;
+    lastScrollTop.current = element.scrollTop;
+    setFlashing(focus.id);
+  }, [focus, messages]);
+
+  useEffect(() => {
+    if (!flashing) return;
+    const timer = setTimeout(() => setFlashing(null), FOCUS_FLASH_MS);
+    return () => clearTimeout(timer);
+  }, [flashing]);
+
+  /** Each message's row: findable by id, and flashing when it is the one opened. */
+  const rowProps = (message: ThreadMessage) => ({
+    'data-message-id': message.id,
+    sx:
+      flashing === message.id
+        ? { borderRadius: 2, animation: `${focusFlash} ${FOCUS_FLASH_MS}ms ease-out` }
+        : undefined
+  });
+
   // The first render lands at the bottom without animating there.
   useEffect(() => {
     scrollToBottom();
@@ -252,7 +305,7 @@ export function MessageList({
             const newDay = !previous || !sameDay(previous.createdAt, message.createdAt);
             if (message.kind === 'system') {
               return (
-                <Box key={message.clientId || message.id}>
+                <Box key={message.clientId || message.id} {...rowProps(message)}>
                   {newDay && <DaySeparator iso={message.createdAt} />}
                   <SystemLine message={message} />
                 </Box>
@@ -260,7 +313,7 @@ export function MessageList({
             }
             if (message.kind === 'collage' && message.collage && !message.deletedAt) {
               return (
-                <Box key={message.clientId || message.id}>
+                <Box key={message.clientId || message.id} {...rowProps(message)}>
                   {newDay && <DaySeparator iso={message.createdAt} />}
                   <CollageCard
                     message={message}
@@ -281,7 +334,7 @@ export function MessageList({
               new Date(message.createdAt).getTime() - new Date(previous.createdAt).getTime() > GROUP_WINDOW_MS;
 
             return (
-              <Box key={message.clientId || message.id}>
+              <Box key={message.clientId || message.id} {...rowProps(message)}>
                 {newDay && <DaySeparator iso={message.createdAt} />}
                 <MessageBubble
                   message={message}

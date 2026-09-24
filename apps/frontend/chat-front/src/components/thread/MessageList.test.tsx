@@ -144,3 +144,57 @@ describe('MessageList scrolling', () => {
     expect(onOpenCollage).toHaveBeenCalledWith('k1');
   });
 });
+
+describe('opening a message from search', () => {
+  const list30 = Array.from({ length: 30 }, (_, index) => message(index));
+  const element = (focus: { id: string; key: number } | null) => (
+    <MessageList
+      messages={list30}
+      currentUserId="u-tom"
+      hasOlder={false}
+      loadingOlder={false}
+      onLoadOlder={() => {}}
+      onReact={() => {}}
+      onRetry={() => {}}
+      onPickEmoji={() => {}}
+      onOpenMedia={() => {}}
+      focus={focus}
+    />
+  );
+
+  beforeEach(() => {
+    // The list's own box at 0, and the message 100px below it.
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      const top = this.getAttribute('data-message-id') === 'm5' ? 100 : 0;
+      return { top, bottom: top, left: 0, right: 0, width: 0, height: 0, x: 0, y: top, toJSON: () => ({}) } as DOMRect;
+    });
+  });
+
+  it('brings the message to the middle of the list', () => {
+    const { rerender } = render(element(null));
+    const list = screen.getByRole('log');
+    expect(list.scrollTop).toBe(bottom());
+
+    rerender(element({ id: 'm5', key: 1 }));
+
+    // From the bottom, down by its 100px offset, up by half the viewport.
+    expect(list.scrollTop).toBe(bottom() + 100 - VIEWPORT / 2);
+  });
+
+  it('stays on the message when photos below it finish loading', () => {
+    const { rerender } = render(element(null));
+    const list = screen.getByRole('log');
+    rerender(element({ id: 'm5', key: 1 }));
+    const there = list.scrollTop;
+
+    contentHeight = 2900;
+    resized!();
+
+    expect(list.scrollTop).toBe(there);
+  });
+
+  it('marks every message row with its id, for finding it', () => {
+    render(element(null));
+    expect(document.querySelector('[data-message-id="m5"]')).toHaveTextContent('message 5');
+  });
+});

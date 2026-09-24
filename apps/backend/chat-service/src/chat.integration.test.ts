@@ -718,6 +718,62 @@ describe('search', () => {
     expect(res.body.data[0].body).toContain('reservation');
   });
 
+  it('matches part of a word, in any case, newest first', async () => {
+    const id = await conversationInG1();
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'That Restaurant was lovely' });
+    await as(IRJA).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'the restaurant again?' });
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'something else' });
+
+    const res = await as(IRJA).get(`/api/chat/search?q=rest&conversationId=${id}`);
+
+    expect(res.body.data.map((message: { body: string }) => message.body)).toEqual([
+      'the restaurant again?',
+      'That Restaurant was lovely'
+    ]);
+  });
+
+  it('takes the term literally rather than as a pattern', async () => {
+    const id = await conversationInG1();
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'costs 5.50 (maybe)' });
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'costs 5x50' });
+
+    const res = await as(IRJA).get(`/api/chat/search?q=${encodeURIComponent('5.50 (')}`);
+
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].body).toBe('costs 5.50 (maybe)');
+  });
+
+  it('finds Russian text in any case, and English inside the same message', async () => {
+    const id = await conversationInG1();
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'Привет! Встречаемся в Кафе на Tallinn street?' });
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'just english here' });
+
+    const search = (term: string) => as(IRJA).get(`/api/chat/search?q=${encodeURIComponent(term)}&conversationId=${id}`);
+
+    for (const term of ['привет', 'ПРИВЕТ', 'кафе', 'встреч', 'tallinn', 'кафе на tall']) {
+      const res = await search(term);
+      expect({ term, found: res.body.data.map((message: { body: string }) => message.body) }).toEqual({
+        term,
+        found: ['Привет! Встречаемся в Кафе на Tallinn street?']
+      });
+    }
+  });
+
+  it('treats ё and е as the same letter, the way people type Russian', async () => {
+    const id = await conversationInG1();
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'Ещё одна Ёлка' });
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'еще раз' });
+
+    const bodies = async (term: string) =>
+      (await as(IRJA).get(`/api/chat/search?q=${encodeURIComponent(term)}&conversationId=${id}`)).body.data
+        .map((message: { body: string }) => message.body)
+        .sort();
+
+    expect(await bodies('еще')).toEqual(['Ещё одна Ёлка', 'еще раз']);
+    expect(await bodies('ещё')).toEqual(['Ещё одна Ёлка', 'еще раз']);
+    expect(await bodies('елка')).toEqual(['Ещё одна Ёлка']);
+  });
+
   it('returns nothing for an empty term rather than the whole history', async () => {
     const id = await conversationInG1();
     await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'anything' });

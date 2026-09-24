@@ -513,26 +513,50 @@ export function publishTyping(conversation: IConversation, person: Caller): void
   );
 }
 
-/** Full-text search within the conversations the caller can reach. */
+/** The longest term searched for; anything past it is dropped. */
+const MAX_SEARCH_TERM = 100;
+
+const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * The term as a pattern: taken literally, except that е and ё match each
+ * other. Russian is mostly typed without ё ("еще" for "ещё"), so a search
+ * would otherwise miss half of what was written. Case is left to the `i`
+ * flag, which folds Cyrillic as well as Latin.
+ */
+const searchPattern = (term: string) => escapeRegex(term).replace(/[еёЕЁ]/g, '[еёЕЁ]');
+
+/**
+ * Messages in the conversations the caller can reach whose text contains the
+ * term, newest first.
+ *
+ * A plain substring match, in any case, rather than the text index. The index
+ * matches whole English words only, so "rest" missed "restaurant" and Estonian
+ * words were cut by English stemming rules; people searching a chat type the
+ * start of a word and expect the latest mention first. Scoped by
+ * conversation, it walks that conversation's own index, which a couple's
+ * history stays well inside.
+ *
+ * Works the same for Russian: any case, and е finds ё (see searchPattern).
+ *
+ * Notes about the conversation ("Irja set photos to go to Rome") and unsent
+ * messages are left out.
+ */
 export async function searchMessages(
   conversationIds: string[],
   term: string,
   limit = 50
 ): Promise<MessageView[]> {
-  if (conversationIds.length === 0 || !term.trim()) return [];
+  const needle = term.trim().slice(0, MAX_SEARCH_TERM);
+  if (conversationIds.length === 0 || !needle) return [];
 
-  try {
-    const rows = await Message.find(
-      { conversationId: { $in: conversationIds }, deletedAt: null, $text: { $search: term } },
-      { score: { $meta: 'textScore' } }
-    )
-      .sort({ score: { $meta: 'textScore' } })
-      .limit(Math.min(limit, MAX_MESSAGE_PAGE_SIZE));
-    return rows.map(toView);
-  } catch (error) {
-    // The text index is built by mongoose on boot; a search that arrives first
-    // should return nothing rather than a 500.
-    logger.warn('Chat search failed', { error: (error as Error).message });
-    return [];
-  }
+  const rows = await Message.find({
+    conversationId: { $in: conversationIds },
+    deletedAt: null,
+    kind: { $ne: 'system' },
+    body: { $regex: searchPattern(needle), $options: 'i' }
+  })
+    .sort({ createdAt: -1 })
+    .limit(Math.min(limit, MAX_MESSAGE_PAGE_SIZE));
+  return rows.map(toView);
 }

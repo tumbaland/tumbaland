@@ -12,6 +12,7 @@ import type {
   Appearance,
   Message,
   MessageEffect,
+  MessagePage,
   PhotoAlbum,
   PhotoAlbumChoice,
   Presence,
@@ -73,11 +74,24 @@ export interface UseChatThreadResult {
   send: (body: string, attachments?: Attachment[], options?: SendOptions) => Promise<void>;
   retry: (clientId: string) => Promise<void>;
   loadOlder: () => Promise<void>;
+  /**
+   * Loads older pages until the message is in the thread, for opening a
+   * search result. `gone` when it was unsent since; `too-far` past the limit.
+   */
+  loadUntil: (messageId: string, createdAt: string) => Promise<'found' | 'gone' | 'too-far'>;
   react: (messageId: string, emoji: string) => Promise<void>;
   edit: (messageId: string, body: string) => Promise<void>;
   remove: (messageId: string) => Promise<void>;
   notifyTyping: () => void;
 }
+
+/**
+ * How far back opening a search result will load: 30 pages of 100. Every
+ * message loaded is a bubble on the page, and a result from years back would
+ * otherwise pull the whole history onto a phone to show one line.
+ */
+const JUMP_PAGE_SIZE = 100;
+const JUMP_MAX_PAGES = 30;
 
 export function useChatThread(conversationId: string | undefined, currentUserId: string): UseChatThreadResult {
   const [state, dispatch] = useReducer(threadReducer, initialThreadState);
@@ -162,6 +176,44 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
       dispatch({ type: 'failed', error: (error as Error).message });
     }
   }, [conversationId, state.nextCursor, state.loadingOlder]);
+
+  // Read by loadUntil, whose loop outlives the render it started in.
+  const latestState = useRef(state);
+  useInsertionEffect(() => {
+    latestState.current = state;
+  });
+
+  const loadUntil = useCallback(
+    async (messageId: string, createdAt: string): Promise<'found' | 'gone' | 'too-far'> => {
+      if (!conversationId) return 'gone';
+      if (latestState.current.messages.some((message) => message.id === messageId)) return 'found';
+
+      const target = new Date(createdAt).getTime();
+      let cursor = latestState.current.nextCursor;
+      for (let page = 0; cursor && page < JUMP_MAX_PAGES; page++) {
+        if (conversationRef.current !== conversationId) return 'gone';
+        dispatch({ type: 'loadingOlder' });
+        let result: MessagePage;
+        try {
+          result = await chatApi.listMessages(conversationId, { before: cursor, limit: JUMP_PAGE_SIZE });
+        } catch (error) {
+          // Settles the spinner without an error banner over the thread; the
+          // caller says what went wrong.
+          dispatch({ type: 'olderLoaded', messages: [], nextCursor: cursor });
+          throw error;
+        }
+        dispatch({ type: 'olderLoaded', messages: result.messages, nextCursor: result.nextCursor });
+        if (result.messages.some((message) => message.id === messageId)) return 'found';
+
+        // Walked past where it was without finding it: unsent since the search.
+        const oldest = result.messages[result.messages.length - 1];
+        if (oldest && new Date(oldest.createdAt).getTime() < target) return 'gone';
+        cursor = result.nextCursor;
+      }
+      return cursor ? 'too-far' : 'gone';
+    },
+    [conversationId]
+  );
 
   /** Events for other conversations are ignored; one stream serves them all. */
   const onEvent = useCallback(
@@ -466,6 +518,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     send,
     retry,
     loadOlder,
+    loadUntil,
     react,
     edit,
     remove,

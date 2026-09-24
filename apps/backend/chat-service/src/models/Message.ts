@@ -122,7 +122,9 @@ MessageSchema.index({ conversationId: 1, createdAt: -1 });
 // first version.
 MessageSchema.index({ conversationId: 1, clientId: 1 }, { unique: true });
 
-// Search within a conversation.
+// Built for the first version of search, which now matches parts of words
+// instead (see searchMessages). Removing it here would not drop it from the
+// database, so it stays until it is dropped on purpose.
 MessageSchema.index({ body: 'text' });
 
 export const Message = model<IMessage>('Message', MessageSchema);

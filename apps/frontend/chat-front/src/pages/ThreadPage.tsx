@@ -22,13 +22,14 @@ import { TypingIndicator } from '../components/thread/TypingIndicator';
 import { ScreenEffect } from '../components/thread/ScreenEffect';
 import { ThreadHeader } from '../components/thread/ThreadHeader';
 import { AlbumPicker } from '../components/thread/AlbumPicker';
-import { CollageStartDialog } from '../components/thread/CollageStartDialog';
+import { AlbumCollageDialog } from '../components/thread/AlbumCollageDialog';
+import { SearchDialog } from '../components/thread/SearchDialog';
 import { ThemePicker } from '../components/thread/ThemePicker';
 import { chatColors, chatThemeVars, themeById } from '../components/thread/themes';
 import { surface } from '@tumbaland/frontend-core';
 import { recordEmoji } from '../components/thread/recentEmoji';
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
-import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
+import SearchIcon from '@mui/icons-material/Search';
 import { chatApi } from '../services/chatApi';
 import { requestCall } from '../services/callBus';
 import { clearShare, isMedia, readShare, sharedMessage } from '../services/sharedInbox';
@@ -37,7 +38,7 @@ import { useAttachmentUploads } from '../hooks/useAttachmentUploads';
 import { useChatThread } from '../hooks/useChatThread';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useScreenEffects } from '../hooks/useScreenEffects';
-import type { PhotoAlbum, PhotoAlbumChoice, SendOptions, ThreadMessage } from '../types';
+import type { Message, PhotoAlbum, PhotoAlbumChoice, SendOptions, ThreadMessage } from '../types';
 
 export interface ThreadPageProps {
   /** Given by the side panel, which has no route to read it from. */
@@ -64,7 +65,11 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
   const [actionError, setActionError] = useState<string | null>(null);
   const [choosingAlbum, setChoosingAlbum] = useState(false);
   const [choosingTheme, setChoosingTheme] = useState(false);
-  const [startingCollage, setStartingCollage] = useState(false);
+  const [albumAndCollage, setAlbumAndCollage] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  /** The message the list scrolls to and flashes: a search result. */
+  const [focus, setFocus] = useState<{ id: string; key: number } | null>(null);
+  const [jumping, setJumping] = useState(false);
   const navigate = useNavigate();
 
   const thread = useChatThread(conversationId, user?.id ?? '');
@@ -85,7 +90,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
    */
   const [searchParams, setSearchParams] = useSearchParams();
   const sharing = !given && searchParams.has('shared');
-  const [prefill, setPrefill] = useState<string>();
+  const [prefill, setPrefill] = useState<{ text: string; key: number } | null>(null);
   const addUploads = uploads.add;
   useEffect(() => {
     if (!sharing || !conversationId) return;
@@ -96,7 +101,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         const media = share.files.filter(isMedia);
         if (media.length > 0) void addUploads(media);
         const text = sharedMessage(share);
-        if (text) setPrefill(text);
+        if (text) setPrefill({ text, key: Date.now() });
         await clearShare();
       }
       setSearchParams(
@@ -260,6 +265,26 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
     if (card?.collage) openCollage(card.collage.id);
   };
 
+  /**
+   * A search result: older messages are loaded until it is in the thread,
+   * then the list scrolls to it. Past the loading limit, or unsent since the
+   * search, it says so instead.
+   */
+  const openResult = async (message: Message) => {
+    setSearchOpen(false);
+    setJumping(true);
+    try {
+      const outcome = await thread.loadUntil(message.id, message.createdAt);
+      if (outcome === 'found') setFocus({ id: message.id, key: Date.now() });
+      else if (outcome === 'too-far') setActionError('That message is too far back to open here.');
+      else setActionError('That message is no longer in the chat.');
+    } catch {
+      setActionError('Could not open that message. Try again.');
+    } finally {
+      setJumping(false);
+    }
+  };
+
   const openMedia = (message: ThreadMessage, index: number) => setViewing({ messageId: message.id, index });
 
   if (loadingUser || (thread.loading && thread.messages.length === 0)) {
@@ -315,21 +340,21 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         onCall={callable ? () => requestCall({ conversationId: conversationId!, peer: callable }) : undefined}
         menu={[
           {
-            label: 'Photos go to',
+            label: 'Search messages',
+            icon: <SearchIcon fontSize="small" />,
+            onClick: () => setSearchOpen(true)
+          },
+          {
+            label: 'Album and collage',
             secondary: albumLabel,
             icon: <PhotoAlbumOutlinedIcon fontSize="small" />,
-            onClick: () => setChoosingAlbum(true)
+            onClick: () => setAlbumAndCollage(true)
           },
           {
             label: 'Theme',
             secondary: thread.appearance.backgroundFileId ? `${theme.name}, with a photo` : theme.name,
             icon: <PaletteOutlinedIcon fontSize="small" />,
             onClick: () => setChoosingTheme(true)
-          },
-          {
-            label: 'Make a collage together',
-            icon: <DashboardOutlinedIcon fontSize="small" />,
-            onClick: () => setStartingCollage(true)
           }
         ]}
       />
@@ -369,6 +394,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         accent={chatColors.bubble}
         members={thread.members}
         reads={thread.reads}
+        focus={focus}
       />
 
       <TypingIndicator names={thread.typingNames} />
@@ -398,6 +424,23 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         prefill={prefill}
       />
 
+      {conversationId && (
+        <SearchDialog
+          open={searchOpen}
+          onClose={() => setSearchOpen(false)}
+          conversationId={conversationId}
+          members={thread.members}
+          currentUserId={user?.id ?? ''}
+          onPick={(message) => void openResult(message)}
+        />
+      )}
+
+      <Snackbar open={jumping} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity="info" icon={<CircularProgress size={18} />} sx={{ width: '100%' }}>
+          Finding the message…
+        </Alert>
+      </Snackbar>
+
       <ThemePicker
         open={choosingTheme}
         onClose={() => setChoosingTheme(false)}
@@ -405,14 +448,17 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         onChange={thread.setAppearance}
       />
 
-      <CollageStartDialog
-        open={startingCollage}
-        onClose={() => setStartingCollage(false)}
+      <AlbumCollageDialog
+        open={albumAndCollage}
+        onClose={() => setAlbumAndCollage(false)}
         photoAlbum={thread.photoAlbum}
-        onChooseAlbum={() => setChoosingAlbum(true)}
-        onStart={startCollage}
+        loadAlbums={loadAlbums}
+        onChooseAlbum={thread.setPhotoAlbum}
+        onStartCollage={startCollage}
       />
 
+      {/* On its own for the composer's "Photos go to" line, where the
+          question is only where this photo goes. */}
       <AlbumPicker
         open={choosingAlbum}
         onClose={() => setChoosingAlbum(false)}
