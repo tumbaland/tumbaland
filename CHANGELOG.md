@@ -1,4 +1,11 @@
 # Tumbalog
+## [0.0.519](https://github.com/toomastahves/tumbaland/compare/app-v0.0.518...app-v0.0.519) (2026-09-24)
+
+### Features
+
+* add mobile share for android ([2898b3c](https://github.com/toomastahves/tumbaland/commit/2898b3cce8602b8456582757a8910a07b47e26c0))
+* improve chat options menu ([47256af](https://github.com/toomastahves/tumbaland/commit/47256afb8d9baf6da5add492b616b9ee2f6fe3b5))
+
 ## [0.0.518](https://github.com/toomastahves/tumbaland/compare/app-v0.0.517...app-v0.0.518) (2026-09-24)
 
 ### Features
