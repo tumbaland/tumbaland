@@ -1,4 +1,15 @@
 # Tumbalog
+## [0.0.518](https://github.com/toomastahves/tumbaland/compare/app-v0.0.517...app-v0.0.518) (2026-09-24)
+
+### Features
+
+* add more modern collage look ([a203c54](https://github.com/toomastahves/tumbaland/commit/a203c54f649ea8b007dc506566ca154fcb18322c))
+* improve collage maker user experience ([0d145f9](https://github.com/toomastahves/tumbaland/commit/0d145f93fbee318926b06f7df154040291f06d4b))
+
+### Chores
+
+* **release:** @tumbaland/backend-core 1.47.0 ([c044300](https://github.com/toomastahves/tumbaland/commit/c044300f04494ad6914e48042603bf7950abce1f))
+
 ## [0.0.517](https://github.com/toomastahves/tumbaland/compare/app-v0.0.516...app-v0.0.517) (2026-09-23)
 
 ### Features
