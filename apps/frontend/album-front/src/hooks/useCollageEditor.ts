@@ -3,6 +3,7 @@ import {
   CollageDoc,
   CollagePhotoItem,
   CollageTextItem,
+  DEFAULT_TEXT,
   DEFAULT_TEXT_COLOR,
   DEFAULT_TEXT_SIZE,
   newItemId
@@ -222,7 +223,7 @@ export const useCollageEditor = () => {
             ...d.texts,
             {
               id,
-              text: 'Double-click to edit',
+              text: DEFAULT_TEXT,
               x: d.canvas.width / 2 - 120,
               y: d.canvas.height / 2 - 30,
               width: 240,
@@ -281,6 +282,12 @@ export const useCollageEditor = () => {
     selectedItem,
     canUndo: state.past.length > 0,
     canRedo: state.future.length > 0,
+    /**
+     * The step Undo would reverse now. A new object for every step this editor
+     * takes or undoes, and untouched by other people's changes, so it says
+     * whether a particular step is still the one Undo would take back.
+     */
+    lastChange: state.past[state.past.length - 1] ?? null,
     /** True while a drag, resize or rotate is under way. Autosave waits for it to end. */
     gestureActive: state.gestureBase !== null,
     init,

@@ -103,6 +103,22 @@ beforeEach(() => {
   });
 });
 
+/** Adds a text and applies it in the dialog that "Add text" opens. */
+async function addText() {
+  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^apply$/i }));
+  await waitFor(() => expect(screen.queryByText('Edit text')).not.toBeInTheDocument());
+}
+
+it('says where photos come from on an empty canvas, until something is on it', async () => {
+  renderPage();
+  expect(screen.getByText(/start with a photo/i)).toBeInTheDocument();
+
+  await addText();
+
+  expect(screen.queryByText(/start with a photo/i)).not.toBeInTheDocument();
+});
+
 it('shows a spinner while the collage is pending', () => {
   mockedUseCollageDetails.mockReturnValue({ data: undefined, isPending: true, error: null });
 
@@ -141,7 +157,7 @@ it('hides the toolbar and shows the mini action bar in view mode', () => {
 it('saves a change by itself a moment after it is made, sending only what changed', async () => {
   renderPage();
 
-  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
+  await addText();
 
   await waitFor(
     () =>
@@ -151,7 +167,7 @@ it('saves a change by itself a moment after it is made, sending only what change
           expect.objectContaining({
             type: 'put',
             layer: 'texts',
-            item: expect.objectContaining({ text: 'Double-click to edit' })
+            item: expect.objectContaining({ text: 'Your text' })
           })
         ],
         expect.any(String)
@@ -166,7 +182,7 @@ it('says plainly when a save failed and keeps trying', async () => {
   mockedApplyChanges.mockRejectedValue(new Error('network down'));
   renderPage();
 
-  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
+  await addText();
 
   await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Not saved, retrying'), {
     timeout: 3000
@@ -218,7 +234,7 @@ it('navigates back immediately when there are no unsaved changes', async () => {
 it('saves a waiting change before going back, without asking', async () => {
   const confirmSpy = vi.spyOn(window, 'confirm');
   renderPage();
-  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
+  await addText();
 
   await userEvent.click(screen.getByRole('button', { name: /back to collages/i }));
 
@@ -232,7 +248,7 @@ it('asks before going back when the last change could not be saved', async () =>
   mockedApplyChanges.mockRejectedValue(new Error('network down'));
   const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
   renderPage();
-  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
+  await addText();
 
   await userEvent.click(screen.getByRole('button', { name: /back to collages/i }));
 
@@ -243,13 +259,13 @@ it('asks before going back when the last change could not be saved', async () =>
 
 it('undoes the last change via Ctrl+Z', async () => {
   renderPage();
-  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
+  await addText();
   // Adding the text selected it, which shows the selection actions.
-  expect(screen.getByRole('button', { name: /edit item/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^edit text$/i })).toBeInTheDocument();
 
   await userEvent.keyboard('{Control>}z{/Control}');
 
-  expect(screen.queryByRole('button', { name: /edit item/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /^edit text$/i })).not.toBeInTheDocument();
 });
 
 it('exports the collage as PNG via the toolbar', async () => {
@@ -260,7 +276,7 @@ it('exports the collage as PNG via the toolbar', async () => {
   await waitFor(() => expect(mockedExportCollageToPng).toHaveBeenCalled());
 });
 
-it('places a dropped photo, selecting it and revealing the selection-only toolbar actions', async () => {
+it('places a dropped photo, selecting it and showing what can be done to it on the canvas', async () => {
   mockedUseCollageDetails.mockReturnValue({
     data: { collage, albumPhotos },
     isPending: false,
@@ -271,11 +287,11 @@ it('places a dropped photo, selecting it and revealing the selection-only toolba
   await userEvent.click(screen.getByText('simulate drop photo-1'));
 
   expect(screen.getByRole('status')).toHaveTextContent('Saving…');
-  expect(screen.getByRole('button', { name: /edit item/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^edit photo$/i })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /bring forward/i })).toBeInTheDocument();
 });
 
-it('opens the photo settings dialog via "Edit item" once a dropped photo is selected', async () => {
+it('opens the photo dialog via "Edit" once a dropped photo is selected', async () => {
   mockedUseCollageDetails.mockReturnValue({
     data: { collage, albumPhotos },
     isPending: false,
@@ -284,12 +300,12 @@ it('opens the photo settings dialog via "Edit item" once a dropped photo is sele
   renderPage();
   await userEvent.click(screen.getByText('simulate drop photo-1'));
 
-  await userEvent.click(screen.getByRole('button', { name: /edit item/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^edit photo$/i }));
 
-  expect(screen.getByText('Photo settings')).toBeInTheDocument();
+  expect(screen.getByText('Edit photo')).toBeInTheDocument();
 });
 
-it('removes the selected item via "Delete item", hiding the selection-only actions again', async () => {
+it('removes the selected photo from the bar on the canvas, and offers to undo it', async () => {
   mockedUseCollageDetails.mockReturnValue({
     data: { collage, albumPhotos },
     isPending: false,
@@ -297,11 +313,18 @@ it('removes the selected item via "Delete item", hiding the selection-only actio
   });
   renderPage();
   await userEvent.click(screen.getByText('simulate drop photo-1'));
-  expect(screen.getByRole('button', { name: /edit item/i })).toBeInTheDocument();
+  expect(screen.getByRole('toolbar', { name: 'Selected photo' })).toBeInTheDocument();
 
-  await userEvent.click(screen.getByRole('button', { name: /delete item/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^delete photo$/i }));
 
-  expect(screen.queryByRole('button', { name: /edit item/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('toolbar', { name: 'Selected photo' })).not.toBeInTheDocument();
+  expect(screen.getByText('Photo removed')).toBeInTheDocument();
+  expect(screen.queryByText(/start with a photo/i)).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: /^undo$/i }));
+
+  await waitFor(() => expect(screen.queryByText('Photo removed')).not.toBeInTheDocument());
+  expect(screen.queryByText(/start with a photo/i)).not.toBeInTheDocument();
 });
 
 it('switches to preview (view) mode via the toolbar', async () => {
@@ -342,7 +365,7 @@ it('reorders the selected item via Bring forward / Send backward', async () => {
 
   // Reordering a single item is a no-op on doc contents, but exercising the
   // handlers shouldn't throw or clear the selection.
-  expect(screen.getByRole('button', { name: /edit item/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^edit photo$/i })).toBeInTheDocument();
 });
 
 it('changes background color, frame color, and toggles photo frames via the toolbar', async () => {
@@ -371,12 +394,12 @@ it('changes background color, frame color, and toggles photo frames via the tool
   );
 });
 
-it('edits a text item via "Edit item", saving the new text and closing the dialog', async () => {
+it('opens new text straight in its dialog, with the placeholder ready to be typed over', async () => {
   renderPage();
   await userEvent.click(screen.getByRole('button', { name: /add text/i }));
 
-  await userEvent.click(screen.getByRole('button', { name: /edit item/i }));
   expect(screen.getByText('Edit text')).toBeInTheDocument();
+  expect(screen.getByLabelText('Text')).toHaveValue('Your text');
 
   const textInput = screen.getByLabelText('Text');
   await userEvent.clear(textInput);
@@ -386,26 +409,56 @@ it('edits a text item via "Edit item", saving the new text and closing the dialo
   await waitFor(() => expect(screen.queryByText('Edit text')).not.toBeInTheDocument());
 });
 
-it('deletes a text item from within its edit dialog', async () => {
+it('deletes a text item from within its edit dialog, offering to undo it', async () => {
   renderPage();
-  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
-  await userEvent.click(screen.getByRole('button', { name: /edit item/i }));
+  await addText();
+  await userEvent.click(screen.getByRole('button', { name: /^edit text$/i }));
 
   await userEvent.click(screen.getByRole('button', { name: /^delete$/i }));
 
   await waitFor(() => expect(screen.queryByText('Edit text')).not.toBeInTheDocument());
-  expect(screen.queryByRole('button', { name: /edit item/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /^edit text$/i })).not.toBeInTheDocument();
+  expect(screen.getByText('Text removed')).toBeInTheDocument();
 });
 
-it('cancels out of a text item edit dialog without saving', async () => {
+it('cancels out of editing an existing text, keeping it', async () => {
   renderPage();
-  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
-  await userEvent.click(screen.getByRole('button', { name: /edit item/i }));
+  await addText();
+  await userEvent.click(screen.getByRole('button', { name: /^edit text$/i }));
 
   await userEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
 
   await waitFor(() => expect(screen.queryByText('Edit text')).not.toBeInTheDocument());
-  expect(screen.getByRole('button', { name: /edit item/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^edit text$/i })).toBeInTheDocument();
+});
+
+it.each(['cancel', 'delete'])('takes a just-added text away again on %s, with nothing to undo', async (button) => {
+  renderPage();
+  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
+
+  await userEvent.click(screen.getByRole('button', { name: new RegExp(`^${button}$`, 'i') }));
+
+  await waitFor(() => expect(screen.queryByText('Edit text')).not.toBeInTheDocument());
+  expect(screen.queryByRole('button', { name: /^edit text$/i })).not.toBeInTheDocument();
+  expect(screen.getByText(/start with a photo/i)).toBeInTheDocument();
+  expect(screen.queryByText('Text removed')).not.toBeInTheDocument();
+});
+
+it('offers to undo a removal only until something else is done', async () => {
+  mockedUseCollageDetails.mockReturnValue({
+    data: { collage, albumPhotos },
+    isPending: false,
+    error: null
+  });
+  renderPage();
+  await userEvent.click(screen.getByText('simulate drop photo-1'));
+  await userEvent.click(screen.getByRole('button', { name: /^delete photo$/i }));
+  expect(screen.getByText('Photo removed')).toBeInTheDocument();
+
+  // Undo from the toast now would take back this, not the removal.
+  await addText();
+
+  await waitFor(() => expect(screen.queryByText('Photo removed')).not.toBeInTheDocument());
 });
 
 it('saves photo settings via "Apply" in the photo settings dialog', async () => {
@@ -416,12 +469,12 @@ it('saves photo settings via "Apply" in the photo settings dialog', async () => 
   });
   renderPage();
   await userEvent.click(screen.getByText('simulate drop photo-1'));
-  await userEvent.click(screen.getByRole('button', { name: /edit item/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^edit photo$/i }));
 
   await userEvent.type(screen.getByLabelText('Caption'), 'Beach day');
   await userEvent.click(screen.getByRole('button', { name: /^apply$/i }));
 
-  await waitFor(() => expect(screen.queryByText('Photo settings')).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByText('Edit photo')).not.toBeInTheDocument());
 });
 
 it('removes a photo from the collage via "Remove from collage" in the photo settings dialog', async () => {
@@ -432,12 +485,12 @@ it('removes a photo from the collage via "Remove from collage" in the photo sett
   });
   renderPage();
   await userEvent.click(screen.getByText('simulate drop photo-1'));
-  await userEvent.click(screen.getByRole('button', { name: /edit item/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^edit photo$/i }));
 
   await userEvent.click(screen.getByRole('button', { name: /remove from collage/i }));
 
-  await waitFor(() => expect(screen.queryByText('Photo settings')).not.toBeInTheDocument());
-  expect(screen.queryByRole('button', { name: /edit item/i })).not.toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByText('Edit photo')).not.toBeInTheDocument());
+  expect(screen.queryByRole('button', { name: /^edit photo$/i })).not.toBeInTheDocument();
 });
 
 it('warns before closing the tab when there are unsaved changes', async () => {

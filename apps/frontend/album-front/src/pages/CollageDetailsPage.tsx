@@ -4,6 +4,7 @@ import { logger } from '@tumbaland/frontend-core';
 import {
   Alert,
   Box,
+  Button,
   CircularProgress,
   IconButton,
   Snackbar,
@@ -22,7 +23,7 @@ import { CollageViewer, useCollageLive } from '../hooks/useCollageLive';
 import { useMotionReport, useRemoteMotion } from '../hooks/useCollageMotion';
 import { collageService } from '../services/collageService';
 import { CollagePerson, personColour } from '../components/collage/CollagePeople';
-import type { ServerChange } from '../components/collage/collageChanges';
+import type { DocChange, ServerChange } from '../components/collage/collageChanges';
 import {
   CollageDoc,
   EDITOR_BACKDROP,
@@ -35,6 +36,8 @@ import CollageStage, { ResolvedPhoto } from '../components/collage/CollageStage'
 import CollageToolbar from '../components/collage/CollageToolbar';
 import CollagePhotoTray, { AlbumPhoto } from '../components/collage/CollagePhotoTray';
 import CollagePhotoDialog from '../components/collage/CollagePhotoDialog';
+import CollageSelectionBar from '../components/collage/CollageSelectionBar';
+import CollageEmptyHint from '../components/collage/CollageEmptyHint';
 import CollageTextDialog from '../components/collage/CollageTextDialog';
 import { downloadBlob, exportCollageToPng } from '../components/collage/exportCollage';
 import { appPath } from '../appBase';
@@ -85,7 +88,9 @@ const CollageDetailsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const isViewMode = searchParams.get('mode') === 'view';
   // A phone held upright: the photo tray goes under the canvas, not beside it.
-  const phone = useMediaQuery(useTheme().breakpoints.down('sm'));
+  const theme = useTheme();
+  const phone = useMediaQuery(theme.breakpoints.down('sm'));
+  const narrow = useMediaQuery(theme.breakpoints.down('md'));
 
   const collageQuery = useCollageDetails(id);
   const { updateCollage } = useCollageMutations();
@@ -97,7 +102,16 @@ const CollageDetailsPage: React.FC = () => {
   const [session] = useState(newItemId);
   const [viewers, setViewers] = useState<CollageViewer[]>([]);
   const [editItemId, setEditItemId] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    severity: 'success' | 'error';
+    /** A removal that can be taken back from the toast. */
+    undo?: boolean;
+    /** The removal's undo step, once known; the toast lasts only while Undo would reverse it. */
+    undoStep?: DocChange | null;
+  } | null>(null);
+  /** Text just made by "Add text" and not yet written: cancelling its dialog takes it away again. */
+  const freshText = useRef<string | null>(null);
 
   const collage = collageQuery.data?.collage;
   const albumPhotos = useMemo(() => (collageQuery.data?.albumPhotos ?? []) as AlbumPhoto[], [collageQuery.data]);
@@ -248,11 +262,13 @@ const CollageDetailsPage: React.FC = () => {
 
   // What this tab has selected, for the others to see outlined. Sent again on
   // reconnect, since the server forgets a tab when its stream closes.
+  // By id: the photo tray refetching the collage is not a reason to send it again.
   const selectedId = isViewMode ? null : editor.selectedId;
+  const collageId = collage?._id;
   useEffect(() => {
-    if (!collage || !live.connected) return;
-    collageService.setPresence(collage._id, session, selectedId).catch(() => undefined);
-  }, [collage, live.connected, session, selectedId]);
+    if (!collageId || !live.connected) return;
+    collageService.setPresence(collageId, session, selectedId).catch(() => undefined);
+  }, [collageId, live.connected, session, selectedId]);
 
   const handleExport = useCallback(async () => {
     if (!doc) return;
@@ -290,6 +306,41 @@ const CollageDetailsPage: React.FC = () => {
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [sync.unsaved]);
 
+  // Removing is one tap on a phone, so it says so and offers the way back.
+  const removeItem = useCallback(
+    (id: string) => {
+      const isText = doc?.texts.some((t) => t.id === id);
+      // Already gone (someone else removed it): nothing was done, so nothing to undo.
+      if (!isText && !doc?.photos.some((p) => p.id === id)) return;
+      editor.removeItem(id);
+      setToast({ message: isText ? 'Text removed' : 'Photo removed', severity: 'success', undo: true });
+    },
+    [doc, editor]
+  );
+
+  // "Undo" on the toast reverses the removal, never something done after it:
+  // any later step of this editor's own ends the offer.
+  const { lastChange } = editor;
+  useEffect(() => {
+    if (!toast?.undo) return;
+    if (toast.undoStep === undefined) setToast({ ...toast, undoStep: lastChange });
+    else if (lastChange !== toast.undoStep) setToast(null);
+  }, [toast, lastChange]);
+
+  const addText = useCallback(() => {
+    const id = editor.addText();
+    freshText.current = id;
+    setEditItemId(id);
+  }, [editor]);
+
+  /** Leaving the text dialog without applying: a text added a moment ago goes with it. */
+  const closeTextDialog = useCallback(() => {
+    // Its dialog is modal, so adding it is still the step Undo would take back.
+    if (freshText.current && freshText.current === editItemId) editor.undo();
+    freshText.current = null;
+    setEditItemId(null);
+  }, [editor, editItemId]);
+
   // Keyboard shortcuts (edit mode, and not while typing or in a dialog)
   useEffect(() => {
     if (isViewMode) return;
@@ -312,7 +363,7 @@ const CollageDetailsPage: React.FC = () => {
         void sync.flush();
       } else if ((e.key === 'Delete' || e.key === 'Backspace') && editor.selectedId) {
         e.preventDefault();
-        editor.removeItem(editor.selectedId);
+        removeItem(editor.selectedId);
       } else if (e.key === 'Escape') {
         editor.select(null);
       } else if (e.key.startsWith('Arrow') && editor.selectedId && selectedItem) {
@@ -328,7 +379,7 @@ const CollageDetailsPage: React.FC = () => {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [editor, selectedItem, editItemId, isViewMode, sync]);
+  }, [editor, selectedItem, editItemId, isViewMode, sync, removeItem]);
 
   const editingItem = useMemo(() => {
     if (!doc || !editItemId) return null;
@@ -402,21 +453,18 @@ const CollageDetailsPage: React.FC = () => {
           frameColor={doc.frameColor}
           frameEnabled={doc.frameEnabled}
           zoom={zoom}
-          hasSelection={Boolean(selectedItem)}
           onBack={() => void handleBack()}
           onUndo={editor.undo}
           onRedo={editor.redo}
-          onAddText={() => editor.addText()}
+          // Straight into writing it: a placeholder to find and double-click is
+          // no way in on a phone.
+          onAddText={addText}
           onBackgroundChange={(background) => editor.patchDoc({ background })}
           onFrameColorChange={(frameColor) => editor.patchDoc({ frameColor })}
           onFrameEnabledChange={(frameEnabled) => editor.patchDoc({ frameEnabled })}
           onZoomChange={setZoom}
           onExport={handleExport}
           onPreview={() => setMode(true)}
-          onEditSelected={() => selectedItem && setEditItemId(selectedItem.item.id)}
-          onDeleteSelected={() => editor.selectedId && editor.removeItem(editor.selectedId)}
-          onBringForward={() => editor.selectedId && editor.reorderItem(editor.selectedId, 1)}
-          onSendBackward={() => editor.selectedId && editor.reorderItem(editor.selectedId, -1)}
         />
       )}
 
@@ -467,19 +515,34 @@ const CollageDetailsPage: React.FC = () => {
             layout={phone ? 'bottom' : 'side'}
           />
         )}
-        <CollageStage
-          editor={editor}
-          resolvePhoto={resolvePhoto}
-          readOnly={isViewMode}
-          zoom={isViewMode ? 0 : zoom}
-          onEditItem={setEditItemId}
-          people={people}
-          motions={motions}
-          onDropPhoto={(photoId, x, y) => {
-            const photo = photoById.get(photoId);
-            if (photo) placePhoto(photo, { x, y });
-          }}
-        />
+        <Box sx={{ flex: 1, display: 'flex', position: 'relative', minWidth: 0, minHeight: 0 }}>
+          <CollageStage
+            editor={editor}
+            resolvePhoto={resolvePhoto}
+            readOnly={isViewMode}
+            // The narrow toolbar has no zoom control, so it is always Fit there.
+            zoom={isViewMode || narrow ? 0 : zoom}
+            onEditItem={setEditItemId}
+            people={people}
+            motions={motions}
+            onDropPhoto={(photoId, x, y) => {
+              const photo = photoById.get(photoId);
+              if (photo) placePhoto(photo, { x, y });
+            }}
+          />
+          {!isViewMode && doc && doc.photos.length === 0 && doc.texts.length === 0 && (
+            <CollageEmptyHint trayBelow={phone} />
+          )}
+          {!isViewMode && selectedItem && !editor.gestureActive && (
+            <CollageSelectionBar
+              kind={selectedItem.kind}
+              onEdit={() => setEditItemId(selectedItem.item.id)}
+              onBringForward={() => editor.reorderItem(selectedItem.item.id, 1)}
+              onSendBackward={() => editor.reorderItem(selectedItem.item.id, -1)}
+              onDelete={() => removeItem(selectedItem.item.id)}
+            />
+          )}
+        </Box>
       </Box>
 
       <CollagePhotoDialog
@@ -492,23 +555,47 @@ const CollageDetailsPage: React.FC = () => {
         }
         onClose={() => setEditItemId(null)}
         onSave={(patch) => editItemId && editor.patchItem(editItemId, patch)}
-        onDelete={() => editItemId && editor.removeItem(editItemId)}
+        onDelete={() => editItemId && removeItem(editItemId)}
       />
       <CollageTextDialog
         open={editingItem?.kind === 'text'}
         text={editingItem?.kind === 'text' ? editingItem.text : null}
-        onClose={() => setEditItemId(null)}
-        onSave={(patch) => editItemId && editor.patchItem(editItemId, patch)}
-        onDelete={() => editItemId && editor.removeItem(editItemId)}
+        onClose={closeTextDialog}
+        onSave={(patch) => {
+          freshText.current = null;
+          if (editItemId) editor.patchItem(editItemId, patch);
+        }}
+        // Deleting a text never written is the same as cancelling it: nothing to undo.
+        onDelete={() => editItemId && freshText.current !== editItemId && removeItem(editItemId)}
       />
 
       <Snackbar
         open={Boolean(toast)}
-        autoHideDuration={3500}
-        onClose={() => setToast(null)}
+        autoHideDuration={toast?.undo ? 6000 : 3500}
+        onClose={(_, reason) => reason !== 'clickaway' && setToast(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity={toast?.severity ?? 'success'} variant="filled" onClose={() => setToast(null)}>
+        <Alert
+          severity={toast?.severity ?? 'success'}
+          variant="filled"
+          icon={toast?.undo ? false : undefined}
+          onClose={toast?.undo ? undefined : () => setToast(null)}
+          action={
+            toast?.undo ? (
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => {
+                  editor.undo();
+                  setToast(null);
+                }}
+              >
+                Undo
+              </Button>
+            ) : undefined
+          }
+          sx={toast?.undo ? { bgcolor: '#1c1c1e', color: '#fff', alignItems: 'center' } : undefined}
+        >
           {toast?.message}
         </Alert>
       </Snackbar>

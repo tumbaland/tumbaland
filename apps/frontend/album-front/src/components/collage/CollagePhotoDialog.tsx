@@ -73,6 +73,9 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
 }) => {
   // A phone: the whole screen, with room for the keyboard.
   const fullScreen = useMediaQuery(useTheme().breakpoints.down('sm'));
+  // Not on a touch screen: the keyboard would come up over the crop area
+  // before anyone has decided to write a caption.
+  const finePointer = useMediaQuery('(pointer: fine)');
   const [caption, setCaption] = useState('');
   const [rotation, setRotation] = useState(0);
   const [frame, setFrame] = useState<string>(INHERIT);
@@ -123,7 +126,7 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
 
   return (
     <Dialog open={open} fullScreen={fullScreen} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Photo settings</DialogTitle>
+      <DialogTitle>Edit photo</DialogTitle>
       <DialogContent>
         {photoSrc && (
           <>
@@ -188,7 +191,7 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
           </>
         )}
         <TextField
-          autoFocus
+          autoFocus={finePointer}
           label="Caption"
           fullWidth
           margin="dense"

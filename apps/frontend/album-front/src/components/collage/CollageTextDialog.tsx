@@ -12,7 +12,7 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
-import { CollageTextItem } from './collageDoc';
+import { CollageTextItem, DEFAULT_TEXT } from './collageDoc';
 
 interface CollageTextDialogProps {
   open: boolean;
@@ -55,6 +55,8 @@ const CollageTextDialog: React.FC<CollageTextDialogProps> = ({ open, text, onClo
           margin="dense"
           value={value}
           onChange={(e) => setValue(e.target.value)}
+          // Fresh from "Add text": typing replaces the placeholder.
+          onFocus={(e) => value === DEFAULT_TEXT && e.target.select()}
         />
         <Box sx={{ mt: 2, px: 1 }}>
           <Typography variant="body2" sx={{ color: 'text.secondary' }} gutterBottom>

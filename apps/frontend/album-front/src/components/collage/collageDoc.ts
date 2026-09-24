@@ -84,6 +84,9 @@ export const DEFAULT_TEXT_COLOR = '#e91e63';
 export const EDITOR_BACKDROP = '#1e293b';
 export const DEFAULT_TEXT_SIZE = 32;
 
+/** What "Add text" puts on the canvas, selected in the text dialog so typing replaces it. */
+export const DEFAULT_TEXT = 'Your text';
+
 export const newItemId = (): string =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()

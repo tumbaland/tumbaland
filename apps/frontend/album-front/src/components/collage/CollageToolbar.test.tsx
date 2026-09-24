@@ -13,7 +13,6 @@ function baseProps() {
     frameColor: '#ffffff',
     frameEnabled: true,
     zoom: 1,
-    hasSelection: false,
     onBack: vi.fn(),
     onUndo: vi.fn(),
     onRedo: vi.fn(),
@@ -23,11 +22,7 @@ function baseProps() {
     onFrameEnabledChange: vi.fn(),
     onZoomChange: vi.fn(),
     onExport: vi.fn(),
-    onPreview: vi.fn(),
-    onEditSelected: vi.fn(),
-    onDeleteSelected: vi.fn(),
-    onBringForward: vi.fn(),
-    onSendBackward: vi.fn()
+    onPreview: vi.fn()
   };
 }
 
@@ -120,30 +115,11 @@ it('changes the background and frame colors via the color swatches', () => {
   expect(props.onFrameColorChange).toHaveBeenCalledWith('#00ff00');
 });
 
-it('omits the selection-only actions when hasSelection is false', () => {
-  render(<CollageToolbar {...baseProps()} hasSelection={false} />);
+it('has no actions for a selected item: those are on the canvas', () => {
+  render(<CollageToolbar {...baseProps()} />);
 
-  expect(screen.queryByRole('button', { name: /edit item/i })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /bring forward/i })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /send backward/i })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /delete item/i })).not.toBeInTheDocument();
-});
-
-it('shows and wires the selection-only actions when hasSelection is true', async () => {
-  const props = baseProps();
-  render(<CollageToolbar {...props} hasSelection />);
-
-  await userEvent.click(screen.getByRole('button', { name: /edit item/i }));
-  expect(props.onEditSelected).toHaveBeenCalledTimes(1);
-
-  await userEvent.click(screen.getByRole('button', { name: /bring forward/i }));
-  expect(props.onBringForward).toHaveBeenCalledTimes(1);
-
-  await userEvent.click(screen.getByRole('button', { name: /send backward/i }));
-  expect(props.onSendBackward).toHaveBeenCalledTimes(1);
-
-  await userEvent.click(screen.getByRole('button', { name: /delete item/i }));
-  expect(props.onDeleteSelected).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
 });
 
 describe('on a phone', () => {
@@ -182,15 +158,5 @@ describe('on a phone', () => {
     fireEvent.change(screen.getByLabelText('Background color'), { target: { value: '#ff0000' } });
 
     expect(props.onBackgroundChange).toHaveBeenCalledWith('#ff0000');
-  });
-
-  it('puts labelled actions for the selected item on a row of their own', async () => {
-    const props = baseProps();
-    render(<CollageToolbar {...props} hasSelection />);
-
-    const row = screen.getByRole('toolbar', { name: 'Selected item' });
-    expect(row).toHaveTextContent(/Edit.*Forward.*Back.*Delete/);
-    await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
-    expect(props.onDeleteSelected).toHaveBeenCalled();
   });
 });

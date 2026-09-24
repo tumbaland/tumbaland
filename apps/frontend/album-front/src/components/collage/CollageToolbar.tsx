@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Button,
   CircularProgress,
   Divider,
   IconButton,
@@ -27,10 +26,6 @@ import RedoIcon from '@mui/icons-material/Redo';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
 import DownloadIcon from '@mui/icons-material/Download';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import DeleteIcon from '@mui/icons-material/Delete';
-import TuneIcon from '@mui/icons-material/Tune';
-import FlipToFrontIcon from '@mui/icons-material/FlipToFront';
-import FlipToBackIcon from '@mui/icons-material/FlipToBack';
 import FilterFramesIcon from '@mui/icons-material/FilterFrames';
 import type { SaveStatus } from '../../hooks/useCollageSync';
 import { CollagePeopleFaces, CollagePerson } from './CollagePeople';
@@ -72,7 +67,6 @@ interface CollageToolbarProps {
   frameColor: string;
   frameEnabled: boolean;
   zoom: number;
-  hasSelection: boolean;
   onBack: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -83,10 +77,6 @@ interface CollageToolbarProps {
   onZoomChange: (zoom: number) => void;
   onExport: () => void;
   onPreview: () => void;
-  onEditSelected: () => void;
-  onDeleteSelected: () => void;
-  onBringForward: () => void;
-  onSendBackward: () => void;
 }
 
 /**
@@ -134,19 +124,26 @@ const ColorMenuItem: React.FC<ColorSwatchProps & { icon: React.ReactNode }> = ({
       aria-label={label}
       value={value}
       onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
-      sx={{ width: 32, height: 32, p: 0, ml: 2, border: '1px solid rgba(128,128,128,0.5)', borderRadius: 1, bgcolor: 'transparent' }}
+      sx={{
+        width: 32,
+        height: 32,
+        p: 0,
+        ml: 2,
+        border: '1px solid rgba(128,128,128,0.5)',
+        borderRadius: 1,
+        bgcolor: 'transparent'
+      }}
     />
   </MenuItem>
 );
 
 /**
  * The toolbar on a narrow screen. One row of what is used all the time, at a
- * size for fingers, with the rest behind the ⋯ menu; and, while something is
- * selected, a second row of what can be done to it, labelled, since there is
- * no hovering over an icon to learn what it does.
+ * size for fingers, with the rest behind the ⋯ menu. What can be done to a
+ * selected item is on the canvas (CollageSelectionBar), not here.
  */
 const CompactToolbar: React.FC<CollageToolbarProps> = (props) => {
-  const { title, saveStatus, canUndo, canRedo, background, frameColor, frameEnabled, hasSelection } = props;
+  const { title, saveStatus, canUndo, canRedo, background, frameColor, frameEnabled } = props;
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const closeThen = (action: () => void) => () => {
     setMenuAnchor(null);
@@ -154,18 +151,21 @@ const CompactToolbar: React.FC<CollageToolbarProps> = (props) => {
   };
 
   return (
-    <Paper
-      square
-      elevation={4}
-      sx={{ zIndex: 50, pt: 'env(safe-area-inset-top)', px: 'env(safe-area-inset-left)' }}
-    >
+    <Paper square elevation={4} sx={{ zIndex: 50, pt: 'env(safe-area-inset-top)', px: 'env(safe-area-inset-left)' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, px: 0.5, minHeight: 52 }}>
         <IconButton onClick={props.onBack} aria-label="Back to collages">
           <ArrowBackIcon />
         </IconButton>
         <Typography
           variant="subtitle1"
-          sx={{ fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          sx={{
+            fontWeight: 600,
+            flex: 1,
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}
         >
           {title}
         </Typography>
@@ -184,27 +184,6 @@ const CompactToolbar: React.FC<CollageToolbarProps> = (props) => {
           <MoreVertIcon />
         </IconButton>
       </Box>
-
-      {hasSelection && (
-        <Box
-          role="toolbar"
-          aria-label="Selected item"
-          sx={{ display: 'flex', justifyContent: 'space-around', borderTop: 1, borderColor: 'divider', py: 0.25 }}
-        >
-          <Button size="small" startIcon={<TuneIcon />} onClick={props.onEditSelected}>
-            Edit
-          </Button>
-          <Button size="small" startIcon={<FlipToFrontIcon />} onClick={props.onBringForward}>
-            Forward
-          </Button>
-          <Button size="small" startIcon={<FlipToBackIcon />} onClick={props.onSendBackward}>
-            Back
-          </Button>
-          <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={props.onDeleteSelected}>
-            Delete
-          </Button>
-        </Box>
-      )}
 
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
         <ColorMenuItem
@@ -250,7 +229,7 @@ const CollageToolbar: React.FC<CollageToolbarProps> = (props) => {
 };
 
 const WideToolbar: React.FC<CollageToolbarProps> = (props) => {
-  const { title, saveStatus, canUndo, canRedo, background, frameColor, frameEnabled, zoom, hasSelection } = props;
+  const { title, saveStatus, canUndo, canRedo, background, frameColor, frameEnabled, zoom } = props;
 
   return (
     <Paper
@@ -341,32 +320,6 @@ const WideToolbar: React.FC<CollageToolbarProps> = (props) => {
         <MenuItem value={1}>100%</MenuItem>
         <MenuItem value={1.5}>150%</MenuItem>
       </Select>
-
-      {hasSelection && (
-        <>
-          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-          <Tooltip title="Edit item">
-            <IconButton onClick={props.onEditSelected} size="small">
-              <TuneIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Bring forward">
-            <IconButton onClick={props.onBringForward} size="small">
-              <FlipToFrontIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Send backward">
-            <IconButton onClick={props.onSendBackward} size="small">
-              <FlipToBackIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Delete item (Del)">
-            <IconButton onClick={props.onDeleteSelected} size="small" color="error">
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </>
-      )}
 
       <Box sx={{ flex: 1 }} />
 
