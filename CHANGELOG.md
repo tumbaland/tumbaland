@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.520](https://github.com/toomastahves/tumbaland/compare/app-v0.0.519...app-v0.0.520) (2026-09-25)
+
+### Features
+
+* lot of quality of life improvements ([5c78ba0](https://github.com/toomastahves/tumbaland/commit/5c78ba02152d93d6a4f2f8bda99e7863f63095d0))
+
 ## [0.0.519](https://github.com/toomastahves/tumbaland/compare/app-v0.0.518...app-v0.0.519) (2026-09-24)
 
 ### Features
