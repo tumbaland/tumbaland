@@ -16,6 +16,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import DownloadIcon from '@mui/icons-material/Download';
+import MovieOutlinedIcon from '@mui/icons-material/MovieOutlined';
 import { useCollageDetails, useCollageMutations } from '../hooks/useCollage';
 import { useCollageEditor } from '../hooks/useCollageEditor';
 import { useCollageSync } from '../hooks/useCollageSync';
@@ -27,6 +28,7 @@ import type { DocChange, ServerChange } from '../components/collage/collageChang
 import {
   CollageDoc,
   EDITOR_BACKDROP,
+  isVideoType,
   newItemId,
   normalizeCollageConfig,
   serializeCollageDoc
@@ -39,7 +41,17 @@ import CollagePhotoDialog from '../components/collage/CollagePhotoDialog';
 import CollageSelectionBar from '../components/collage/CollageSelectionBar';
 import CollageEmptyHint from '../components/collage/CollageEmptyHint';
 import CollageTextDialog from '../components/collage/CollageTextDialog';
-import { downloadBlob, exportCollageToPng } from '../components/collage/exportCollage';
+import CollageChatDock from '../components/collage/CollageChatDock';
+import { DEFAULT_SHAPE_COLOR } from '../components/collage/CollageAddMenu';
+import { ITEM_NAMES } from '../components/collage/CollageSelectionBar';
+import { ensureCollageFonts } from '../components/collage/collageElements';
+import {
+  collageMoves,
+  downloadBlob,
+  exportCollageToPng,
+  exportCollageToVideo
+} from '../components/collage/exportCollage';
+import { chatDockAvailable } from '../services/chatDock';
 import { appPath } from '../appBase';
 
 /**
@@ -81,6 +93,32 @@ const needsIds = (config?: CollageConfig | null): boolean =>
 /** How long the tray waits for more new photos before fetching them all at once. */
 const PHOTOS_REFETCH_DELAY_MS = 800;
 
+/** Whether chat was left open beside the collage, on this device. */
+const CHAT_OPEN_KEY = 'tumbaland.collage.chatOpen';
+
+const readChatOpen = (): boolean => {
+  try {
+    return window.localStorage.getItem(CHAT_OPEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+
+/** A video's own size, read from the file when the album never stored it. */
+const readVideoSize = (src: string): Promise<{ width: number; height: number }> =>
+  new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.onloadedmetadata = () => resolve({ width: video.videoWidth, height: video.videoHeight });
+    video.onerror = () => reject(new Error('Could not read the video'));
+    video.src = src;
+  });
+
+/** "25 September 2026", for the date element. */
+const todayLabel = (): string =>
+  new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+
 /** Full-screen collage editor / viewer. Route: /collages/:id[?mode=view] */
 const CollageDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -112,6 +150,24 @@ const CollageDetailsPage: React.FC = () => {
   } | null>(null);
   /** Text just made by "Add text" and not yet written: cancelling its dialog takes it away again. */
   const freshText = useRef<string | null>(null);
+  const [exportingVideo, setExportingVideo] = useState(false);
+
+  // Chat beside the canvas, drawn by the shell. Not offered where there is no shell.
+  const [chatAvailable] = useState(chatDockAvailable);
+  const [chatOpen, setChatOpen] = useState(readChatOpen);
+  const toggleChat = useCallback(() => {
+    setChatOpen((open) => {
+      try {
+        window.localStorage.setItem(CHAT_OPEN_KEY, open ? '0' : '1');
+      } catch {
+        // Private mode: it just starts closed next time.
+      }
+      return !open;
+    });
+  }, []);
+
+  // Text in a chosen font should look right on the canvas, not only in the export.
+  useEffect(() => ensureCollageFonts(), []);
 
   const collage = collageQuery.data?.collage;
   const albumPhotos = useMemo(() => (collageQuery.data?.albumPhotos ?? []) as AlbumPhoto[], [collageQuery.data]);
@@ -135,9 +191,13 @@ const CollageDetailsPage: React.FC = () => {
     (photoId: string): ResolvedPhoto | undefined => {
       const p = photoById.get(photoId);
       if (!p) return undefined;
+      const video = isVideoType(p.mimetype);
       return {
         src: p.signedUrl,
-        thumbSrc: p.thumbnailSignedUrl,
+        // A video's thumbnail link is the video itself; its still is the poster.
+        thumbSrc: video ? p.posterSignedUrl : p.thumbnailSignedUrl,
+        posterSrc: p.posterSignedUrl,
+        mimetype: p.mimetype,
         width: p.width,
         height: p.height,
         title: p.title
@@ -179,6 +239,10 @@ const CollageDetailsPage: React.FC = () => {
       };
       if (photo.width && photo.height) {
         place(photo.width, photo.height);
+      } else if (isVideoType(photo.mimetype) && photo.signedUrl) {
+        readVideoSize(photo.signedUrl)
+          .then(({ width, height }) => place(width, height))
+          .catch(() => place(16, 9));
       } else if (photo.signedUrl || photo.thumbnailSignedUrl) {
         // older photos have no stored dimensions; read them from the image itself
         const img = new Image();
@@ -284,6 +348,41 @@ const CollageDetailsPage: React.FC = () => {
     }
   }, [doc, collage, resolvePhoto]);
 
+  const moves = useMemo(() => collageMoves(doc, resolvePhoto), [doc, resolvePhoto]);
+
+  const handleExportVideo = useCallback(async () => {
+    if (!doc || exportingVideo) return;
+    setExportingVideo(true);
+    setToast({ message: 'Making the video. This takes as long as the clip.', severity: 'success' });
+    try {
+      const { blob, extension } = await exportCollageToVideo(doc, resolvePhoto);
+      downloadBlob(blob, `${collage?.title || 'collage'}.${extension}`);
+      setToast({ message: 'Video downloaded', severity: 'success' });
+    } catch (e) {
+      logger.error('Failed to export collage video', e);
+      setToast({
+        message: e instanceof Error ? e.message : 'Failed to make the video',
+        severity: 'error'
+      });
+    } finally {
+      setExportingVideo(false);
+    }
+  }, [doc, collage, resolvePhoto, exportingVideo]);
+
+  /** A photo dragged in from the chat: placed if it is in one of the collage's albums. */
+  const placeChatFile = useCallback(
+    (fileId: string, x: number, y: number) => {
+      const photo = albumPhotos.find((p) => p.minioFileId === fileId);
+      if (photo) placePhoto(photo, { x, y });
+      else
+        setToast({
+          message: "That photo isn't in this collage's albums yet. Save it to one of them first.",
+          severity: 'error'
+        });
+    },
+    [albumPhotos, placePhoto]
+  );
+
   const handleBack = useCallback(async () => {
     const saved = await sync.flush();
     if (!saved && !window.confirm('Your latest changes are not saved yet. Leave anyway?')) return;
@@ -309,11 +408,12 @@ const CollageDetailsPage: React.FC = () => {
   // Removing is one tap on a phone, so it says so and offers the way back.
   const removeItem = useCallback(
     (id: string) => {
-      const isText = doc?.texts.some((t) => t.id === id);
+      const overlay = doc?.texts.find((t) => t.id === id);
       // Already gone (someone else removed it): nothing was done, so nothing to undo.
-      if (!isText && !doc?.photos.some((p) => p.id === id)) return;
+      if (!overlay && !doc?.photos.some((p) => p.id === id)) return;
       editor.removeItem(id);
-      setToast({ message: isText ? 'Text removed' : 'Photo removed', severity: 'success', undo: true });
+      const name = overlay ? ITEM_NAMES[overlay.kind ?? 'text'] : ITEM_NAMES.photo;
+      setToast({ message: `${name[0]!.toUpperCase()}${name.slice(1)} removed`, severity: 'success', undo: true });
     },
     [doc, editor]
   );
@@ -459,6 +559,12 @@ const CollageDetailsPage: React.FC = () => {
           // Straight into writing it: a placeholder to find and double-click is
           // no way in on a phone.
           onAddText={addText}
+          onAddSticker={editor.addSticker}
+          onAddShape={(shape) => editor.addShape(shape, DEFAULT_SHAPE_COLOR)}
+          onAddDate={() => editor.addText({ text: todayLabel(), width: 360, height: 60 })}
+          chat={chatAvailable ? { open: chatOpen, onToggle: toggleChat } : undefined}
+          onExportVideo={moves ? () => void handleExportVideo() : undefined}
+          exportingVideo={exportingVideo}
           onBackgroundChange={(background) => editor.patchDoc({ background })}
           onFrameColorChange={(frameColor) => editor.patchDoc({ frameColor })}
           onFrameEnabledChange={(frameEnabled) => editor.patchDoc({ frameEnabled })}
@@ -494,6 +600,25 @@ const CollageDetailsPage: React.FC = () => {
               <DownloadIcon fontSize="small" />
             </IconButton>
           </Tooltip>
+          {moves && (
+            <Tooltip title="Download as video">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={() => void handleExportVideo()}
+                  disabled={exportingVideo}
+                  aria-label="Download as video"
+                  sx={{ color: '#fff', bgcolor: 'rgba(0,0,0,0.4)' }}
+                >
+                  {exportingVideo ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : (
+                    <MovieOutlinedIcon fontSize="small" />
+                  )}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
           <Tooltip title="Back to collages">
             <IconButton
               size="small"
@@ -507,6 +632,7 @@ const CollageDetailsPage: React.FC = () => {
       )}
 
       <Box sx={{ flex: 1, display: 'flex', flexDirection: phone ? 'column-reverse' : 'row', minHeight: 0 }}>
+        {!isViewMode && chatAvailable && chatOpen && phone && <CollageChatDock layout="bottom" onClose={toggleChat} />}
         {!isViewMode && (
           <CollagePhotoTray
             photos={albumPhotos}
@@ -529,6 +655,7 @@ const CollageDetailsPage: React.FC = () => {
               const photo = photoById.get(photoId);
               if (photo) placePhoto(photo, { x, y });
             }}
+            onDropFile={placeChatFile}
           />
           {!isViewMode && doc && doc.photos.length === 0 && doc.texts.length === 0 && (
             <CollageEmptyHint trayBelow={phone} />
@@ -543,6 +670,7 @@ const CollageDetailsPage: React.FC = () => {
             />
           )}
         </Box>
+        {!isViewMode && chatAvailable && chatOpen && !phone && <CollageChatDock layout="side" onClose={toggleChat} />}
       </Box>
 
       <CollagePhotoDialog
@@ -550,7 +678,10 @@ const CollageDetailsPage: React.FC = () => {
         photo={editingItem?.kind === 'photo' ? editingItem.photo : null}
         photoSrc={
           editingItem?.kind === 'photo'
-            ? resolvePhoto(editingItem.photo.photoId)?.thumbSrc || resolvePhoto(editingItem.photo.photoId)?.src
+            ? resolvePhoto(editingItem.photo.photoId)?.thumbSrc ||
+              (isVideoType(resolvePhoto(editingItem.photo.photoId)?.mimetype)
+                ? undefined
+                : resolvePhoto(editingItem.photo.photoId)?.src)
             : undefined
         }
         onClose={() => setEditItemId(null)}

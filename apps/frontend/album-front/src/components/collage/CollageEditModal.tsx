@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { Collage } from '../../types/collage';
-import { useAlbums } from '../../hooks/useAlbums';
+import { useAllAlbums } from '../../hooks/useAlbums';
 import { useTenantFilter } from '@tumbaland/frontend-core';
 
 /**
@@ -52,7 +52,7 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
     albums,
     loading: albumsLoading,
     fetchAlbums
-  } = useAlbums({
+  } = useAllAlbums({
     groupId: tenantGroupId, // Pass groupId only if present (group context), undefined for personal
     includeCover: false
   });

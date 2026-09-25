@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useReducer } from 'react';
 import {
+  cleanTextPatch,
   CollageDoc,
   CollagePhotoItem,
+  CollageShape,
   CollageTextItem,
   DEFAULT_TEXT,
   DEFAULT_TEXT_COLOR,
@@ -149,6 +151,9 @@ const patchItems = <T extends { id: string }>(items: T[], id: string, patch: Par
   return next;
 };
 
+/** What an overlay item is, for the selection bar and the dialogs. */
+export const overlayKind = (item: CollageTextItem): 'text' | 'sticker' | 'shape' => item.kind ?? 'text';
+
 const moveInArray = <T>(items: T[], from: number, to: number): T[] => {
   if (from === to || from < 0 || to < 0 || to >= items.length) return items;
   const next = items.slice();
@@ -184,7 +189,7 @@ export const useCollageEditor = () => {
       updater: (d) => ({
         ...d,
         photos: patchItems(d.photos, id, patch as Partial<CollagePhotoItem>),
-        texts: patchItems(d.texts, id, patch as Partial<CollageTextItem>)
+        texts: patchItems(d.texts, id, cleanTextPatch(patch as Partial<CollageTextItem>))
       })
     });
   }, []);
@@ -194,7 +199,7 @@ export const useCollageEditor = () => {
       commit((d) => ({
         ...d,
         photos: patchItems(d.photos, id, patch as Partial<CollagePhotoItem>),
-        texts: patchItems(d.texts, id, patch as Partial<CollageTextItem>)
+        texts: patchItems(d.texts, id, cleanTextPatch(patch as Partial<CollageTextItem>))
       })),
     [commit]
   );
@@ -216,29 +221,56 @@ export const useCollageEditor = () => {
   const addText = useCallback(
     (text?: Partial<Omit<CollageTextItem, 'id'>>) => {
       const id = newItemId();
-      commit(
-        (d) => ({
+      commit((d) => {
+        const width = text?.width ?? 240;
+        const height = text?.height ?? 60;
+        return {
           ...d,
           texts: [
             ...d.texts,
             {
               id,
               text: DEFAULT_TEXT,
-              x: d.canvas.width / 2 - 120,
-              y: d.canvas.height / 2 - 30,
-              width: 240,
-              height: 60,
+              x: d.canvas.width / 2 - width / 2,
+              y: d.canvas.height / 2 - height / 2,
               fontSize: DEFAULT_TEXT_SIZE,
               color: DEFAULT_TEXT_COLOR,
-              ...text
+              ...text,
+              width,
+              height
             }
           ]
-        }),
-        id
-      );
+        };
+      }, id);
       return id;
     },
     [commit]
+  );
+
+  /** An emoji sticker in the middle of the canvas, selected. */
+  const addSticker = useCallback(
+    (emoji: string) => {
+      const size = Math.round(Math.min(doc?.canvas.width ?? 900, doc?.canvas.height ?? 900) * 0.16);
+      return addText({ kind: 'sticker', text: emoji, width: size, height: size, fontSize: size });
+    },
+    [addText, doc?.canvas.width, doc?.canvas.height]
+  );
+
+  /** A shape in the middle of the canvas, selected. */
+  const addShape = useCallback(
+    (shape: CollageShape, color: string) => {
+      const size = Math.round(Math.min(doc?.canvas.width ?? 900, doc?.canvas.height ?? 900) * 0.22);
+      const wide = shape === 'arrow' || shape === 'rectangle';
+      return addText({
+        kind: 'shape',
+        shape,
+        text: '',
+        color,
+        width: wide ? Math.round(size * 1.5) : size,
+        height: shape === 'arrow' ? Math.round(size * 0.75) : size
+      });
+    },
+    [addText, doc?.canvas.width, doc?.canvas.height]
   );
 
   const removeItem = useCallback(
@@ -272,7 +304,7 @@ export const useCollageEditor = () => {
     const photo = doc.photos.find((p) => p.id === selectedId);
     if (photo) return { kind: 'photo' as const, item: photo };
     const text = doc.texts.find((t) => t.id === selectedId);
-    if (text) return { kind: 'text' as const, item: text };
+    if (text) return { kind: overlayKind(text), item: text };
     return null;
   }, [doc, selectedId]);
 
@@ -299,6 +331,8 @@ export const useCollageEditor = () => {
     patchItem,
     addPhoto,
     addText,
+    addSticker,
+    addShape,
     removeItem,
     reorderItem,
     beginGesture,

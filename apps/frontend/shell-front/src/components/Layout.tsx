@@ -17,6 +17,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { ModuleHeader } from './ModuleHeader';
 import { ChatPanel } from './ChatPanel';
+import { ChatDockHost } from './ChatDockHost';
 import { CallLayer } from './CallLayer';
 
 /** Whether the desktop chat panel was left open, so it stays that way across visits. */
@@ -100,7 +101,9 @@ export default function Layout({ children }: LayoutProps) {
 
   // Desktop only, and not on the chat page itself, which would be the same
   // conversation twice with two live connections.
-  const showChatPanel = authenticated && !isMobile && !inChat && chatPanelOpen;
+  // Nor while a module has chat docked in its own page: that would be two copies.
+  const [chatDocked, setChatDocked] = useState(false);
+  const showChatPanel = authenticated && !isMobile && !inChat && chatPanelOpen && !chatDocked;
 
   // How tall the app may be right now, which is less than the screen while the
   // on-screen keyboard is up. See the hook for why `100dvh` alone is not enough.
@@ -255,6 +258,8 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {showChatPanel && <ChatPanel onClose={toggleChatPanel} />}
+
+      {authenticated && <ChatDockHost onDockedChange={setChatDocked} />}
 
       {authenticated && <CallLayer />}
 

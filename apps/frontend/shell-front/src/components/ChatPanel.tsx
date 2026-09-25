@@ -17,6 +17,8 @@ const chat = CHAT_APP as RemoteApp;
 
 interface ChatPanelProps {
   onClose: () => void;
+  /** Fills the element it is drawn in (docked in a module's page) rather than the side column. */
+  fill?: boolean;
 }
 
 /**
@@ -26,7 +28,7 @@ interface ChatPanelProps {
  * Narrow on purpose: it is for keeping up with what comes in and answering
  * quickly. The full page is one click away for anything longer.
  */
-export function ChatPanel({ onClose }: ChatPanelProps) {
+export function ChatPanel({ onClose, fill = false }: ChatPanelProps) {
   const [attempt, setAttempt] = useState(0);
   const Remote = remoteComponent(chat, CHAT_PANEL_MODULE);
 
@@ -35,13 +37,14 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
       component="aside"
       aria-label="Chat"
       sx={{
-        width: 'clamp(300px, 26vw, 380px)',
+        width: fill ? '100%' : 'clamp(300px, 26vw, 380px)',
         flexShrink: 0,
         height: '100%',
+        boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,
-        borderLeft: `1px solid ${surface.chromeEdge}`,
+        borderLeft: fill ? 'none' : `1px solid ${surface.chromeEdge}`,
         bgcolor: surface.default
       }}
     >
@@ -60,11 +63,14 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
         <Box component="span" sx={{ flex: 1, fontSize: 15, fontWeight: 700, color: ink.strong }}>
           {CHAT_APP.name}
         </Box>
-        <Tooltip title="Open full page">
-          <IconButton component={Link} to={CHAT_APP.route} size="small" aria-label="Open chat full page">
-            <OpenInFullIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        {/* Not from inside a module's page: leaving it is that page's call. */}
+        {!fill && (
+          <Tooltip title="Open full page">
+            <IconButton component={Link} to={CHAT_APP.route} size="small" aria-label="Open chat full page">
+              <OpenInFullIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
         <Tooltip title="Close">
           <IconButton size="small" aria-label="Close chat" onClick={onClose}>
             <CloseIcon fontSize="small" />

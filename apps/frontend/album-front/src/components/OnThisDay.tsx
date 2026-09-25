@@ -6,6 +6,7 @@ import { useMemories } from '../hooks/useMemories';
 import { MemoryPhoto, MemoryYear } from '../types';
 import { appPath } from '../appBase';
 import { MediaThumb } from '@tumbaland/frontend-core';
+import { mediaPreview } from '../utils/mediaPreview';
 
 interface OnThisDayProps {
   groupId?: string;
@@ -83,7 +84,7 @@ const MemoryTiles: React.FC<MemoryTilesProps> = ({ year, onSelect }) => {
       }}
     >
       {shown.map((photo, index) => {
-        const src = photo.thumbnailSignedUrl || photo.signedUrl;
+        const { src, mimetype } = mediaPreview(photo);
 
         return (
           <Tooltip key={photo._id} title={describe(photo)}>
@@ -115,7 +116,7 @@ const MemoryTiles: React.FC<MemoryTilesProps> = ({ year, onSelect }) => {
               {src ? (
                 <MediaThumb
                   src={src}
-                  mimetype={photo.mimetype}
+                  mimetype={mimetype}
                   alt={photo.title || photo.originalName}
                   loading="lazy"
                   sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}

@@ -11,6 +11,7 @@ interface AggregatedPhoto {
   filename: string;
   minioFileId?: string;
   minioThumbnailFileId?: string;
+  minioPosterFileId?: string;
   mimetype: string;
   createdAt: Date;
   title?: string;
@@ -35,6 +36,8 @@ interface PhotoWithSignedUrl extends AggregatedPhoto {
   thumbnailSignedUrl?: string;
   thumbnailSignedUrlExpiresAt?: string;
   thumbnailSignedUrlExpiresInMinutes?: number;
+  /** A video's still; it expires with the others. */
+  posterSignedUrl?: string;
 }
 
 interface CollageListFilter {
@@ -211,6 +214,7 @@ export const getCollageWithPhotos = async (
               filename: '$$photo.filename',
               minioFileId: '$$photo.minioFileId',
               minioThumbnailFileId: '$$photo.minioThumbnailFileId',
+              minioPosterFileId: '$$photo.minioPosterFileId',
               mimetype: '$$photo.mimetype',
               createdAt: '$$photo.createdAt',
               title: '$$photo.title',
@@ -251,7 +255,7 @@ export const getCollageWithPhotos = async (
   try {
     urlMap = await getSignedUrlsBatch(
       allPhotos
-        .flatMap((photo) => [photo.minioFileId, photo.minioThumbnailFileId])
+        .flatMap((photo) => [photo.minioFileId, photo.minioThumbnailFileId, photo.minioPosterFileId])
         .filter((id): id is string => Boolean(id)),
       60
     );
@@ -262,6 +266,7 @@ export const getCollageWithPhotos = async (
   const photosWithUrls: PhotoWithSignedUrl[] = allPhotos.map((photo) => {
     const original = photo.minioFileId ? urlMap[photo.minioFileId] : undefined;
     const thumbnail = photo.minioThumbnailFileId ? urlMap[photo.minioThumbnailFileId] : undefined;
+    const poster = photo.minioPosterFileId ? urlMap[photo.minioPosterFileId] : undefined;
     return {
       ...photo,
       signedUrl: original?.signedUrl,
@@ -269,7 +274,8 @@ export const getCollageWithPhotos = async (
       signedUrlExpiresInMinutes: original?.expiresInMinutes,
       thumbnailSignedUrl: thumbnail?.signedUrl,
       thumbnailSignedUrlExpiresAt: thumbnail?.expiresAt,
-      thumbnailSignedUrlExpiresInMinutes: thumbnail?.expiresInMinutes
+      thumbnailSignedUrlExpiresInMinutes: thumbnail?.expiresInMinutes,
+      posterSignedUrl: poster?.signedUrl
     };
   });
 

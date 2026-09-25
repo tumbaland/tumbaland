@@ -52,6 +52,8 @@ export interface ChatPhotoInput {
   fileId: string;
   /** Chat's display copy of an image. Left out for a video: Album plays a video's own first frame. */
   thumbnailFileId?: string | null;
+  /** Chat's still of a video, for places that need a picture rather than a player. */
+  posterFileId?: string | null;
   mimetype: string;
   size: number;
   width?: number | null;
@@ -88,6 +90,7 @@ export async function addChatPhoto(input: ChatPhotoInput): Promise<ChatPhotoResu
     // Album's grid plays a video's thumbnail link as a video, so a still
     // image there would show as broken. Images get chat's 640px copy.
     minioThumbnailFileId: video ? undefined : input.thumbnailFileId || undefined,
+    minioPosterFileId: video ? input.posterFileId || undefined : undefined,
     albumId: album._id.toString(),
     mimetype: input.mimetype,
     size: input.size,

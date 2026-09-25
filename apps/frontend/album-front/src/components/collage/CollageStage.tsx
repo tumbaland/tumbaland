@@ -9,21 +9,29 @@ import {
   CollageTextItem,
   EDITOR_BACKDROP,
   isQuarterTurned,
+  isVideoType,
   orientationTurns,
   photoHasFrame,
   sourceCrop
 } from './collageDoc';
 import { CollagePerson, FOLLOW_TRANSITION, RemoteSelections, StageMotion } from './CollagePeople';
+import { CHAT_FILE_DRAG_TYPE } from '../../services/chatDock';
+import { labelRadius, SHAPE_OUTLINE_WIDTH, SHAPE_PATHS, TEXT_SHADOW, textCss } from './collageElements';
 
 export interface ResolvedPhoto {
   src?: string;
   thumbSrc?: string;
+  /** A video's still, when there is one. */
+  posterSrc?: string;
+  /** The file's type: a video is drawn playing rather than as a still. */
+  mimetype?: string;
   width?: number;
   height?: number;
   title?: string;
 }
 
 export type ResolvePhoto = (photoId: string) => ResolvedPhoto | undefined;
+
 
 interface CollageStageProps {
   editor: CollageEditor;
@@ -33,6 +41,8 @@ interface CollageStageProps {
   zoom: number;
   onEditItem?: (id: string) => void;
   onDropPhoto?: (photoId: string, x: number, y: number) => void;
+  /** A photo dragged in from the chat, by its file id. */
+  onDropFile?: (fileId: string, x: number, y: number) => void;
   /** Other people with the collage open; what they have selected is outlined. */
   people?: CollagePerson[];
   /** Items other people are moving right now, drawn where they have them. */
@@ -57,7 +67,8 @@ interface Point {
 interface Gesture {
   mode: GestureMode | 'pinch';
   itemId: string;
-  isText: boolean;
+  /** Resizing keeps the proportions: photos and stickers, unless Shift is held. */
+  keepAspect: boolean;
   /** The finger or mouse that started it; other pointers' moves are not this gesture's. */
   pointerId: number;
   startClientX: number;
@@ -92,14 +103,13 @@ const normalizeAngle = (angle: number) => {
 
 /**
  * Two fingers on an item: spreading them resizes it about its centre, turning
- * them turns it (photos; text does not rotate), and moving both moves it.
+ * them turns it, and moving both moves it.
  */
 export const pinchGeometry = (
   start: Geometry,
   from: { a: Point; b: Point },
   to: { a: Point; b: Point },
-  scale: number,
-  rotates: boolean
+  scale: number
 ): Geometry => {
   const startDistance = distance(from.a, from.b);
   let factor = startDistance > 0 ? distance(to.a, to.b) / startDistance : 1;
@@ -113,9 +123,7 @@ export const pinchGeometry = (
   const centerX = start.x + start.width / 2 + (toMid.x - fromMid.x) / scale;
   const centerY = start.y + start.height / 2 + (toMid.y - fromMid.y) / scale;
 
-  const rotation = rotates
-    ? Math.round(normalizeAngle(start.rotation + angleOf(to.a, to.b) - angleOf(from.a, from.b)))
-    : start.rotation;
+  const rotation = Math.round(normalizeAngle(start.rotation + angleOf(to.a, to.b) - angleOf(from.a, from.b)));
   return { x: centerX - width / 2, y: centerY - height / 2, width, height, rotation };
 };
 
@@ -198,7 +206,26 @@ const StagePhoto: React.FC<{
       onDoubleClick={readOnly ? undefined : onDoubleClick}
     >
       <Box sx={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', borderRadius: '4px' }}>
-        {src ? (
+        {isVideoType(resolved?.mimetype) && resolved?.src ? (
+          <Box sx={orientedLayer(content, photo.orientation)}>
+            {/* Plays silently on a loop, as it would in a moving collage. */}
+            <video
+              src={resolved.src}
+              poster={resolved.posterSrc}
+              aria-label={resolved?.title || 'collage video'}
+              muted
+              loop
+              autoPlay
+              playsInline
+              style={{
+                ...cropImageStyle(sourceCrop(photo)),
+                objectFit: 'cover',
+                display: 'block',
+                pointerEvents: 'none'
+              }}
+            />
+          </Box>
+        ) : src ? (
           <Box sx={orientedLayer(content, photo.orientation)}>
             <img
               src={src}
@@ -261,6 +288,33 @@ const StagePhoto: React.FC<{
   );
 };
 
+/** A shape, stretched to its box; its outline keeps one width whatever the size. */
+const ShapeSvg: React.FC<{ item: CollageTextItem }> = ({ item }) => (
+  <svg
+    viewBox="0 0 100 100"
+    preserveAspectRatio="none"
+    width="100%"
+    height="100%"
+    style={{
+      display: 'block',
+      overflow: 'visible',
+      filter: item.shadow
+        ? `drop-shadow(0 ${TEXT_SHADOW.offsetY}px ${TEXT_SHADOW.blur / 2}px ${TEXT_SHADOW.color})`
+        : undefined
+    }}
+  >
+    <path
+      d={SHAPE_PATHS[item.shape!]}
+      fill={item.color}
+      stroke={item.outline || 'none'}
+      strokeWidth={item.outline ? SHAPE_OUTLINE_WIDTH : 0}
+      strokeLinejoin="round"
+      vectorEffect="non-scaling-stroke"
+    />
+  </svg>
+);
+
+/** A text, sticker or shape: everything on the layer above the photos. */
 const StageText: React.FC<{
   text: CollageTextItem;
   selected: boolean;
@@ -268,56 +322,66 @@ const StageText: React.FC<{
   followed?: boolean;
   onPointerDown: (e: React.PointerEvent, id: string) => void;
   onDoubleClick?: () => void;
-}> = ({ text, selected, readOnly, followed, onPointerDown, onDoubleClick }) => (
-  <Box
-    data-item-id={text.id}
-    sx={{
-      position: 'absolute',
-      left: text.x,
-      top: text.y,
-      width: text.width,
-      height: text.height,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      cursor: readOnly ? 'default' : 'grab',
-      userSelect: 'none',
-      touchAction: 'none',
-      outline: selected ? '2px solid #6366f1' : readOnly ? 'none' : '1px dashed rgba(128,128,128,0.4)',
-      outlineOffset: '2px',
-      borderRadius: '4px',
-      transition: followed ? FOLLOW_TRANSITION : undefined
-    }}
-    onPointerDown={readOnly ? undefined : (e) => onPointerDown(e, text.id)}
-    onDoubleClick={readOnly ? undefined : onDoubleClick}
-  >
+}> = ({ text, selected, readOnly, followed, onPointerDown, onDoubleClick }) => {
+  const shape = text.kind === 'shape' && text.shape;
+  const label = !shape && text.kind !== 'sticker' && text.background;
+  return (
     <Box
-      component="span"
+      data-item-id={text.id}
       sx={{
-        width: '100%',
-        textAlign: 'center',
-        whiteSpace: 'pre-line',
-        fontWeight: 700,
-        letterSpacing: 1,
-        lineHeight: 1.15,
-        fontSize: text.fontSize,
-        color: text.color,
-        overflow: 'hidden'
+        position: 'absolute',
+        left: text.x,
+        top: text.y,
+        width: text.width,
+        height: text.height,
+        transform: text.rotation ? `rotate(${text.rotation}deg)` : undefined,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: readOnly ? 'default' : 'grab',
+        userSelect: 'none',
+        touchAction: 'none',
+        bgcolor: label || undefined,
+        outline: selected
+          ? '2px solid #6366f1'
+          : readOnly || shape || text.kind === 'sticker'
+            ? 'none'
+            : '1px dashed rgba(128,128,128,0.4)',
+        outlineOffset: '2px',
+        borderRadius: label ? `${labelRadius(text)}px` : '4px',
+        transition: followed ? FOLLOW_TRANSITION : undefined
       }}
+      onPointerDown={readOnly ? undefined : (e) => onPointerDown(e, text.id)}
+      onDoubleClick={readOnly ? undefined : onDoubleClick}
     >
-      {text.text}
+      {shape ? (
+        <ShapeSvg item={text} />
+      ) : (
+        <Box
+          component="span"
+          sx={{
+            width: '100%',
+            boxSizing: 'border-box',
+            whiteSpace: 'pre-line',
+            overflowWrap: 'break-word',
+            overflow: 'hidden',
+            ...textCss(text)
+          }}
+        >
+          {text.text}
+        </Box>
+      )}
     </Box>
-  </Box>
-);
+  );
+};
 
 /** Selection handles rendered in canvas space around the selected item. */
 const SelectionHandles: React.FC<{
   item: { x: number; y: number; width: number; height: number; rotation?: number };
   scale: number;
-  showRotate: boolean;
   onResizeDown: (e: React.PointerEvent) => void;
   onRotateDown: (e: React.PointerEvent) => void;
-}> = ({ item, scale, showRotate, onResizeDown, onRotateDown }) => {
+}> = ({ item, scale, onResizeDown, onRotateDown }) => {
   // On screen: 14px under a mouse, 32px under a finger.
   const onScreen = coarsePointer() ? 32 : 14;
   const handleSize = Math.max(onScreen, onScreen / scale);
@@ -335,25 +399,23 @@ const SelectionHandles: React.FC<{
       }}
     >
       {/* rotate handle */}
-      {showRotate && (
-        <Box
-          onPointerDown={onRotateDown}
-          sx={{
-            position: 'absolute',
-            left: '50%',
-            top: -(onScreen + 14) / scale,
-            transform: 'translateX(-50%)',
-            width: handleSize,
-            height: handleSize,
-            borderRadius: '50%',
-            bgcolor: '#6366f1',
-            border: '2px solid #fff',
-            cursor: 'grab',
-            pointerEvents: 'auto',
-            touchAction: 'none'
-          }}
-        />
-      )}
+      <Box
+        onPointerDown={onRotateDown}
+        sx={{
+          position: 'absolute',
+          left: '50%',
+          top: -(onScreen + 14) / scale,
+          transform: 'translateX(-50%)',
+          width: handleSize,
+          height: handleSize,
+          borderRadius: '50%',
+          bgcolor: '#6366f1',
+          border: '2px solid #fff',
+          cursor: 'grab',
+          pointerEvents: 'auto',
+          touchAction: 'none'
+        }}
+      />
       {/* resize handle (SE) */}
       <Box
         onPointerDown={onResizeDown}
@@ -385,7 +447,7 @@ const findCurrent = (doc: CollageDoc, id: string): Geometry | null => {
     y: item.y,
     width: item.width,
     height: item.height,
-    rotation: (item as CollagePhotoItem).rotation || 0
+    rotation: item.rotation || 0
   };
 };
 
@@ -396,6 +458,7 @@ const CollageStage: React.FC<CollageStageProps> = ({
   zoom,
   onEditItem,
   onDropPhoto,
+  onDropFile,
   people,
   motions
 }) => {
@@ -424,7 +487,8 @@ const CollageStage: React.FC<CollageStageProps> = ({
         y: at.y,
         width: at.width,
         height: at.height,
-        ...('rotation' in item && at.rotation !== undefined ? { rotation: at.rotation } : {})
+        // Text turns too now, and may have no rotation of its own yet.
+        ...(at.rotation !== undefined ? { rotation: at.rotation } : {})
       };
     };
     return { ...doc, photos: doc.photos.map(follow), texts: doc.texts.map(follow) };
@@ -456,9 +520,9 @@ const CollageStage: React.FC<CollageStageProps> = ({
     (id: string) => {
       if (!doc) return null;
       const photo = doc.photos.find((p) => p.id === id);
-      if (photo) return { item: photo, isText: false };
+      if (photo) return { item: photo, keepAspect: true };
       const text = doc.texts.find((t) => t.id === id);
-      if (text) return { item: text, isText: true };
+      if (text) return { item: text, keepAspect: text.kind === 'sticker' };
       return null;
     },
     [doc]
@@ -513,7 +577,7 @@ const CollageStage: React.FC<CollageStageProps> = ({
       gestureRef.current = {
         mode,
         itemId: id,
-        isText: found.isText,
+        keepAspect: found.keepAspect,
         pointerId: e.pointerId,
         startClientX: e.clientX,
         startClientY: e.clientY,
@@ -537,8 +601,7 @@ const CollageStage: React.FC<CollageStageProps> = ({
         if (e.pointerId === g.pointerId) g.last = point;
         else if (e.pointerId === g.secondId) g.second = point;
         else return;
-        const next = pinchGeometry(g.start, g.pinchFrom!, { a: g.last, b: g.second! }, g.scale, !g.isText);
-        editor.gesturePatchItem(g.itemId, g.isText ? { x: next.x, y: next.y, width: next.width, height: next.height } : next);
+        editor.gesturePatchItem(g.itemId, pinchGeometry(g.start, g.pinchFrom!, { a: g.last, b: g.second! }, g.scale));
         return;
       }
 
@@ -564,7 +627,7 @@ const CollageStage: React.FC<CollageStageProps> = ({
         const minSize = 40;
         let width = Math.max(minSize, g.start.width + dx);
         let height = Math.max(minSize, g.start.height + dy);
-        const keepAspect = !g.isText && !e.shiftKey;
+        const keepAspect = g.keepAspect && !e.shiftKey;
         if (keepAspect && g.start.height > 0) {
           const ratio = g.start.width / g.start.height;
           if (Math.abs(dx) >= Math.abs(dy)) height = width / ratio;
@@ -594,7 +657,7 @@ const CollageStage: React.FC<CollageStageProps> = ({
           gestureRef.current = {
             mode: 'move',
             itemId: g.itemId,
-            isText: g.isText,
+            keepAspect: g.keepAspect,
             pointerId: remaining.id,
             startClientX: remaining.at.x,
             startClientY: remaining.at.y,
@@ -630,14 +693,21 @@ const CollageStage: React.FC<CollageStageProps> = ({
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
-      if (!onDropPhoto || !canvasRef.current) return;
-      const photoId = e.dataTransfer.getData('application/x-collage-photo');
-      if (!photoId) return;
-      e.preventDefault();
+      if (!canvasRef.current) return;
       const rect = canvasRef.current.getBoundingClientRect();
-      onDropPhoto(photoId, (e.clientX - rect.left) / scale, (e.clientY - rect.top) / scale);
+      const x = (e.clientX - rect.left) / scale;
+      const y = (e.clientY - rect.top) / scale;
+      const photoId = e.dataTransfer.getData('application/x-collage-photo');
+      const fileId = e.dataTransfer.getData(CHAT_FILE_DRAG_TYPE);
+      if (photoId && onDropPhoto) {
+        e.preventDefault();
+        onDropPhoto(photoId, x, y);
+      } else if (fileId && onDropFile) {
+        e.preventDefault();
+        onDropFile(fileId, x, y);
+      }
     },
-    [onDropPhoto, scale]
+    [onDropPhoto, onDropFile, scale]
   );
 
   if (!doc) return null;
@@ -752,7 +822,6 @@ const CollageStage: React.FC<CollageStageProps> = ({
               <SelectionHandles
                 item={selectedItem.item}
                 scale={scale}
-                showRotate={selectedItem.kind === 'photo'}
                 onResizeDown={(e) => startGesture(e, selectedItem.item.id, 'resize')}
                 onRotateDown={(e) => startGesture(e, selectedItem.item.id, 'rotate')}
               />

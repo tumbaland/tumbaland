@@ -5,8 +5,11 @@ import FlipToFrontIcon from '@mui/icons-material/FlipToFront';
 import FlipToBackIcon from '@mui/icons-material/FlipToBack';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 
+/** What each kind of item is called, in the bar's labels and the toast. */
+export const ITEM_NAMES = { photo: 'photo', text: 'text', sticker: 'sticker', shape: 'shape' } as const;
+
 interface CollageSelectionBarProps {
-  kind: 'photo' | 'text';
+  kind: keyof typeof ITEM_NAMES;
   onEdit: () => void;
   onBringForward: () => void;
   onSendBackward: () => void;
@@ -39,7 +42,7 @@ const CollageSelectionBar: React.FC<CollageSelectionBarProps> = ({
 }) => (
   <Box
     role="toolbar"
-    aria-label={kind === 'photo' ? 'Selected photo' : 'Selected text'}
+    aria-label={`Selected ${ITEM_NAMES[kind]}`}
     // Its own clicks must not reach the canvas, which would clear the selection.
     onPointerDown={(e) => e.stopPropagation()}
     sx={{
@@ -67,7 +70,7 @@ const CollageSelectionBar: React.FC<CollageSelectionBarProps> = ({
       size="small"
       startIcon={<TuneIcon />}
       onClick={onEdit}
-      aria-label={kind === 'photo' ? 'Edit photo' : 'Edit text'}
+      aria-label={`Edit ${ITEM_NAMES[kind]}`}
       sx={buttonSx}
     >
       Edit
@@ -95,7 +98,7 @@ const CollageSelectionBar: React.FC<CollageSelectionBarProps> = ({
       size="small"
       startIcon={<DeleteOutlinedIcon />}
       onClick={onDelete}
-      aria-label={kind === 'photo' ? 'Delete photo' : 'Delete text'}
+      aria-label={`Delete ${ITEM_NAMES[kind]}`}
       sx={{ ...buttonSx, color: '#fca5a5' }}
     >
       Delete

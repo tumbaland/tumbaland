@@ -159,3 +159,39 @@ describe('as a strip under the canvas', () => {
     expect(onAddPhoto).toHaveBeenCalledWith(expect.objectContaining({ _id: 'p1' }));
   });
 });
+
+describe('videos', () => {
+  it('shows a video by its still, marked as a video', () => {
+    render(
+      <CollagePhotoTray
+        photos={[
+          {
+            _id: 'v1',
+            filename: 'clip.mp4',
+            mimetype: 'video/mp4',
+            signedUrl: 'https://cdn.example/clip.mp4',
+            thumbnailSignedUrl: 'https://cdn.example/clip.mp4',
+            posterSignedUrl: 'https://cdn.example/clip.jpg'
+          }
+        ]}
+        usedPhotoIds={new Set()}
+        onAddPhoto={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('img', { name: 'clip.mp4' })).toHaveAttribute('src', 'https://cdn.example/clip.jpg');
+    expect(screen.getByLabelText('Video')).toBeInTheDocument();
+  });
+
+  it('falls back to the video’s own first frame when it has no still', () => {
+    const { container } = render(
+      <CollagePhotoTray
+        photos={[{ _id: 'v1', filename: 'clip.mp4', mimetype: 'video/mp4', signedUrl: 'https://cdn.example/clip.mp4' }]}
+        usedPhotoIds={new Set()}
+        onAddPhoto={vi.fn()}
+      />
+    );
+
+    expect(container.querySelector('video')).toHaveAttribute('src', 'https://cdn.example/clip.mp4#t=0.1');
+  });
+});

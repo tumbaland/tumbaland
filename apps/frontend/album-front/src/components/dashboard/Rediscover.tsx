@@ -6,6 +6,7 @@ import { useRandomPhoto } from '../../hooks/useHighlights';
 import { HighlightPhoto } from '../../types';
 import { appPath } from '../../appBase';
 import { MediaThumb } from '@tumbaland/frontend-core';
+import { mediaPreview } from '../../utils/mediaPreview';
 
 /** How long ago, in the words a person would use rather than a date. */
 const howLongAgo = (iso: string, now: Date): string => {
@@ -56,7 +57,7 @@ const Rediscover: React.FC<RediscoverProps> = ({ groupId }) => {
     return null;
   }
 
-  const src = photo ? photo.signedUrl || photo.thumbnailSignedUrl : undefined;
+  const { src, mimetype } = photo ? mediaPreview(photo, 'original') : { src: undefined, mimetype: undefined };
 
   return (
     <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', p: { xs: 1.25, sm: 2 } }}>
@@ -97,7 +98,7 @@ const Rediscover: React.FC<RediscoverProps> = ({ groupId }) => {
         >
           <MediaThumb
             src={src}
-            mimetype={photo.mimetype}
+            mimetype={mimetype}
             alt={photo.title || photo.originalName}
             loading="lazy"
             sx={{

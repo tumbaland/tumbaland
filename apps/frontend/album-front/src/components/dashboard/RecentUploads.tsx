@@ -6,6 +6,7 @@ import { useRecentPhotos } from '../../hooks/useHighlights';
 import { HighlightPhoto } from '../../types';
 import { appPath } from '../../appBase';
 import { MediaThumb } from '@tumbaland/frontend-core';
+import { mediaPreview } from '../../utils/mediaPreview';
 
 /** Same ladder as the memories strip, so the two rows line up column for column. */
 const TILES_BY_WIDTH = { xs: 4, sm: 6, md: 8 } as const;
@@ -70,7 +71,7 @@ const RecentUploads: React.FC<RecentUploadsProps> = ({ groupId }) => {
         }}
       >
         {photos.map((photo, index) => {
-          const src = photo.thumbnailSignedUrl || photo.signedUrl;
+          const { src, mimetype } = mediaPreview(photo);
 
           return (
             <Tooltip key={photo._id} title={describe(photo)}>
@@ -108,7 +109,7 @@ const RecentUploads: React.FC<RecentUploadsProps> = ({ groupId }) => {
                 {src ? (
                   <MediaThumb
                     src={src}
-                    mimetype={photo.mimetype}
+                    mimetype={mimetype}
                     alt={photo.title || photo.originalName}
                     loading="lazy"
                     sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}

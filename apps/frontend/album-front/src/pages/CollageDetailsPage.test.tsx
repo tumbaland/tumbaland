@@ -25,11 +25,14 @@ vi.mock('../components/collage/CollageStage', () => ({
   default: (props: {
     onEditItem?: (id: string) => void;
     onDropPhoto?: (photoId: string, x: number, y: number) => void;
+    onDropFile?: (fileId: string, x: number, y: number) => void;
   }) => (
     <div>
       collage stage
       <button onClick={() => props.onDropPhoto?.('photo-1', 10, 20)}>simulate drop photo-1</button>
       <button onClick={() => props.onDropPhoto?.('photo-2', 10, 20)}>simulate drop photo-2</button>
+      <button onClick={() => props.onDropFile?.('file-1', 10, 20)}>simulate chat drop file-1</button>
+      <button onClick={() => props.onDropFile?.('file-9', 10, 20)}>simulate chat drop file-9</button>
     </div>
   )
 }));
@@ -42,6 +45,8 @@ vi.mock('../services/collageService', () => ({
 // stub it here so Export/Download stays a simple, deterministic call.
 vi.mock('../components/collage/exportCollage', () => ({
   exportCollageToPng: vi.fn().mockResolvedValue(new Blob()),
+  exportCollageToVideo: vi.fn(),
+  collageMoves: vi.fn().mockReturnValue(false),
   downloadBlob: vi.fn()
 }));
 
@@ -595,5 +600,63 @@ describe('with someone else in the collage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /add text/i }));
     await waitFor(() => expect(mockedSetPresence).toHaveBeenLastCalledWith('collage-1', session, expect.any(String)));
+  });
+});
+
+describe('stickers, shapes, chat and video', () => {
+  it('adds a sticker from the element menu and saves it', async () => {
+    renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add sticker or shape' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add sticker 🎉' }));
+
+    await waitFor(
+      () =>
+        expect(mockedApplyChanges).toHaveBeenCalledWith(
+          'collage-1',
+          [expect.objectContaining({ layer: 'texts', item: expect.objectContaining({ kind: 'sticker', text: '🎉' }) })],
+          expect.any(String)
+        ),
+      { timeout: 3000 }
+    );
+    expect(screen.getByRole('toolbar', { name: 'Selected sticker' })).toBeInTheDocument();
+  });
+
+  it('places a photo dragged in from the chat when it is in the collage’s albums', async () => {
+    mockedUseCollageDetails.mockReturnValue({
+      data: { collage, albumPhotos: [{ ...albumPhotos[0], minioFileId: 'file-1' }] },
+      isPending: false,
+      error: null
+    });
+    renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: 'simulate chat drop file-1' }));
+    expect(screen.getByRole('toolbar', { name: 'Selected photo' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'simulate chat drop file-9' }));
+    expect(await screen.findByText(/isn't in this collage's albums/)).toBeInTheDocument();
+  });
+
+  it('offers chat beside the collage only inside the app, and asks the shell to draw it', async () => {
+    const requests: unknown[] = [];
+    const listen = (event: Event) => requests.push((event as CustomEvent).detail);
+    window.addEventListener('tumbaland:chat-dock', listen);
+
+    const { unmount } = renderPage();
+    expect(screen.queryByRole('button', { name: 'Show chat' })).not.toBeInTheDocument();
+    unmount();
+
+    (window as unknown as Record<string, unknown>).__tumbalandChatDock = true;
+    try {
+      renderPage();
+      await userEvent.click(screen.getByRole('button', { name: 'Show chat' }));
+
+      expect(requests.at(-1)).toMatchObject({ container: expect.any(HTMLElement) });
+      await userEvent.click(screen.getByRole('button', { name: 'Hide chat' }));
+      expect(requests.at(-1)).toMatchObject({ container: null });
+    } finally {
+      delete (window as unknown as Record<string, unknown>).__tumbalandChatDock;
+      window.removeEventListener('tumbaland:chat-dock', listen);
+    }
   });
 });

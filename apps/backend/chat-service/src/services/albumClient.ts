@@ -74,6 +74,7 @@ export interface ChatPhotoInput {
   messageId: string;
   fileId: string;
   thumbnailFileId?: string | null;
+  posterFileId?: string | null;
   mimetype: string;
   size: number;
   width?: number | null;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type DragEvent } from 'react';
 import Box from '@mui/material/Box';
 import PlayCircleIcon from '@mui/icons-material/PlayCircle';
 import BrokenImageOutlinedIcon from '@mui/icons-material/BrokenImageOutlined';
@@ -9,6 +9,9 @@ export interface MediaGridProps {
   attachments: Attachment[];
   onOpen: (index: number) => void;
 }
+
+/** What a dragged photo carries: its file id. album-front's collage reads it on drop. */
+export const CHAT_FILE_DRAG_TYPE = 'application/x-tumbaland-file';
 
 export const isVideo = (attachment: Attachment) => attachment.mimetype?.startsWith('video/') ?? false;
 
@@ -102,6 +105,14 @@ function MediaTile({ attachment, square, onOpen }: MediaTileProps) {
       component="button"
       type="button"
       onClick={onOpen}
+      // Dragged onto a collage beside the chat, it names the file, which the
+      // album the chat saves to knows it by.
+      draggable
+      onDragStart={(event: DragEvent) => {
+        event.dataTransfer.setData(CHAT_FILE_DRAG_TYPE, attachment.fileId);
+        if (attachment.url) event.dataTransfer.setData('text/uri-list', attachment.url);
+        event.dataTransfer.effectAllowed = 'copy';
+      }}
       aria-label={video ? 'Open video' : 'Open photo'}
       sx={{
         position: 'relative',

@@ -52,6 +52,24 @@ export interface CollagePhotoItem {
   crop?: CollageCrop;
 }
 
+export type TextAlign = 'left' | 'center' | 'right';
+
+/** The shapes "Add element" offers. Drawn from the paths in collageElements. */
+export const COLLAGE_SHAPES = ['rectangle', 'rounded', 'circle', 'heart', 'star', 'triangle', 'arrow'] as const;
+export type CollageShape = (typeof COLLAGE_SHAPES)[number];
+
+/**
+ * Everything drawn over the photos: text, stickers and shapes. They share one
+ * layer (stored as `texts`, the name it had when text was all there was), so
+ * they stack among each other and always sit above the photos.
+ *
+ * - text: `text` in the chosen font and style.
+ * - sticker: an emoji in `text`, sized to fill its box rather than by `fontSize`.
+ * - shape: `shape` filled with `color`; `text` is unused.
+ *
+ * Optional style fields are left out when they are the default, so a text
+ * made before they existed reads exactly as it did.
+ */
 export interface CollageTextItem {
   id: string;
   text: string;
@@ -61,6 +79,22 @@ export interface CollageTextItem {
   height: number;
   fontSize: number;
   color: string;
+  /** Absent means text. */
+  kind?: 'sticker' | 'shape';
+  shape?: CollageShape;
+  /** A font id from collageElements; absent is the plain sans. */
+  fontFamily?: string;
+  /** Absent means bold: every text was bold before this could be changed. */
+  bold?: boolean;
+  italic?: boolean;
+  /** Absent means centred. */
+  align?: TextAlign;
+  /** A colour band behind the text, or a shape's outline colour. */
+  background?: string;
+  /** Stroke round the letters, or round a shape. */
+  outline?: string;
+  shadow?: boolean;
+  rotation?: number;
 }
 
 export interface CollageDoc {
@@ -83,9 +117,15 @@ export const DEFAULT_TEXT_COLOR = '#e91e63';
  */
 export const EDITOR_BACKDROP = '#1e293b';
 export const DEFAULT_TEXT_SIZE = 32;
+/** The font a text has when it names none: the app's own sans. */
+export const DEFAULT_FONT = 'sans';
 
 /** What "Add text" puts on the canvas, selected in the text dialog so typing replaces it. */
 export const DEFAULT_TEXT = 'Your text';
+
+export const isVideoType = (mimetype?: string): boolean => Boolean(mimetype?.startsWith('video/'));
+/** Animated as far as a collage is concerned: a video, or a GIF, which may or may not move. */
+export const isMovingType = (mimetype?: string): boolean => isVideoType(mimetype) || mimetype === 'image/gif';
 
 export const newItemId = (): string =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -182,6 +222,58 @@ export const normalizePhoto = (p: CollageConfigPhoto): CollagePhotoItem => {
   };
 };
 
+const isShape = (value: unknown): value is CollageShape =>
+  (COLLAGE_SHAPES as readonly string[]).includes(value as string);
+const isAlign = (value: unknown): value is TextAlign => value === 'left' || value === 'center' || value === 'right';
+const nonEmpty = (value: unknown): string | undefined => (typeof value === 'string' && value ? value : undefined);
+
+/**
+ * The optional style fields, keeping only the ones that differ from the
+ * default. A default written out would read as a change to every text made
+ * before the field existed.
+ */
+const textStyle = (t: CollageTextBox | CollageTextItem): Partial<CollageTextItem> => {
+  const style: Partial<CollageTextItem> = {};
+  if (t.kind === 'shape' && isShape(t.shape)) {
+    style.kind = 'shape';
+    style.shape = t.shape;
+  } else if (t.kind === 'sticker') {
+    style.kind = 'sticker';
+  }
+  const fontFamily = nonEmpty(t.fontFamily);
+  if (fontFamily && fontFamily !== DEFAULT_FONT) style.fontFamily = fontFamily;
+  if (t.bold === false) style.bold = false;
+  if (t.italic === true) style.italic = true;
+  if (isAlign(t.align) && t.align !== 'center') style.align = t.align;
+  const background = nonEmpty(t.background);
+  if (background) style.background = background;
+  const outline = nonEmpty(t.outline);
+  if (outline) style.outline = outline;
+  if (t.shadow === true) style.shadow = true;
+  const rotation = toNumber(t.rotation, 0);
+  if (rotation) style.rotation = rotation;
+  return style;
+};
+
+/**
+ * A change to an overlay item, with every default written as undefined, so
+ * the edited item stays in the shape normalizeText gives it. Otherwise
+ * `bold: true` here and no `bold` in the saved copy would compare as a
+ * difference forever, and autosave would keep sending it.
+ */
+export const cleanTextPatch = <T extends Partial<CollageTextItem>>(patch: T): T => {
+  const out: Partial<CollageTextItem> = { ...patch };
+  if ('fontFamily' in out && (!out.fontFamily || out.fontFamily === DEFAULT_FONT)) out.fontFamily = undefined;
+  if ('bold' in out && out.bold !== false) out.bold = undefined;
+  if ('italic' in out && out.italic !== true) out.italic = undefined;
+  if ('align' in out && (!out.align || out.align === 'center')) out.align = undefined;
+  if ('background' in out && !out.background) out.background = undefined;
+  if ('outline' in out && !out.outline) out.outline = undefined;
+  if ('shadow' in out && out.shadow !== true) out.shadow = undefined;
+  if ('rotation' in out && !out.rotation) out.rotation = undefined;
+  return out as T;
+};
+
 export const normalizeText = (t: CollageTextBox): CollageTextItem => ({
   id: typeof t.id === 'string' && t.id ? t.id : newItemId(),
   text: typeof t.text === 'string' ? t.text : '',
@@ -190,7 +282,8 @@ export const normalizeText = (t: CollageTextBox): CollageTextItem => ({
   width: toNumber(t.width, 180),
   height: toNumber(t.height, 48),
   fontSize: toNumber(t.fontSize, DEFAULT_TEXT_SIZE),
-  color: typeof t.color === 'string' ? t.color : DEFAULT_TEXT_COLOR
+  color: typeof t.color === 'string' ? t.color : DEFAULT_TEXT_COLOR,
+  ...textStyle(t)
 });
 
 export const normalizeCollageConfig = (config?: CollageConfig | null): CollageDoc => {
@@ -242,7 +335,8 @@ export const serializeText = (t: CollageTextItem): CollageTextBox => ({
   width: t.width,
   height: t.height,
   fontSize: t.fontSize,
-  color: t.color
+  color: t.color,
+  ...textStyle(t)
 });
 
 /** The collage-wide settings, under the config keys they are stored as. */

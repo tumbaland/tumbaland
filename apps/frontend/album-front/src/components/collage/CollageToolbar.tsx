@@ -27,8 +27,15 @@ import TextFieldsIcon from '@mui/icons-material/TextFields';
 import DownloadIcon from '@mui/icons-material/Download';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import FilterFramesIcon from '@mui/icons-material/FilterFrames';
+import InterestsOutlinedIcon from '@mui/icons-material/InterestsOutlined';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
+import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
+import MovieOutlinedIcon from '@mui/icons-material/MovieOutlined';
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import type { SaveStatus } from '../../hooks/useCollageSync';
 import { CollagePeopleFaces, CollagePerson } from './CollagePeople';
+import type { CollageShape } from './collageDoc';
+import CollageAddMenu from './CollageAddMenu';
 
 interface ColorSwatchProps {
   label: string;
@@ -71,11 +78,20 @@ interface CollageToolbarProps {
   onUndo: () => void;
   onRedo: () => void;
   onAddText: () => void;
+  onAddSticker: (emoji: string) => void;
+  onAddShape: (shape: CollageShape) => void;
+  onAddDate: () => void;
+  /** Chat beside the canvas. Absent where there is no chat to show (album-front on its own). */
+  chat?: { open: boolean; onToggle: () => void };
   onBackgroundChange: (color: string) => void;
   onFrameColorChange: (color: string) => void;
   onFrameEnabledChange: (enabled: boolean) => void;
   onZoomChange: (zoom: number) => void;
   onExport: () => void;
+  /** Only when something on the collage moves: a GIF or a video. */
+  onExportVideo?: () => void;
+  /** Set while a video is being recorded, which takes as long as the clip. */
+  exportingVideo?: boolean;
   onPreview: () => void;
 }
 
@@ -137,6 +153,42 @@ const ColorMenuItem: React.FC<ColorSwatchProps & { icon: React.ReactNode }> = ({
   </MenuItem>
 );
 
+/** Opens the stickers, shapes and date menu. */
+const AddElementButton: React.FC<CollageToolbarProps & { size?: 'small' }> = ({ size, ...props }) => {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  return (
+    <>
+      <Tooltip title="Add sticker or shape">
+        <IconButton onClick={(e) => setAnchor(e.currentTarget)} size={size} aria-label="Add sticker or shape">
+          <InterestsOutlinedIcon fontSize={size} />
+        </IconButton>
+      </Tooltip>
+      <CollageAddMenu
+        anchorEl={anchor}
+        onClose={() => setAnchor(null)}
+        onAddSticker={props.onAddSticker}
+        onAddShape={props.onAddShape}
+        onAddDate={props.onAddDate}
+      />
+    </>
+  );
+};
+
+const ChatToggle: React.FC<{ chat?: CollageToolbarProps['chat']; size?: 'small' }> = ({ chat, size }) =>
+  chat ? (
+    <Tooltip title={chat.open ? 'Hide chat' : 'Show chat'}>
+      <IconButton
+        onClick={chat.onToggle}
+        size={size}
+        aria-label={chat.open ? 'Hide chat' : 'Show chat'}
+        aria-pressed={chat.open}
+        color={chat.open ? 'primary' : 'default'}
+      >
+        {chat.open ? <ChatBubbleIcon fontSize={size} /> : <ChatBubbleOutlineIcon fontSize={size} />}
+      </IconButton>
+    </Tooltip>
+  ) : null;
+
 /**
  * The toolbar on a narrow screen. One row of what is used all the time, at a
  * size for fingers, with the rest behind the ⋯ menu. What can be done to a
@@ -180,6 +232,8 @@ const CompactToolbar: React.FC<CollageToolbarProps> = (props) => {
         <IconButton onClick={props.onAddText} aria-label="Add text">
           <TextFieldsIcon />
         </IconButton>
+        <AddElementButton {...props} />
+        <ChatToggle chat={props.chat} />
         <IconButton onClick={(e) => setMenuAnchor(e.currentTarget)} aria-label="More">
           <MoreVertIcon />
         </IconButton>
@@ -217,6 +271,14 @@ const CompactToolbar: React.FC<CollageToolbarProps> = (props) => {
           </ListItemIcon>
           <ListItemText primary="Download as PNG" />
         </MenuItem>
+        {props.onExportVideo && (
+          <MenuItem onClick={closeThen(props.onExportVideo)} disabled={props.exportingVideo} sx={{ minHeight: 48 }}>
+            <ListItemIcon>
+              <MovieOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary={props.exportingVideo ? 'Making the video…' : 'Download as video'} />
+          </MenuItem>
+        )}
       </Menu>
     </Paper>
   );
@@ -288,10 +350,11 @@ const WideToolbar: React.FC<CollageToolbarProps> = (props) => {
       <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 
       <Tooltip title="Add text">
-        <IconButton onClick={props.onAddText} size="small">
+        <IconButton onClick={props.onAddText} size="small" aria-label="Add text">
           <TextFieldsIcon fontSize="small" />
         </IconButton>
       </Tooltip>
+      <AddElementButton {...props} size="small" />
       <ColorSwatch label="Background color" value={background} onChange={props.onBackgroundChange} />
       <ColorSwatch label="Frame color" value={frameColor} onChange={props.onFrameColorChange} />
       <Tooltip title={frameEnabled ? 'Photo frames: on' : 'Photo frames: off'}>
@@ -328,12 +391,53 @@ const WideToolbar: React.FC<CollageToolbarProps> = (props) => {
           <VisibilityIcon fontSize="small" />
         </IconButton>
       </Tooltip>
+      <DownloadButton {...props} />
+      <ChatToggle chat={props.chat} size="small" />
+    </Paper>
+  );
+};
+
+/** PNG straight away, or a choice of PNG and video when the collage moves. */
+const DownloadButton: React.FC<CollageToolbarProps> = (props) => {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  if (!props.onExportVideo) {
+    return (
       <Tooltip title="Download as PNG">
-        <IconButton onClick={props.onExport} size="small">
+        <IconButton onClick={props.onExport} size="small" aria-label="Download as PNG">
           <DownloadIcon fontSize="small" />
         </IconButton>
       </Tooltip>
-    </Paper>
+    );
+  }
+  const pick = (action: () => void) => () => {
+    setAnchor(null);
+    action();
+  };
+  return (
+    <>
+      <Tooltip title="Download">
+        <IconButton onClick={(e) => setAnchor(e.currentTarget)} size="small" aria-label="Download">
+          {props.exportingVideo ? <CircularProgress size={18} /> : <DownloadIcon fontSize="small" />}
+        </IconButton>
+      </Tooltip>
+      <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+        <MenuItem onClick={pick(props.onExport)}>
+          <ListItemIcon>
+            <ImageOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Picture (PNG)" />
+        </MenuItem>
+        <MenuItem onClick={pick(props.onExportVideo)} disabled={props.exportingVideo}>
+          <ListItemIcon>
+            <MovieOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary={props.exportingVideo ? 'Making the video…' : 'Video'}
+            secondary="Keeps GIFs and videos moving"
+          />
+        </MenuItem>
+      </Menu>
+    </>
   );
 };
 

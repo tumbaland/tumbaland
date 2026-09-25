@@ -4,6 +4,7 @@ import { ReadState } from '../models/ReadState';
 import type { Caller } from './accessService';
 import { photoAlbumView, type PhotoAlbumView } from './photoAlbumService';
 import { appearanceView, type AppearanceView } from './appearanceService';
+import { publishToGroup } from './streamHub';
 
 export interface ConversationSummary {
   id: string;
@@ -66,6 +67,14 @@ export async function recordMember(conversation: IConversation, person: Caller):
     known.name = person.name;
     known.email = person.email;
     known.picture = picture;
+    // An open thread loaded the roster once; without this it kept showing the
+    // old name until someone reopened it.
+    publishToGroup(conversation.groupId, {
+      type: 'conversation.updated',
+      conversationId: conversation._id.toString(),
+      at: Date.now(),
+      payload: { member: { userId: person.id, name: person.name, picture } }
+    });
     return conversation;
   }
 

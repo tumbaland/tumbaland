@@ -17,6 +17,9 @@ function baseProps() {
     onUndo: vi.fn(),
     onRedo: vi.fn(),
     onAddText: vi.fn(),
+    onAddSticker: vi.fn(),
+    onAddShape: vi.fn(),
+    onAddDate: vi.fn(),
     onBackgroundChange: vi.fn(),
     onFrameColorChange: vi.fn(),
     onFrameEnabledChange: vi.fn(),
@@ -158,5 +161,40 @@ describe('on a phone', () => {
     fireEvent.change(screen.getByLabelText('Background color'), { target: { value: '#ff0000' } });
 
     expect(props.onBackgroundChange).toHaveBeenCalledWith('#ff0000');
+  });
+});
+
+describe('stickers, shapes, chat and video', () => {
+  it('adds a sticker or a shape from the element menu', async () => {
+    const props = baseProps();
+    render(<CollageToolbar {...props} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add sticker or shape' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add sticker 🎉' }));
+    expect(props.onAddSticker).toHaveBeenCalledWith('🎉');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add sticker or shape' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add heart' }));
+    expect(props.onAddShape).toHaveBeenCalledWith('heart');
+  });
+
+  it('shows the chat toggle only when there is a chat to show', async () => {
+    const onToggle = vi.fn();
+    const { rerender } = render(<CollageToolbar {...baseProps()} />);
+    expect(screen.queryByRole('button', { name: 'Show chat' })).not.toBeInTheDocument();
+
+    rerender(<CollageToolbar {...baseProps()} chat={{ open: false, onToggle }} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Show chat' }));
+    expect(onToggle).toHaveBeenCalled();
+  });
+
+  it('offers a video download only when the collage moves', async () => {
+    const onExportVideo = vi.fn();
+    render(<CollageToolbar {...baseProps()} onExportVideo={onExportVideo} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Download' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /Video/ }));
+
+    expect(onExportVideo).toHaveBeenCalled();
   });
 });

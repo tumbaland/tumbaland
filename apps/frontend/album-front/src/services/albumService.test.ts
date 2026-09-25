@@ -27,6 +27,26 @@ describe('albumService', () => {
     expect(String(url)).toContain('/albums?page=1&limit=10');
   });
 
+  it('reads every page of albums for a picker, so older albums can be chosen too', async () => {
+    const newest = Array.from({ length: 100 }, (_, index) => ({ _id: `a${index}` }));
+    mockFetchOnce({
+      success: true,
+      data: { albums: newest, pagination: { page: 1, limit: 100, total: 101, pages: 2 } }
+    });
+    mockFetchOnce({
+      success: true,
+      data: { albums: [{ _id: 'oldest' }], pagination: { page: 2, limit: 100, total: 101, pages: 2 } }
+    });
+
+    const albums = await albumService.getAllAlbums({ includeCover: false });
+
+    expect(albums).toHaveLength(101);
+    expect(albums[100]).toEqual({ _id: 'oldest' });
+    const urls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.map(([url]) => String(url));
+    expect(urls[0]).toContain('page=1&limit=100');
+    expect(urls[1]).toContain('page=2&limit=100');
+  });
+
   it('creates an album and returns the full envelope', async () => {
     mockFetchOnce({ success: true, message: 'Album created', data: { _id: 'album-2', name: 'New album' } });
 

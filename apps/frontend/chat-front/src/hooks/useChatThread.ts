@@ -254,11 +254,23 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
           dispatch({ type: 'removed', id: (event.payload as { id: string }).id });
           break;
         case 'conversation.updated': {
-          // Someone changed where photos go or how the thread looks, or the
-          // album or background photo went away.
-          const payload = event.payload as { photoAlbum?: PhotoAlbum; appearance?: Appearance } | null;
+          // Someone changed where photos go or how the thread looks, the
+          // album or background photo went away, or someone renamed themselves.
+          const payload = event.payload as {
+            photoAlbum?: PhotoAlbum;
+            appearance?: Appearance;
+            member?: Pick<ConversationMember, 'userId' | 'name' | 'picture'>;
+          } | null;
           if (payload?.photoAlbum) setPhotoAlbumState(payload.photoAlbum);
           if (payload?.appearance) setAppearanceState(payload.appearance);
+          const changed = payload?.member;
+          if (changed) {
+            setMembers((previous) =>
+              previous.map((member) =>
+                member.userId === changed.userId ? { ...member, name: changed.name, picture: changed.picture } : member
+              )
+            );
+          }
           break;
         }
         case 'typing': {

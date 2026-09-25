@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CallScreen, formatElapsed, statusText } from './CallScreen';
 import { IDLE, type CallState } from '../../services/callEngine';
@@ -95,5 +95,45 @@ describe('minimized', () => {
     render(<CallScreen state={state({ phase: 'connecting' })} {...handlers()} onMinimize={onMinimize} />);
     await userEvent.click(screen.getByRole('button', { name: 'Minimize call' }));
     expect(onMinimize).toHaveBeenCalled();
+  });
+});
+
+describe('dragging the bar', () => {
+  const bar = () => screen.getByRole('region', { name: 'Call with Irja' });
+
+  it('moves where it is dragged, stays there next time, and does not open the call on letting go', () => {
+    window.localStorage.clear();
+    const on = { ...handlers(), onExpand: vi.fn() };
+    const { unmount } = render(
+      <CallScreen state={state({ phase: 'active', connectedAt: Date.now() })} {...on} minimized />
+    );
+    bar().getBoundingClientRect = () => ({ left: 100, top: 500, width: 300, height: 50 }) as DOMRect;
+
+    const openButton = screen.getByRole('button', { name: 'Open call' });
+    fireEvent.pointerDown(openButton, { pointerId: 1, button: 0, clientX: 150, clientY: 520 });
+    fireEvent.pointerMove(openButton, { pointerId: 1, clientX: 130, clientY: 320 });
+    fireEvent.pointerUp(openButton, { pointerId: 1, clientX: 130, clientY: 320 });
+    fireEvent.click(openButton);
+
+    expect(bar()).toHaveStyle({ left: '80px', top: '300px' });
+    expect(on.onExpand).not.toHaveBeenCalled();
+
+    unmount();
+    render(<CallScreen state={state({ phase: 'active', connectedAt: Date.now() })} {...handlers()} minimized />);
+    expect(bar()).toHaveStyle({ left: '80px', top: '300px' });
+  });
+
+  it('treats a press that barely moves as a tap', () => {
+    window.localStorage.clear();
+    const on = { ...handlers(), onExpand: vi.fn() };
+    render(<CallScreen state={state({ phase: 'active', connectedAt: Date.now() })} {...on} minimized />);
+
+    const openButton = screen.getByRole('button', { name: 'Open call' });
+    fireEvent.pointerDown(openButton, { pointerId: 1, button: 0, clientX: 150, clientY: 520 });
+    fireEvent.pointerMove(openButton, { pointerId: 1, clientX: 152, clientY: 521 });
+    fireEvent.pointerUp(openButton, { pointerId: 1, clientX: 152, clientY: 521 });
+    fireEvent.click(openButton);
+
+    expect(on.onExpand).toHaveBeenCalled();
   });
 });

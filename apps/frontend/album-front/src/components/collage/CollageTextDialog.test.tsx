@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { describe, vi } from 'vitest';
 import CollageTextDialog from './CollageTextDialog';
 import { CollageTextItem } from './collageDoc';
 
@@ -74,4 +74,81 @@ it('falls back to its default state when open with no text item selected', () =>
   render(<CollageTextDialog open text={null} onClose={vi.fn()} onSave={vi.fn()} onDelete={vi.fn()} />);
 
   expect(screen.getByText('Size: 32px')).toBeInTheDocument();
+});
+
+describe('more ways to style text', () => {
+  it('saves a chosen font, italic, alignment, label and outline', async () => {
+    const onSave = vi.fn();
+    render(<CollageTextDialog open text={text} onClose={vi.fn()} onSave={onSave} onDelete={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Handwritten' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Bold' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Italic' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Align left' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Label behind the text' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Outline' }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Shadow' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fontFamily: 'hand',
+        bold: false,
+        italic: true,
+        align: 'left',
+        background: '#ffffff',
+        outline: '#ffffff',
+        shadow: true
+      })
+    );
+  });
+
+  it('picks a colour from the swatches', async () => {
+    const onSave = vi.fn();
+    render(<CollageTextDialog open text={text} onClose={vi.fn()} onSave={onSave} onDelete={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Text color #0ea5e9' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ color: '#0ea5e9' }));
+  });
+
+  it('swaps a sticker for another', async () => {
+    const onSave = vi.fn();
+    render(
+      <CollageTextDialog
+        open
+        text={{ ...text, kind: 'sticker', text: '🎉' }}
+        onClose={vi.fn()}
+        onSave={onSave}
+        onDelete={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Edit sticker')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Sticker 🌹' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ text: '🌹' }));
+  });
+
+  it('changes a shape and its fill', async () => {
+    const onSave = vi.fn();
+    render(
+      <CollageTextDialog
+        open
+        text={{ ...text, kind: 'shape', shape: 'circle', text: '' }}
+        onClose={vi.fn()}
+        onSave={onSave}
+        onDelete={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Edit shape')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Star' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Fill color #facc15' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ shape: 'star', color: '#facc15' }));
+  });
 });

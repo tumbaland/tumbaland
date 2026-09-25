@@ -1,7 +1,7 @@
 import { HydratedDocument } from 'mongoose';
 import { IPhoto } from '../models/Photo';
 import { logger } from '@tumbaland/backend-core';
-import { getPhotoSignedUrl, getPhotoSignedUrlsBatch, SignedUrlData } from './fileServiceClient';
+import { getPhotoSignedUrl, getPhotoSignedUrlsBatch, getSignedUrlsBatch, SignedUrlData } from './fileServiceClient';
 
 export interface PhotoWithSignedUrls {
   _id: unknown;
@@ -26,6 +26,8 @@ export interface PhotoWithSignedUrls {
   thumbnailSignedUrl?: string;
   thumbnailSignedUrlExpiresAt?: string;
   thumbnailSignedUrlExpiresInMinutes?: number;
+  /** A video's still (see Photo.minioPosterFileId). */
+  posterSignedUrl?: string;
 }
 
 /**
@@ -34,7 +36,8 @@ export interface PhotoWithSignedUrls {
 const enrichPhotoWithUrls = (
   photo: HydratedDocument<IPhoto>,
   signedUrlMap: Record<string, SignedUrlData>,
-  thumbnailSignedUrlMap: Record<string, SignedUrlData>
+  thumbnailSignedUrlMap: Record<string, SignedUrlData>,
+  posterSignedUrlMap: Record<string, SignedUrlData> = {}
 ): PhotoWithSignedUrls => {
   const signedUrlData = signedUrlMap[photo.minioFileId || ''];
   const photoObj = photo.toObject();
@@ -66,6 +69,9 @@ const enrichPhotoWithUrls = (
 
   // Explicitly include thumbnail photo IDs for frontend
   result.minioThumbnailFileId = photo.minioThumbnailFileId;
+
+  const poster = photo.minioPosterFileId ? posterSignedUrlMap[photo.minioPosterFileId] : undefined;
+  if (poster) result.posterSignedUrl = poster.signedUrl;
 
   return result;
 };
@@ -99,7 +105,11 @@ export const attachSignedUrls = async (photos: HydratedDocument<IPhoto>[]): Prom
     }
   }
 
-  return photos.map((photo) => enrichPhotoWithUrls(photo, signedUrlMap, thumbnailSignedUrlMap));
+  // Videos from chat carry a still; a third call, and only when there are any.
+  const posterIds = photos.map((photo) => photo.minioPosterFileId).filter((id): id is string => Boolean(id));
+  const posterSignedUrlMap = posterIds.length > 0 ? await getSignedUrlsBatch(posterIds, 60) : {};
+
+  return photos.map((photo) => enrichPhotoWithUrls(photo, signedUrlMap, thumbnailSignedUrlMap, posterSignedUrlMap));
 };
 
 /**

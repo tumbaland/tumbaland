@@ -105,7 +105,7 @@ it('selects an item on pointer down and shows resize/rotate handles for a photo'
   fireEvent.pointerDown(photoBox, { clientX: 150, clientY: 150 });
 
   // The rotate handle (round) and resize handle (nwse-resize cursor) only
-  // render for a selected photo (rotate is hidden for a selected text item).
+  // render for a selected item.
   expect(findByComputedStyle(container, 'borderRadius', '50%')).toBeTruthy();
   expect(findByComputedStyle(container, 'cursor', 'nwse-resize')).toBeTruthy();
 });
@@ -242,19 +242,15 @@ describe('pinchGeometry', () => {
   const from = { a: { x: 0, y: 0 }, b: { x: 100, y: 0 } };
 
   it('never makes an item smaller than it can be picked up again', () => {
-    const tiny = pinchGeometry(start, from, { a: { x: 0, y: 0 }, b: { x: 1, y: 0 } }, 1, true);
+    const tiny = pinchGeometry(start, from, { a: { x: 0, y: 0 }, b: { x: 1, y: 0 } }, 1);
     expect(Math.min(tiny.width, tiny.height)).toBe(40);
   });
 
   it('follows both fingers moving together, scaled to the canvas', () => {
-    const moved = pinchGeometry(start, from, { a: { x: 50, y: 20 }, b: { x: 150, y: 20 } }, 0.5, true);
+    const moved = pinchGeometry(start, from, { a: { x: 50, y: 20 }, b: { x: 150, y: 20 } }, 0.5);
     expect(moved).toEqual({ x: 200, y: 140, width: 200, height: 100, rotation: 0 });
   });
 
-  it('leaves the rotation alone for text', () => {
-    const turned = pinchGeometry(start, from, { a: { x: 0, y: 0 }, b: { x: 0, y: 100 } }, 1, false);
-    expect(turned.rotation).toBe(0);
-  });
 });
 
 it('resizes an item via the resize handle', () => {
@@ -396,5 +392,104 @@ describe('an item someone else is moving', () => {
     fireEvent.pointerDown(photo, { clientX: 0, clientY: 0, pointerId: 1 });
 
     expect(photoBox(container)).toHaveStyle({ left: '100px', top: '100px' });
+  });
+});
+
+describe('stickers, shapes and styled text', () => {
+  const overlayDoc: CollageDoc = {
+    ...baseDoc,
+    photos: [],
+    texts: [
+      {
+        id: 'styled',
+        text: 'Styled',
+        x: 0,
+        y: 0,
+        width: 240,
+        height: 60,
+        fontSize: 40,
+        color: '#111111',
+        fontFamily: 'hand',
+        bold: false,
+        italic: true,
+        align: 'left',
+        background: '#ffff00',
+        rotation: 30
+      },
+      { id: 'sticker', kind: 'sticker', text: '🎉', x: 300, y: 0, width: 100, height: 100, fontSize: 32, color: '#000' },
+      { id: 'heart', kind: 'shape', shape: 'heart', text: '', x: 500, y: 0, width: 120, height: 100, fontSize: 32, color: '#e91e63' }
+    ]
+  };
+
+  it('draws a text in its font and style, turned and on its label', () => {
+    const { container } = render(<Harness doc={overlayDoc} />);
+    const box = container.querySelector('[data-item-id="styled"]') as HTMLElement;
+    const letters = screen.getByText('Styled');
+
+    expect(box.style.transform || getComputedStyle(box).transform).toContain('rotate(30deg)');
+    expect(getComputedStyle(box).backgroundColor).toBe('rgb(255, 255, 0)');
+    expect(getComputedStyle(letters).fontFamily).toContain('Caveat');
+    expect(getComputedStyle(letters).fontStyle).toBe('italic');
+    expect(getComputedStyle(letters).fontWeight).toBe('400');
+    expect(getComputedStyle(letters).textAlign).toBe('left');
+  });
+
+  it('sizes a sticker to its box', () => {
+    render(<Harness doc={overlayDoc} />);
+    expect(getComputedStyle(screen.getByText('🎉')).fontSize).toBe('80px');
+  });
+
+  it('draws a shape in its colour', () => {
+    const { container } = render(<Harness doc={overlayDoc} />);
+    const path = container.querySelector('[data-item-id="heart"] path')!;
+    expect(path).toHaveAttribute('fill', '#e91e63');
+  });
+
+  it('turns a text with two fingers, as it does a photo', () => {
+    const { container } = render(<Harness doc={overlayDoc} />);
+    const box = container.querySelector('[data-item-id="sticker"]') as HTMLElement;
+    const touch = (pointerId: number, clientX: number, clientY: number) => ({ pointerId, pointerType: 'touch', clientX, clientY });
+
+    fireEvent.pointerDown(box, touch(1, 350, 50));
+    fireEvent.pointerDown(box, touch(2, 400, 50));
+    fireEvent.pointerMove(window, touch(2, 350, 100));
+    fireEvent.pointerUp(window, touch(2, 350, 100));
+    fireEvent.pointerUp(window, touch(1, 350, 50));
+
+    expect(box.style.transform || getComputedStyle(box).transform).toContain('rotate(90deg)');
+  });
+
+  it('plays a video in place, with its poster until it starts', () => {
+    const { container } = render(
+      <Harness
+        doc={baseDoc}
+        resolvePhoto={() => ({ src: 'https://cdn.example/clip.mp4', posterSrc: 'https://cdn.example/clip.jpg', mimetype: 'video/mp4' })}
+      />
+    );
+    const video = container.querySelector('video')!;
+    expect(video).toHaveAttribute('src', 'https://cdn.example/clip.mp4');
+    expect(video).toHaveAttribute('poster', 'https://cdn.example/clip.jpg');
+    expect(video.muted).toBe(true);
+  });
+
+  it('places a photo dragged in from the chat by its file id', () => {
+    const onDropFile = vi.fn();
+    const editorDoc = baseDoc;
+    function DropHarness() {
+      const editor = useCollageEditor();
+      useEffect(() => {
+        editor.init(editorDoc);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+      if (!editor.doc) return null;
+      return <CollageStage editor={editor} resolvePhoto={() => undefined} readOnly={false} zoom={1} onDropFile={onDropFile} />;
+    }
+    const { container } = render(<DropHarness />);
+
+    const canvas = container.querySelector('[data-item-id="photo-item-1"]')!.parentElement!;
+    const dataTransfer = { getData: (type: string) => (type === 'application/x-tumbaland-file' ? 'file-7' : '') };
+    fireEvent.drop(canvas, { dataTransfer, clientX: 210, clientY: 220 });
+
+    expect(onDropFile).toHaveBeenCalledWith('file-7', expect.any(Number), expect.any(Number));
   });
 });

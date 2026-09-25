@@ -8,9 +8,11 @@ import CallEndIcon from '@mui/icons-material/CallEnd';
 import MicIcon from '@mui/icons-material/Mic';
 import MicOffIcon from '@mui/icons-material/MicOff';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import type { ReactNode } from 'react';
 import { MemberAvatar } from '../thread/MemberAvatar';
 import type { CallState } from '../../services/callEngine';
+import { useDraggable } from './useDraggable';
 
 export interface CallScreenProps {
   state: CallState;
@@ -102,10 +104,14 @@ const RED = '#dc2626';
 const GREEN = '#16a34a';
 const GLASS = 'rgba(255,255,255,0.18)';
 
+/** Where the bar was last dragged to, on this device. */
+const BAR_POSITION_KEY = 'tumbaland-call-bar-position';
+
 /**
  * The call as a small bar at the bottom of the screen, clear of the chat
  * composer and the phone's tab bar, so a call can run while the rest of the
- * app is used. Tapping the name brings the full screen back.
+ * app is used. Tapping the name brings the full screen back. It can be dragged
+ * out of the way, say off a collage being arranged, and stays where it is left.
  */
 function CallBar({
   state,
@@ -122,21 +128,33 @@ function CallBar({
 }) {
   const name = state.peer?.name || 'Call';
   const talking = state.phase === 'connecting' || state.phase === 'active';
+  const { ref, position, handlers } = useDraggable<HTMLDivElement>(BAR_POSITION_KEY);
   return (
     <Box
+      ref={ref}
       role="region"
       aria-label={`Call with ${name}`}
+      {...handlers}
       sx={{
         position: 'fixed',
         zIndex: 1600,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        bottom: { xs: 'calc(env(safe-area-inset-bottom) + 88px)', sm: 24 },
+        ...(position
+          ? { left: position.left, top: position.top }
+          : {
+              left: '50%',
+              transform: 'translateX(-50%)',
+              bottom: { xs: 'calc(env(safe-area-inset-bottom) + 88px)', sm: 24 }
+            }),
         width: 'min(360px, calc(100vw - 32px))',
+        // A finger drag moves the bar instead of scrolling the page under it.
+        touchAction: 'none',
+        userSelect: 'none',
+        cursor: 'grab',
+        '&:active': { cursor: 'grabbing' },
         display: 'flex',
         alignItems: 'center',
         gap: 1,
-        pl: 0.75,
+        pl: 0.25,
         pr: 0.75,
         py: 0.75,
         borderRadius: 999,
@@ -145,6 +163,7 @@ function CallBar({
         boxShadow: '0 10px 30px rgba(15,23,42,0.35)'
       }}
     >
+      <DragIndicatorIcon aria-hidden fontSize="small" sx={{ color: 'rgba(255,255,255,0.45)', mr: -0.5 }} />
       <ButtonBase
         onClick={onExpand}
         aria-label="Open call"

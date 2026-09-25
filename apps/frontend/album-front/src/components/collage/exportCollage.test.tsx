@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { exportCollageToPng, downloadBlob } from './exportCollage';
+import { collageMoves, downloadBlob, exportCollageToPng, exportCollageToVideo, frameIndexAt } from './exportCollage';
 import { CollageDoc } from './collageDoc';
 import { ResolvePhoto } from './CollageStage';
 
@@ -38,6 +38,16 @@ function makeCtx() {
     drawImage: vi.fn(),
     fillRect: vi.fn(),
     fillText: vi.fn(),
+    strokeText: vi.fn(),
+    fill: vi.fn(),
+    stroke: vi.fn(),
+    beginPath: vi.fn(),
+    roundRect: vi.fn(),
+    // Ten pixels a character, so wrapping is easy to predict.
+    measureText: vi.fn((text: string) => ({ width: text.length * 10 })),
+    lineWidth: 0,
+    lineJoin: '',
+    strokeStyle: '',
     shadowColor: '',
     shadowBlur: 0,
     shadowOffsetY: 0,
@@ -161,9 +171,139 @@ it('draws each line of a multi-line text item', async () => {
 
   await exportCollageToPng(docWithText, resolvePhoto);
 
-  expect(ctx.fillText).toHaveBeenCalledWith('Line one', 100, expect.any(Number), 200);
-  expect(ctx.fillText).toHaveBeenCalledWith('Line two', 100, expect.any(Number), 200);
+  // Drawn about the item's centre, which the context is translated to.
+  expect(ctx.translate).toHaveBeenCalledWith(100, 30);
+  expect(ctx.fillText).toHaveBeenCalledWith('Line one', 0, expect.any(Number));
+  expect(ctx.fillText).toHaveBeenCalledWith('Line two', 0, expect.any(Number));
   expect(ctx.fillStyleHistory).toContain('#e91e63');
+});
+
+it('wraps a long line to the width of its box, as the canvas on screen does', async () => {
+  const doc: CollageDoc = {
+    ...baseDoc,
+    photos: [],
+    texts: [{ id: 't1', text: 'one two three', x: 0, y: 0, width: 80, height: 60, fontSize: 20, color: '#000' }]
+  };
+
+  await exportCollageToPng(doc, resolvePhoto);
+
+  expect(ctx.fillText.mock.calls.map(([line]) => line)).toEqual(['one two', 'three']);
+});
+
+it('draws a text in its font and style, turned, outlined, on its label', async () => {
+  const doc: CollageDoc = {
+    ...baseDoc,
+    photos: [],
+    texts: [
+      {
+        id: 't1',
+        text: 'Hi',
+        x: 0,
+        y: 0,
+        width: 200,
+        height: 60,
+        fontSize: 20,
+        color: '#000000',
+        fontFamily: 'hand',
+        bold: false,
+        italic: true,
+        align: 'left',
+        background: '#ffff00',
+        outline: '#ffffff',
+        rotation: 90
+      }
+    ]
+  };
+
+  await exportCollageToPng(doc, resolvePhoto);
+
+  expect(ctx.rotate).toHaveBeenCalledWith(Math.PI / 2);
+  expect(ctx.font).toBe('italic 400 20px "Caveat", cursive');
+  expect(ctx.fillStyleHistory).toContain('#ffff00');
+  expect(ctx.roundRect).toHaveBeenCalled();
+  expect(ctx.strokeText).toHaveBeenCalledWith('Hi', expect.any(Number), expect.any(Number));
+  // left-aligned: starts at the box's left edge plus the label's padding
+  expect(ctx.textAlign).toBe('left');
+  expect(ctx.fillText.mock.calls[0][1]).toBeCloseTo(-100 + 20 * 0.3);
+});
+
+it('fills a shape with its colour and outlines it', async () => {
+  class FakePath2D {
+    addPath = vi.fn();
+  }
+  vi.stubGlobal('Path2D', FakePath2D);
+  vi.stubGlobal(
+    'DOMMatrix',
+    class {
+      translate() {
+        return this;
+      }
+      scale() {
+        return this;
+      }
+    }
+  );
+  const doc: CollageDoc = {
+    ...baseDoc,
+    photos: [],
+    texts: [
+      {
+        id: 's1',
+        kind: 'shape',
+        shape: 'heart',
+        text: '',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        fontSize: 32,
+        color: '#e91e63',
+        outline: '#ffffff'
+      }
+    ]
+  };
+
+  await exportCollageToPng(doc, resolvePhoto);
+
+  expect(ctx.fill).toHaveBeenCalledWith(expect.any(FakePath2D));
+  expect(ctx.stroke).toHaveBeenCalledWith(expect.any(FakePath2D));
+  expect(ctx.fillText).not.toHaveBeenCalled();
+});
+
+it('draws a video from its poster in the PNG', async () => {
+  const video: ResolvePhoto = () => ({
+    src: 'https://cdn.example/clip.mp4',
+    posterSrc: 'https://cdn.example/clip.jpg',
+    mimetype: 'video/mp4'
+  });
+
+  await exportCollageToPng(baseDoc, video);
+
+  const [image] = ctx.drawImage.mock.calls[0];
+  expect((image as FakeImage).src).toBe('https://cdn.example/clip.jpg');
+});
+
+describe('moving collages', () => {
+  it('knows a collage moves when it holds a GIF or a video', () => {
+    expect(collageMoves(baseDoc, () => ({ mimetype: 'image/jpeg' }))).toBe(false);
+    expect(collageMoves(baseDoc, () => ({ mimetype: 'image/gif' }))).toBe(true);
+    expect(collageMoves(baseDoc, () => ({ mimetype: 'video/mp4' }))).toBe(true);
+    expect(collageMoves(null, () => ({ mimetype: 'video/mp4' }))).toBe(false);
+  });
+
+  it("picks a GIF's frame by time, looping", () => {
+    const durations = [0.1, 0.2, 0.1];
+    expect(frameIndexAt(durations, 0)).toBe(0);
+    expect(frameIndexAt(durations, 0.15)).toBe(1);
+    expect(frameIndexAt(durations, 0.35)).toBe(2);
+    expect(frameIndexAt(durations, 0.45)).toBe(0);
+    expect(frameIndexAt([], 1)).toBe(0);
+  });
+
+  it('says so plainly where the browser cannot record video', async () => {
+    vi.stubGlobal('MediaRecorder', undefined);
+    await expect(exportCollageToVideo(baseDoc, resolvePhoto)).rejects.toThrow(/cannot record video/);
+  });
 });
 
 it('rejects with a CORS-specific message when canvas.toBlob throws', async () => {
@@ -180,7 +320,8 @@ it('rejects when toBlob yields no blob', async () => {
   await expect(exportCollageToPng(baseDoc, resolvePhoto)).rejects.toThrow('Export failed');
 });
 
-it('downloadBlob creates an object URL, triggers a click, and revokes the URL', () => {
+it('downloadBlob creates an object URL, triggers a click, and revokes the URL once the browser has it', () => {
+  vi.useFakeTimers();
   const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
   const blob = new Blob(['data']);
 
@@ -188,8 +329,11 @@ it('downloadBlob creates an object URL, triggers a click, and revokes the URL', 
 
   expect(URL.createObjectURL).toHaveBeenCalledWith(blob);
   expect(clickSpy).toHaveBeenCalledTimes(1);
+  expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+  vi.runAllTimers();
   expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock');
   clickSpy.mockRestore();
+  vi.useRealTimers();
 });
 
 it('draws only the crop region of a cropped photo', async () => {

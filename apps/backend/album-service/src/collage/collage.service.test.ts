@@ -208,6 +208,25 @@ describe('collage.service', () => {
       expect(result.photos[0]).toMatchObject({ signedUrl: 'https://original', thumbnailSignedUrl: 'https://thumb' });
     });
 
+    it("signs a video's still, so the editor has a picture of it", async () => {
+      mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER, albumIds: ['507f1f77bcf86cd799439012'] });
+      mockedAggregate.mockResolvedValue([
+        {
+          userId: OWNER,
+          photos: [{ _id: 'v1', minioFileId: 'clip-1', minioPosterFileId: 'still-1', mimetype: 'video/mp4' }]
+        }
+      ]);
+      mockedGetSignedUrlsBatch.mockResolvedValue({
+        'clip-1': { signedUrl: 'https://clip', expiresAt: 't', expiresInMinutes: 60 },
+        'still-1': { signedUrl: 'https://still', expiresAt: 't', expiresInMinutes: 60 }
+      });
+
+      const result = await getCollageWithPhotos(collageId, OWNER);
+
+      expect(mockedGetSignedUrlsBatch).toHaveBeenCalledWith(['clip-1', 'still-1'], 60);
+      expect(result.photos[0]).toMatchObject({ signedUrl: 'https://clip', posterSignedUrl: 'https://still' });
+    });
+
     it('still returns the collage (with un-enriched photos) when the signed-url batch call fails', async () => {
       mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER, albumIds: ['507f1f77bcf86cd799439012'] });
       mockedAggregate.mockResolvedValue([{ userId: OWNER, photos: [{ _id: 'p1', minioFileId: 'file-1' }] }]);

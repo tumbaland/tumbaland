@@ -6,6 +6,8 @@ export interface IPhoto extends Document {
   originalName: string;
   minioFileId?: string; // MinIO storage path for original file (legacy)
   minioThumbnailFileId?: string; // MinIO storage path for thumbnail (legacy)
+  /** A video's still image. Chat makes one for every video it sends; Album has none of its own. */
+  minioPosterFileId?: string;
   albumId: string;
   title?: string;
   description?: string;
@@ -69,6 +71,10 @@ const PhotoSchema: Schema = new Schema(
       required: false
     },
     minioThumbnailFileId: {
+      type: String,
+      required: false
+    },
+    minioPosterFileId: {
       type: String,
       required: false
     },

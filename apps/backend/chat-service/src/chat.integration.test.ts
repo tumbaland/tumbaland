@@ -1370,6 +1370,45 @@ describe('saving photos to Album', () => {
     expect(stored!.attachments[0]).toMatchObject({ albumId: 'a-rome', albumName: 'Rome' });
   });
 
+  it('tells an open thread when someone changes their name, and keeps the new one', async () => {
+    const id = await conversationInG1();
+    await as(IRJA).get(`/api/chat/conversations/${id}`);
+    const sent: string[] = [];
+    subscribe('u-tom', ['g1'], { send: (chunk: string) => sent.push(chunk) > 0 } as unknown as import('@tumbaland/backend-core').SseStream);
+
+    await as({ ...IRJA, name: 'Irja Tamm' }).get(`/api/chat/conversations/${id}`);
+
+    expect(sent.join('')).toContain('"member":{"userId":"u-irja","name":"Irja Tamm"');
+    const detail = await as(TOM).get(`/api/chat/conversations/${id}`);
+    expect(detail.body.data.members).toEqual(
+      expect.arrayContaining([expect.objectContaining({ userId: 'u-irja', name: 'Irja Tamm' })])
+    );
+  });
+
+  it("hands a video's still to the album along with the video", async () => {
+    const id = await conversationInG1();
+    await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
+
+    await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({
+        clientId: clientId(),
+        attachments: [
+          {
+            fileId: `chat/g1/${id}/clip/original.mp4`,
+            posterFileId: `chat/g1/${id}/still/original.jpg`,
+            mimetype: 'video/mp4',
+            sizeBytes: 100
+          }
+        ]
+      });
+    await settle();
+
+    expect(albumCalls.addChatPhoto).toHaveBeenCalledWith(
+      expect.objectContaining({ fileId: `chat/g1/${id}/clip/original.mp4`, posterFileId: `chat/g1/${id}/still/original.jpg` })
+    );
+  });
+
   it('leaves out a send marked "not this one"', async () => {
     const id = await conversationInG1();
     await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });

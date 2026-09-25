@@ -24,6 +24,7 @@ const chatPhotoSchema = z.object({
   messageId: z.string().min(1),
   fileId: z.string().min(1).max(512),
   thumbnailFileId: z.string().max(512).nullish(),
+  posterFileId: z.string().max(512).nullish(),
   mimetype: z.string().regex(/^(image|video)\//, 'Only images and videos'),
   size: z.number().int().nonnegative(),
   width: z.number().int().positive().nullish(),

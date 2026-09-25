@@ -35,6 +35,17 @@ export interface CollageTextBox {
   /** v2 styling; absent on v1 configs */
   fontSize?: number;
   color?: string;
+  fontFamily?: string;
+  bold?: boolean;
+  italic?: boolean;
+  align?: 'left' | 'center' | 'right';
+  background?: string;
+  outline?: string;
+  shadow?: boolean;
+  rotation?: number;
+  /** What the item is; absent means text. */
+  kind?: 'text' | 'sticker' | 'shape';
+  shape?: string;
 }
 
 export interface CollageConfig {

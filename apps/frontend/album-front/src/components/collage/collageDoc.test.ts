@@ -11,7 +11,10 @@ import {
   normalizeOrientation,
   orientationTurns,
   rotateCropClockwise,
-  sourceCrop
+  sourceCrop,
+  cleanTextPatch,
+  isMovingType,
+  isVideoType
 } from './collageDoc';
 import { CollageConfig } from '../../types/collage';
 
@@ -239,5 +242,99 @@ describe('orientation', () => {
 
     expect(doc.photos[0].orientation).toBeUndefined();
     expect(serializeCollageDoc(doc).photos[0].orientation).toBeUndefined();
+  });
+});
+
+describe('text, sticker and shape styles', () => {
+  const box = { id: 't1', text: 'Hi', x: 0, y: 0, width: 100, height: 40, fontSize: 20, color: '#000' };
+
+  it('keeps a styled text through a save and a reload', () => {
+    const styled = normalizeCollageConfig({
+      ...({} as CollageConfig),
+      photos: [],
+      texts: [
+        {
+          ...box,
+          fontFamily: 'hand',
+          bold: false,
+          italic: true,
+          align: 'right',
+          background: '#ff0',
+          outline: '#fff',
+          shadow: true,
+          rotation: 12
+        }
+      ]
+    });
+    const again = normalizeCollageConfig(serializeCollageDoc(styled));
+
+    expect(again.texts[0]).toEqual(styled.texts[0]);
+    expect(again.texts[0]).toMatchObject({
+      fontFamily: 'hand',
+      bold: false,
+      italic: true,
+      align: 'right',
+      rotation: 12
+    });
+  });
+
+  it('writes nothing for a default, so a text from before styles reads as unchanged', () => {
+    const plain = normalizeCollageConfig({
+      ...({} as CollageConfig),
+      photos: [],
+      texts: [{ ...box, fontFamily: 'sans', bold: true, italic: false, align: 'center', background: '', rotation: 0 }]
+    });
+
+    expect(Object.keys(plain.texts[0]).sort()).toEqual([
+      'color',
+      'fontSize',
+      'height',
+      'id',
+      'text',
+      'width',
+      'x',
+      'y'
+    ]);
+  });
+
+  it('keeps a known shape and drops one it cannot draw', () => {
+    const doc = normalizeCollageConfig({
+      ...({} as CollageConfig),
+      photos: [],
+      texts: [
+        { ...box, id: 'a', kind: 'shape', shape: 'heart' },
+        { ...box, id: 'b', kind: 'shape', shape: 'dodecahedron' },
+        { ...box, id: 'c', kind: 'sticker', text: '🎉' }
+      ]
+    });
+
+    expect(doc.texts[0]).toMatchObject({ kind: 'shape', shape: 'heart' });
+    expect(doc.texts[1]!.kind).toBeUndefined();
+    expect(doc.texts[2]).toMatchObject({ kind: 'sticker', text: '🎉' });
+  });
+
+  it('cleanTextPatch turns defaults into undefined and leaves other fields alone', () => {
+    expect(
+      cleanTextPatch({ bold: true, italic: false, align: 'center', rotation: 0, fontFamily: 'sans', x: 5 })
+    ).toEqual({
+      bold: undefined,
+      italic: undefined,
+      align: undefined,
+      rotation: undefined,
+      fontFamily: undefined,
+      x: 5
+    });
+    expect(cleanTextPatch({ bold: false, align: 'left', rotation: 45 })).toEqual({
+      bold: false,
+      align: 'left',
+      rotation: 45
+    });
+  });
+
+  it('tells videos and GIFs apart from stills', () => {
+    expect(isVideoType('video/mp4')).toBe(true);
+    expect(isVideoType('image/gif')).toBe(false);
+    expect(isMovingType('image/gif')).toBe(true);
+    expect(isMovingType('image/png')).toBe(false);
   });
 });

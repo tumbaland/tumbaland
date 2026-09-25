@@ -65,6 +65,8 @@ export interface Photo {
   signedUrlExpiresAt?: string;
   signedUrlExpiresInMinutes?: number;
   thumbnailSignedUrl?: string; // Add thumbnail signed URL
+  /** A video's still, when one was made (chat makes one for every video it sends). */
+  posterSignedUrl?: string;
   thumbnailSignedUrlExpiresAt?: string;
   thumbnailSignedUrlExpiresInMinutes?: number;
   thumbnailUrl?: string; // Add thumbnail URL for efficient grid loading

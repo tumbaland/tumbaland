@@ -370,3 +370,50 @@ describe('select', () => {
     expect(result.current.selectedId).toBeNull();
   });
 });
+
+describe('stickers and shapes', () => {
+  it('adds a sticker centred on the canvas and selects it', () => {
+    const { result } = renderHook(() => useCollageEditor());
+    act(() => result.current.init(emptyDoc));
+
+    let id = '';
+    act(() => {
+      id = result.current.addSticker('🎉');
+    });
+
+    const sticker = result.current.doc!.texts[0]!;
+    expect(sticker).toMatchObject({ id, kind: 'sticker', text: '🎉' });
+    expect(sticker.width).toBe(sticker.height);
+    expect(sticker.x + sticker.width / 2).toBe(800);
+    expect(sticker.y + sticker.height / 2).toBe(450);
+    expect(result.current.selectedItem).toMatchObject({ kind: 'sticker' });
+  });
+
+  it('adds a shape in the given colour', () => {
+    const { result } = renderHook(() => useCollageEditor());
+    act(() => result.current.init(emptyDoc));
+
+    act(() => {
+      result.current.addShape('star', '#00ff00');
+    });
+
+    expect(result.current.doc!.texts[0]).toMatchObject({ kind: 'shape', shape: 'star', color: '#00ff00' });
+    expect(result.current.selectedItem).toMatchObject({ kind: 'shape' });
+  });
+
+  it('stores a restyled text the way a reload would read it back', () => {
+    const { result } = renderHook(() => useCollageEditor());
+    act(() => result.current.init(emptyDoc));
+    let id = '';
+    act(() => {
+      id = result.current.addText();
+    });
+
+    act(() => result.current.patchItem(id, { bold: true, align: 'center', italic: true }));
+
+    const text = result.current.doc!.texts[0]!;
+    expect(text.bold).toBeUndefined();
+    expect(text.align).toBeUndefined();
+    expect(text.italic).toBe(true);
+  });
+});

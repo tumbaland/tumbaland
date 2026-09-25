@@ -19,6 +19,7 @@ import {
 } from '@mui/icons-material';
 import { Collage } from '../../types/collage';
 import { normalizeCollageConfig } from './collageDoc';
+import { SHAPE_PATHS, stickerFontSize } from './collageElements';
 
 interface CollageCardProps {
   collage: Collage;
@@ -42,6 +43,7 @@ export const CollagePreview: React.FC<{ collage: Collage }> = ({ collage }) => {
         aspectRatio: '16 / 10',
         bgcolor: doc.background,
         overflow: 'hidden',
+        containerType: 'inline-size',
         borderTopLeftRadius: 'inherit',
         borderTopRightRadius: 'inherit'
       }}
@@ -62,21 +64,62 @@ export const CollagePreview: React.FC<{ collage: Collage }> = ({ collage }) => {
           }}
         />
       ))}
-      {doc.texts.map((t) => (
-        <Box
-          key={t.id}
-          sx={{
-            position: 'absolute',
-            left: pct(t.x, vw),
-            top: pct(t.y + t.height / 2, vh),
-            width: pct(t.width, vw),
-            height: '2px',
-            bgcolor: t.color,
-            opacity: 0.85,
-            borderRadius: 1
-          }}
-        />
-      ))}
+      {doc.texts.map((t) =>
+        t.kind === 'shape' && t.shape ? (
+          <Box
+            key={t.id}
+            component="svg"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              left: pct(t.x, vw),
+              top: pct(t.y, vh),
+              width: pct(t.width, vw),
+              height: pct(t.height, vh),
+              transform: t.rotation ? `rotate(${t.rotation}deg)` : undefined
+            }}
+          >
+            <path d={SHAPE_PATHS[t.shape]} fill={t.color} />
+          </Box>
+        ) : t.kind === 'sticker' ? (
+          <Box
+            key={t.id}
+            aria-hidden
+            sx={{
+              position: 'absolute',
+              left: pct(t.x, vw),
+              top: pct(t.y, vh),
+              width: pct(t.width, vw),
+              height: pct(t.height, vh),
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              lineHeight: 1,
+              // Sized against the preview's width, as the sticker is against the canvas.
+              fontSize: `${(stickerFontSize(t) / vw) * 100}cqw`,
+              transform: t.rotation ? `rotate(${t.rotation}deg)` : undefined
+            }}
+          >
+            {t.text}
+          </Box>
+        ) : (
+          <Box
+            key={t.id}
+            sx={{
+              position: 'absolute',
+              left: pct(t.x, vw),
+              top: pct(t.y + t.height / 2, vh),
+              width: pct(t.width, vw),
+              height: '2px',
+              bgcolor: t.background ?? t.color,
+              opacity: 0.85,
+              borderRadius: 1
+            }}
+          />
+        )
+      )}
       {doc.photos.length === 0 && doc.texts.length === 0 && (
         <Box
           sx={{

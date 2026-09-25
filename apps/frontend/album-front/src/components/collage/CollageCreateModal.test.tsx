@@ -10,13 +10,13 @@ vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
 
 const mockFetchAlbums = vi.fn();
 vi.mock('../../hooks/useAlbums', () => ({
-  useAlbums: vi.fn()
+  useAllAlbums: vi.fn()
 }));
 
-import { useAlbums } from '../../hooks/useAlbums';
+import { useAllAlbums } from '../../hooks/useAlbums';
 import { CollageCreateModal } from './CollageCreateModal';
 
-const mockedUseAlbums = useAlbums as unknown as ReturnType<typeof vi.fn>;
+const mockedUseAlbums = useAllAlbums as unknown as ReturnType<typeof vi.fn>;
 
 const albums = [
   {

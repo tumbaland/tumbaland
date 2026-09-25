@@ -1,14 +1,21 @@
 import React, { useMemo, useState } from 'react';
 import { Box, Button, Chip, Tooltip, Typography } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutlined';
+import { MediaThumb } from '@tumbaland/frontend-core';
 
 /** Shape of photos returned by GET /collages/:id (a projection of Photo). */
 export interface AlbumPhoto {
   _id: string;
   filename: string;
   title?: string;
+  mimetype?: string;
+  /** The file's id in storage; a photo sent in the chat shares it with the chat's copy. */
+  minioFileId?: string;
   signedUrl?: string;
   thumbnailSignedUrl?: string;
+  /** A video's still, when one was made (chat makes one for every video it sends). */
+  posterSignedUrl?: string;
   width?: number;
   height?: number;
   tags?: string[];
@@ -163,7 +170,8 @@ const CollagePhotoTray: React.FC<CollagePhotoTrayProps> = ({ photos, usedPhotoId
       >
         {visiblePhotos.map((photo) => {
           const used = usedPhotoIds.has(photo._id);
-          const src = photo.thumbnailSignedUrl || photo.signedUrl;
+          const video = photo.mimetype?.startsWith('video/') ?? false;
+          const src = video ? photo.posterSignedUrl : photo.thumbnailSignedUrl || photo.signedUrl;
           return (
             <Tooltip
               key={photo._id}
@@ -202,6 +210,14 @@ const CollagePhotoTray: React.FC<CollagePhotoTrayProps> = ({ photos, usedPhotoId
                     draggable={false}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   />
+                ) : video && photo.signedUrl ? (
+                  // No still was made for it: the video's own first frame.
+                  <MediaThumb
+                    src={photo.signedUrl}
+                    mimetype={photo.mimetype}
+                    alt={photo.title || photo.filename}
+                    sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
                 ) : (
                   <Box
                     sx={{
@@ -218,6 +234,19 @@ const CollagePhotoTray: React.FC<CollagePhotoTrayProps> = ({ photos, usedPhotoId
                   >
                     No preview
                   </Box>
+                )}
+                {video && (
+                  <PlayCircleOutlineIcon
+                    aria-label="Video"
+                    sx={{
+                      position: 'absolute',
+                      left: 4,
+                      bottom: 4,
+                      fontSize: 20,
+                      color: '#fff',
+                      filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))'
+                    }}
+                  />
                 )}
                 {used && (
                   <CheckCircleIcon

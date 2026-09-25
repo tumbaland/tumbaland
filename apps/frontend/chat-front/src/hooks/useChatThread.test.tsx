@@ -1,18 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import type { Message } from '../types';
+import type { ChatEvent, Message } from '../types';
 
 const listMessages = vi.fn();
+const getConversation = vi.fn();
+let streamEvent: ((event: ChatEvent) => void) | undefined;
 
 vi.mock('../services/chatApi', () => ({
   chatApi: {
     listMessages: (...args: unknown[]) => listMessages(...args),
-    getConversation: () => new Promise(() => {}),
+    getConversation: (...args: unknown[]) => getConversation(...args),
     markRead: () => Promise.resolve()
   },
   newClientId: () => 'client-x'
 }));
-vi.mock('./useChatStream', () => ({ useChatStream: () => {} }));
+vi.mock('./useChatStream', () => ({
+  useChatStream: ({ onEvent }: { onEvent: (event: ChatEvent) => void }) => {
+    streamEvent = onEvent;
+  }
+}));
 
 import { useChatThread } from './useChatThread';
 
@@ -48,6 +54,32 @@ async function openThread() {
 
 beforeEach(() => {
   listMessages.mockReset();
+  getConversation.mockReset().mockReturnValue(new Promise(() => {}));
+});
+
+describe('member renames', () => {
+  it("shows someone's new name as soon as the stream says they changed it", async () => {
+    listMessages.mockResolvedValueOnce(page(2, 1, null));
+    getConversation.mockResolvedValueOnce({
+      id: 'c1',
+      title: '',
+      members: [{ userId: 'u-irja', email: 'irja@test', name: 'Irja', joinedAt: '2026-01-01T00:00:00Z' }],
+      reads: []
+    });
+    const { result } = await openThread();
+    await waitFor(() => expect(result.current.members[0]?.name).toBe('Irja'));
+
+    act(() =>
+      streamEvent!({
+        type: 'conversation.updated',
+        conversationId: 'c1',
+        at: Date.now(),
+        payload: { member: { userId: 'u-irja', name: 'Irja Tamm', picture: null } }
+      })
+    );
+
+    expect(result.current.members[0]).toMatchObject({ name: 'Irja Tamm', email: 'irja@test' });
+  });
 });
 
 describe('loadUntil', () => {

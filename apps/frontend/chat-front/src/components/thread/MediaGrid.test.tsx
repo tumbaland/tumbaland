@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MediaGrid, columnsFor, formatDuration, isVideo, previewSrc } from './MediaGrid';
+import { CHAT_FILE_DRAG_TYPE, MediaGrid, columnsFor, formatDuration, isVideo, previewSrc } from './MediaGrid';
 import type { Attachment } from '../../types';
 
 const photo = (overrides: Partial<Attachment> = {}): Attachment => ({
@@ -167,5 +167,23 @@ describe('a video with no poster', () => {
     fireEvent.error(container.querySelector('img')!);
 
     expect(container.querySelector('video')).toHaveAttribute('src', 'https://files.test/v1#t=0.1');
+  });
+});
+
+describe('dragging a photo out', () => {
+  it('carries its file id, for a collage beside the chat to place it', () => {
+    render(
+      <MediaGrid
+        attachments={[{ fileId: 'file-7', url: 'https://files.test/7', thumbnailUrl: 'https://files.test/7t', mimetype: 'image/jpeg', sizeBytes: 1 }]}
+        onOpen={() => {}}
+      />
+    );
+    const data = new Map<string, string>();
+    const dataTransfer = { setData: (type: string, value: string) => data.set(type, value), effectAllowed: '' };
+
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Open photo' }), { dataTransfer });
+
+    expect(data.get(CHAT_FILE_DRAG_TYPE)).toBe('file-7');
+    expect(data.get('text/uri-list')).toBe('https://files.test/7');
   });
 });

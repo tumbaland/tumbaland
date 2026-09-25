@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Lightbox } from './Lightbox';
+import { Lightbox, downloadAttachment } from './Lightbox';
 import type { Attachment } from '../../types';
 
 const photo = (overrides: Partial<Attachment> = {}): Attachment => ({
@@ -63,5 +63,36 @@ describe('Use as background', () => {
       />
     );
     expect(screen.queryByRole('button', { name: 'Use as background' })).not.toBeInTheDocument();
+  });
+});
+
+describe('downloadAttachment', () => {
+  it('saves through a same-origin blob link, so the page never navigates away mid-call', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(new Blob(['x'], { type: 'image/png' }))));
+    const createObjectURL = vi.fn(() => 'blob:local/1');
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() }));
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    await downloadAttachment(photo({ mimetype: 'image/png' }));
+
+    const clicked = click.mock.contexts[0] as HTMLAnchorElement;
+    expect(clicked.href).toBe('blob:local/1');
+    expect(clicked.download).toBe('tumbaland-f1.png');
+    expect(open).not.toHaveBeenCalled();
+    click.mockRestore();
+    open.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
+  it('opens the file in a new tab when it cannot be fetched', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+
+    await downloadAttachment(photo());
+
+    expect(open).toHaveBeenCalledWith('https://files.test/f1', '_blank', 'noopener');
+    open.mockRestore();
+    vi.unstubAllGlobals();
   });
 });

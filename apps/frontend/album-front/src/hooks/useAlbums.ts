@@ -98,3 +98,18 @@ export const useAlbums = (params?: {
     deleteAlbum: deleteMutation.mutateAsync
   };
 };
+
+/**
+ * Every album in scope, for a picker. `useAlbums` is one page of the albums
+ * screen; this is the whole list, newest first.
+ */
+export const useAllAlbums = (params?: { groupId?: string; includeCover?: boolean }) => {
+  const groupId = params?.groupId;
+  const includeCover = params?.includeCover;
+  const memoizedParams = useMemo(() => normalizeParams({ groupId, includeCover }), [groupId, includeCover]);
+  const query = useQuery<Album[]>({
+    queryKey: [...albumKeys.all, 'every', memoizedParams],
+    queryFn: () => albumService.getAllAlbums(memoizedParams)
+  });
+  return { albums: query.data ?? [], loading: query.isPending, fetchAlbums: query.refetch };
+};

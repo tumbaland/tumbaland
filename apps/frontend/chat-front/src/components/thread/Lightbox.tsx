@@ -37,6 +37,36 @@ export function canShareFile(file: File): boolean {
   return typeof navigator !== 'undefined' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
 }
 
+/**
+ * Saves an attachment without leaving the page.
+ *
+ * Not a plain `<a href download>`: the file lives on another origin, where
+ * browsers ignore `download` and open the file in place instead. That
+ * navigated the whole app away, and a call in progress hung up with it. A
+ * blob URL is same-origin, so `download` holds. If the fetch fails, the file
+ * opens in a new tab, never over this one.
+ */
+export async function downloadAttachment(attachment: Pick<Attachment, 'url' | 'fileId' | 'mimetype'>): Promise<void> {
+  if (!attachment.url) return;
+  try {
+    const response = await fetch(attachment.url);
+    if (!response.ok) throw new Error(`Download failed with ${response.status}`);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const extension = attachment.mimetype.split('/')[1]?.split(/[;+]/)[0] || 'bin';
+    link.download = `tumbaland-${attachment.fileId}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    // Revoked later, not now: some mobile browsers read the blob after click() returns.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch {
+    window.open(attachment.url, '_blank', 'noopener');
+  }
+}
+
 export function Lightbox({ attachments, index, onClose, onEditAlbum, onUseAsBackground }: LightboxProps) {
   const [current, setCurrent] = useState(index ?? 0);
   // Reset while rendering rather than in an effect, so reopening on another
@@ -105,9 +135,7 @@ export function Lightbox({ attachments, index, onClose, onEditAlbum, onUseAsBack
         )}
         {attachment.url && (
           <IconButton
-            component="a"
-            href={attachment.url}
-            download
+            onClick={() => void downloadAttachment(attachment)}
             aria-label="Download"
             sx={{ color: '#fff', width: TOUCH_TARGET, height: TOUCH_TARGET }}
           >

@@ -21,7 +21,7 @@ import {
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { CollageInput } from '../../types/collage';
-import { useAlbums } from '../../hooks/useAlbums';
+import { useAllAlbums } from '../../hooks/useAlbums';
 import { gradient, useTenantFilter } from '@tumbaland/frontend-core';
 import { DEFAULT_BACKGROUND, DEFAULT_FRAME_COLOR } from './collageDoc';
 
@@ -61,7 +61,7 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
     albums,
     loading: albumsLoading,
     fetchAlbums
-  } = useAlbums({
+  } = useAllAlbums({
     groupId: tenantGroupId, // Pass groupId only if present (group context), undefined for personal
     includeCover: false
   });

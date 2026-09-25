@@ -1,6 +1,9 @@
 import { albumApi } from './albumApi';
 import { Album, CreateAlbumData, ApiResponse, PaginatedResponse, AlbumStatistics } from '../types';
 
+/** Page size when reading every album; a few requests at most for anyone. */
+const ALL_ALBUMS_PAGE_SIZE = 100;
+
 export const albumService = {
   // Create a new album
   async createAlbum(albumData: CreateAlbumData & { groupId?: string }): Promise<ApiResponse<Album>> {
@@ -19,6 +22,20 @@ export const albumService = {
   }): Promise<PaginatedResponse<Album>> {
     const response = await albumApi.get<ApiResponse<PaginatedResponse<Album>>>('/albums', { params });
     return response.data;
+  },
+
+  /**
+   * Every album, for pickers. A picker that asked for one page offered only
+   * the newest ten, and an older album could not be chosen at all.
+   */
+  async getAllAlbums(params?: { groupId?: string; includeCover?: boolean }): Promise<Album[]> {
+    const albums: Album[] = [];
+    for (let page = 1; ; page++) {
+      const result = await albumService.getAlbums({ ...params, page, limit: ALL_ALBUMS_PAGE_SIZE });
+      const batch = result.albums ?? [];
+      albums.push(...batch);
+      if (batch.length < ALL_ALBUMS_PAGE_SIZE || page >= (result.pagination?.pages ?? page)) return albums;
+    }
   },
 
   // Get album by ID
