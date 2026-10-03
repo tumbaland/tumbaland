@@ -1,4 +1,11 @@
 # Tumbalog
+## [0.0.521](https://github.com/tumbaland/tumbaland/compare/app-v0.0.520...app-v0.0.521) (2026-10-03)
+
+### Features
+
+* add document upload via chat option ([694b478](https://github.com/tumbaland/tumbaland/commit/694b478b5e6241c1517c633b1cbc33a64363929b))
+* improve hompage ([5bd0b9c](https://github.com/tumbaland/tumbaland/commit/5bd0b9cc0160adacbfdff835128b5abe43ba9a59))
+
 ## [0.0.520](https://github.com/toomastahves/tumbaland/compare/app-v0.0.519...app-v0.0.520) (2026-09-25)
 
 ### Features
