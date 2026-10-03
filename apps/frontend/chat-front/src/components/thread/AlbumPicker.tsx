@@ -132,6 +132,23 @@ export function AlbumChoices({ active, current, offLabel, loadAlbums, onChoose, 
         </Box>
       ) : (
         <List dense disablePadding aria-label="Albums">
+          {/* First, so taking a photo out of its album does not mean scrolling
+              past every album the group has. */}
+          <ListItemButton
+            selected={current.mode === 'off'}
+            disabled={busy}
+            onClick={() => void choose({ mode: 'off' })}
+            sx={{ borderRadius: 2 }}
+          >
+            <ListItemIcon>
+              <DoNotDisturbAltIcon />
+            </ListItemIcon>
+            <ListItemText primary={offLabel} />
+            {current.mode === 'off' && <CheckIcon fontSize="small" aria-label="Current" />}
+          </ListItemButton>
+
+          <Divider sx={{ my: 1 }} />
+
           {naming ? (
             <Box component="form" onSubmit={create} sx={{ display: 'flex', gap: 1, px: 1, py: 1 }}>
               <TextField
@@ -179,20 +196,6 @@ export function AlbumChoices({ active, current, offLabel, loadAlbums, onChoose, 
             );
           })}
 
-          <Divider sx={{ my: 1 }} />
-
-          <ListItemButton
-            selected={current.mode === 'off'}
-            disabled={busy}
-            onClick={() => void choose({ mode: 'off' })}
-            sx={{ borderRadius: 2 }}
-          >
-            <ListItemIcon>
-              <DoNotDisturbAltIcon />
-            </ListItemIcon>
-            <ListItemText primary={offLabel} />
-            {current.mode === 'off' && <CheckIcon fontSize="small" aria-label="Current" />}
-          </ListItemButton>
         </List>
       )}
     </>

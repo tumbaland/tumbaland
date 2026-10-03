@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 import { BadRequestError, ForbiddenError, NotFoundError, logger } from '@tumbaland/backend-core';
 import { Conversation, IConversation } from '../models/Conversation';
 import { IAttachment, ICollageCard, IMessage, Message, MessageEffect } from '../models/Message';
-import { belongsToConversation, bytesOf, fileIdsOf, folderFor, withDownloadUrls, withStoredSizes } from './attachmentService';
+import { attachmentNoun, belongsToConversation, bytesOf, fileIdsOf, folderFor, withDownloadUrls, withStoredSizes } from './attachmentService';
 import { deleteFolder } from './fileServiceClient';
 import { recordStoredBytes, releaseStoredBytes } from './storageUsage';
 import { ReadState } from '../models/ReadState';
@@ -78,8 +78,7 @@ export function toView(document: IMessage): MessageView {
 function preview(body: string, attachments: IAttachment[]): string {
   if (body.trim()) return body.trim();
   if (attachments.length === 0) return '';
-  const video = attachments.some((attachment) => attachment.mimetype.startsWith('video/'));
-  if (attachments.length === 1) return video ? 'Video' : 'Photo';
+  if (attachments.length === 1) return attachmentNoun(attachments[0]!);
   return `${attachments.length} attachments`;
 }
 

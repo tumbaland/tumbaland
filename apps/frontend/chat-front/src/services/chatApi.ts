@@ -55,11 +55,12 @@ export interface SendPayload {
 }
 
 function attachmentRequest(attachment: Attachment) {
-  const { fileId, posterFileId, thumbnailFileId, mimetype, sizeBytes, width, height, durationMs } = attachment;
+  const { fileId, posterFileId, thumbnailFileId, mimetype, name, sizeBytes, width, height, durationMs } = attachment;
   return {
     fileId,
     mimetype,
     sizeBytes,
+    ...(name ? { name } : {}),
     ...(posterFileId != null ? { posterFileId } : {}),
     ...(thumbnailFileId != null ? { thumbnailFileId } : {}),
     ...(width != null ? { width } : {}),

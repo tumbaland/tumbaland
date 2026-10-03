@@ -64,6 +64,15 @@ describe('AlbumPicker', () => {
     expect(onChoose).toHaveBeenCalledWith({ mode: 'album', newAlbumName: 'Paris' });
   });
 
+  it('puts the no-album row above the albums, so it needs no scrolling', async () => {
+    renderPicker();
+
+    const off = await screen.findByText("Don't save to Album");
+    const first = screen.getByText(albums[0]!.name);
+
+    expect(off.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('can turn saving off', async () => {
     const { onChoose } = renderPicker();
 

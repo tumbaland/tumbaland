@@ -3,6 +3,7 @@ import { setTimeout as delay } from 'timers/promises';
 import { IConversation } from '../models/Conversation';
 import { ReadState } from '../models/ReadState';
 import type { Caller } from './accessService';
+import { attachmentNoun } from './attachmentService';
 import { MessageView } from './messageService';
 import { isPushConfigured, sendToUsers } from './pushService';
 
@@ -87,7 +88,6 @@ function notificationBody(message: MessageView): string {
   if (message.body.trim()) return message.body.trim().slice(0, 140);
   if (message.attachments.length === 0) return 'New message';
 
-  const video = message.attachments.some((attachment) => attachment.mimetype.startsWith('video/'));
-  if (message.attachments.length === 1) return video ? 'Sent a video' : 'Sent a photo';
+  if (message.attachments.length === 1) return `Sent a ${attachmentNoun(message.attachments[0]!).toLowerCase()}`;
   return `Sent ${message.attachments.length} attachments`;
 }

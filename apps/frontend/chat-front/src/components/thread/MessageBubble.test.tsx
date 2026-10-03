@@ -156,6 +156,34 @@ describe('MessageBubble', () => {
     expect(onEditAlbum).toHaveBeenCalledWith('m1');
   });
 
+  it('takes the message’s photos out of their album from the minus beside the pencil', async () => {
+    const onRemoveFromAlbum = vi.fn();
+    renderBubble(
+      {
+        kind: 'media',
+        body: '',
+        attachments: [{ fileId: 'f1', mimetype: 'image/jpeg', sizeBytes: 1, albumId: 'a-rome', albumName: 'Rome' }]
+      },
+      { onOpenAlbum: () => {}, onRemoveFromAlbum }
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove from album' }));
+
+    expect(onRemoveFromAlbum).toHaveBeenCalledWith('m1');
+  });
+
+  it('offers no remove button without a handler', () => {
+    renderBubble(
+      {
+        kind: 'media',
+        body: '',
+        attachments: [{ fileId: 'f1', mimetype: 'image/jpeg', sizeBytes: 1, albumId: 'a-rome', albumName: 'Rome' }]
+      },
+      { onOpenAlbum: () => {} }
+    );
+    expect(screen.queryByRole('button', { name: 'Remove from album' })).not.toBeInTheDocument();
+  });
+
   it('shows no album mark on a photo that is not in one', () => {
     renderBubble(
       { kind: 'media', body: '', attachments: [{ fileId: 'f1', mimetype: 'image/jpeg', sizeBytes: 1 }] },

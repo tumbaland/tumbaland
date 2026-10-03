@@ -54,8 +54,22 @@ components:
               image/heif,
               video/mp4,
               video/quicktime,
-              video/webm
+              video/webm,
+              application/pdf,
+              application/msword,
+              application/vnd.openxmlformats-officedocument.wordprocessingml.document,
+              application/vnd.ms-excel,
+              application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,
+              application/vnd.ms-powerpoint,
+              application/vnd.openxmlformats-officedocument.presentationml.presentation,
+              application/vnd.oasis.opendocument.text,
+              application/vnd.oasis.opendocument.spreadsheet,
+              application/vnd.oasis.opendocument.presentation,
+              application/rtf,
+              text/plain,
+              text/csv
             ]
+        name: { type: string, nullable: true, description: The uploaded file's name, kept for documents }
         sizeBytes: { type: integer }
         width: { type: integer, nullable: true }
         height: { type: integer, nullable: true }

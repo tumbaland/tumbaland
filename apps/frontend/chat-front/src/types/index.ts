@@ -9,6 +9,8 @@ export interface Attachment {
   posterFileId?: string | null;
   thumbnailFileId?: string | null;
   mimetype: string;
+  /** The uploaded file's name. Set for documents, which are shown by name. */
+  name?: string | null;
   sizeBytes: number;
   width?: number | null;
   height?: number | null;

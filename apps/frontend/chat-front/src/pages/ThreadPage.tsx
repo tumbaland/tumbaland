@@ -32,6 +32,7 @@ import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import { chatApi } from '../services/chatApi';
 import { requestCall } from '../services/callBus';
+import { isDocumentType } from '../services/documents';
 import { clearShare, isMedia, readShare, sharedMessage } from '../services/sharedInbox';
 import { Lightbox } from '../components/thread/Lightbox';
 import { useAttachmentUploads } from '../hooks/useAttachmentUploads';
@@ -195,6 +196,9 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
   };
 
   const viewingMessage = find(viewing?.messageId);
+  // The lightbox shows photos and videos; a document is saved from its card.
+  const viewingMedia = (viewingMessage?.attachments ?? []).filter((attachment) => !isDocumentType(attachment.mimetype));
+  const viewingIndex = viewingMessage && viewing ? viewingMedia.indexOf(viewingMessage.attachments[viewing.index]!) : -1;
   const viewingStored =
     viewingMessage && !viewingMessage.deletedAt && viewingMessage.delivery !== 'pending' && viewingMessage.delivery !== 'failed';
 
@@ -390,6 +394,9 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         onOpenMedia={openMedia}
         onOpenAlbum={(albumId) => navigate(`/album/albums/${albumId}`)}
         onEditAlbum={(messageId) => setPlacing({ messageId })}
+        onRemoveFromAlbum={(messageId) =>
+          void thread.removeFromAlbum(messageId).catch(() => setActionError('Could not remove it from the album. Try again.'))
+        }
         onOpenCollage={openCollage}
         accent={chatColors.bubble}
         members={thread.members}
@@ -523,16 +530,16 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
       </Snackbar>
 
       <Lightbox
-        attachments={viewingMessage?.attachments ?? []}
-        index={viewingMessage ? (viewing?.index ?? null) : null}
+        attachments={viewingMedia}
+        index={viewingMessage && viewingIndex >= 0 ? viewingIndex : null}
         onClose={() => setViewing(null)}
         onEditAlbum={
-          viewingStored ? (index) => setPlacing({ messageId: viewingMessage.id, fileId: viewingMessage.attachments[index]?.fileId }) : undefined
+          viewingStored ? (index) => setPlacing({ messageId: viewingMessage.id, fileId: viewingMedia[index]?.fileId }) : undefined
         }
         onUseAsBackground={
           viewingStored
             ? (index) => {
-                const fileId = viewingMessage.attachments[index]?.fileId;
+                const fileId = viewingMedia[index]?.fileId;
                 if (fileId) void makeBackground(fileId);
               }
             : undefined

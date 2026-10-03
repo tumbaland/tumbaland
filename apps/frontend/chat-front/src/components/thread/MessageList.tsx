@@ -26,6 +26,7 @@ export interface MessageListProps {
   onOpenMedia: (message: ThreadMessage, index: number) => void;
   onOpenAlbum?: (albumId: string) => void;
   onEditAlbum?: (messageId: string) => void;
+  onRemoveFromAlbum?: (messageId: string) => void;
   /** Join on a collage card: opens that collage in Album. */
   onOpenCollage?: (collageId: string) => void;
   /** Your own bubbles' colour, from the conversation's theme. */
@@ -84,6 +85,7 @@ export function MessageList({
   onOpenMedia,
   onOpenAlbum,
   onEditAlbum,
+  onRemoveFromAlbum,
   onOpenCollage,
   accent,
   members = NO_MEMBERS,
@@ -346,6 +348,7 @@ export function MessageList({
                   onOpenMedia={onOpenMedia}
                   onOpenAlbum={onOpenAlbum}
                   onEditAlbum={onEditAlbum}
+                  onRemoveFromAlbum={onRemoveFromAlbum}
                   accent={accent}
                   senderPicture={pictures.get(message.senderId)}
                   senderName={names.get(message.senderId)}

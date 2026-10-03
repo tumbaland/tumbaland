@@ -46,7 +46,7 @@ export function canShareFile(file: File): boolean {
  * blob URL is same-origin, so `download` holds. If the fetch fails, the file
  * opens in a new tab, never over this one.
  */
-export async function downloadAttachment(attachment: Pick<Attachment, 'url' | 'fileId' | 'mimetype'>): Promise<void> {
+export async function downloadAttachment(attachment: Pick<Attachment, 'url' | 'fileId' | 'mimetype' | 'name'>): Promise<void> {
   if (!attachment.url) return;
   try {
     const response = await fetch(attachment.url);
@@ -55,8 +55,9 @@ export async function downloadAttachment(attachment: Pick<Attachment, 'url' | 'f
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
+    // A document keeps the name it was sent under.
     const extension = attachment.mimetype.split('/')[1]?.split(/[;+]/)[0] || 'bin';
-    link.download = `tumbaland-${attachment.fileId}.${extension}`;
+    link.download = attachment.name || `tumbaland-${attachment.fileId}.${extension}`;
     document.body.appendChild(link);
     link.click();
     link.remove();

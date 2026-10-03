@@ -855,10 +855,11 @@ describe('attachments', () => {
   });
 
   it.each([
-    ['application/pdf'],
     ['text/html'],
-    ['application/octet-stream']
-  ])('refuses %s, so only images and video can reach storage', async (mimetype) => {
+    ['application/octet-stream'],
+    ['application/zip'],
+    ['application/x-msdownload']
+  ])('refuses %s, so only images, video and documents can reach storage', async (mimetype) => {
     const id = await conversationInG1();
 
     const res = await as(TOM)
@@ -866,6 +867,33 @@ describe('attachments', () => {
       .send({ filename: 'x', mimetype, sizeBytes: 100 });
 
     expect(res.status).toBe(400);
+  });
+
+  it.each([
+    ['report.pdf', 'application/pdf'],
+    ['letter.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+    ['budget.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+    ['notes.odt', 'application/vnd.oasis.opendocument.text']
+  ])('allows the document %s, with no poster path', async (filename, mimetype) => {
+    const id = await conversationInG1();
+
+    const res = await as(TOM)
+      .post(`/api/chat/conversations/${id}/attachments/upload-url`)
+      .send({ filename, mimetype, sizeBytes: 5_000_000 });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.posterUploadFileId).toBeNull();
+  });
+
+  it('refuses a document over its ceiling', async () => {
+    const id = await conversationInG1();
+
+    const res = await as(TOM)
+      .post(`/api/chat/conversations/${id}/attachments/upload-url`)
+      .send({ filename: 'big.pdf', mimetype: 'application/pdf', sizeBytes: 30 * 1024 * 1024 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/too large/);
   });
 
   it('refuses an image over the per-file ceiling', async () => {

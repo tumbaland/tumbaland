@@ -15,6 +15,7 @@ import { appPath } from '../appBase';
 import { chatApi } from '../services/chatApi';
 import { dayLabel } from '../components/thread/DaySeparator';
 import { PresenceDot } from '../components/thread/PresenceDot';
+import { isDocumentType } from '../services/documents';
 import { useChatStream } from '../hooks/useChatStream';
 import { namesTyping, useTypingTracker } from '../hooks/useTypingTracker';
 import type { ChatEvent, Conversation, Message, Presence, TypingPayload } from '../types';
@@ -39,8 +40,10 @@ function previewOf(message: Message): string {
   if (message.collage) return `Collage: ${message.collage.title}`;
   if (message.body.trim()) return message.body.trim();
   if (message.attachments.length === 0) return '';
-  const video = message.attachments.some((attachment) => attachment.mimetype.startsWith('video/'));
-  if (message.attachments.length === 1) return video ? 'Video' : 'Photo';
+  const [only] = message.attachments;
+  if (only && message.attachments.length === 1) {
+    return isDocumentType(only.mimetype) ? 'Document' : only.mimetype.startsWith('video/') ? 'Video' : 'Photo';
+  }
   return `${message.attachments.length} attachments`;
 }
 

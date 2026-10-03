@@ -86,6 +86,57 @@ afterEach(() => {
 
 const setup = () => renderHook(() => useAttachmentUploads('c1'));
 
+describe('documents', () => {
+  it('uploads a document as it is, with no resizing, poster or thumbnail', async () => {
+    attachmentUploadUrl.mockResolvedValue({
+      uploadUrl: 'https://files.test/upload/doc',
+      fileId: 'chat/g1/c1/doc/original.pdf',
+      posterUploadFileId: null,
+      expiresInMinutes: 15
+    });
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.add([new File(['x'], 'report.pdf', { type: 'application/pdf' })]);
+    });
+
+    await waitFor(() => expect(result.current.uploads[0]!.status).toBe('done'));
+    expect(downscaleImage).not.toHaveBeenCalled();
+    expect(captureVideoPoster).not.toHaveBeenCalled();
+    expect(requestThumbnail).not.toHaveBeenCalled();
+    expect(result.current.uploads[0]!.attachment).toMatchObject({
+      fileId: 'chat/g1/c1/doc/original.pdf',
+      mimetype: 'application/pdf',
+      name: 'report.pdf'
+    });
+  });
+
+  it('works out the type from the extension when the browser gave none', async () => {
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.add([new File(['x'], 'notes.odt', { type: '' })]);
+    });
+
+    await waitFor(() => expect(result.current.uploads[0]!.status).toBe('done'));
+    expect(attachmentUploadUrl).toHaveBeenCalledWith(
+      'c1',
+      expect.objectContaining({ mimetype: 'application/vnd.oasis.opendocument.text' })
+    );
+  });
+
+  it('fails a file that is not a photo, a video or a known document', async () => {
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.add([new File(['x'], 'tool.exe', { type: 'application/x-msdownload' })]);
+    });
+
+    await waitFor(() => expect(result.current.uploads[0]!.status).toBe('failed'));
+    expect(attachmentUploadUrl).not.toHaveBeenCalled();
+  });
+});
+
 describe('uploading', () => {
   it('uploads the bytes straight to file-service, not through chat-service', async () => {
     const { result } = setup();

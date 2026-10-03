@@ -4,7 +4,7 @@ import { Conversation, IConversation, IPhotoAlbumSetting } from '../models/Conve
 import { IMessage, Message } from '../models/Message';
 import type { Caller } from './accessService';
 import * as albums from './albumClient';
-import { withDownloadUrls } from './attachmentService';
+import { isMedia, withDownloadUrls } from './attachmentService';
 import { postSystemLine, toView, type MessageView } from './messageService';
 import { publishToGroup } from './streamHub';
 
@@ -103,10 +103,10 @@ async function publishUpdated(conversation: IConversation, message: IMessage): P
  */
 export async function saveToAlbum(conversation: IConversation, message: IMessage): Promise<void> {
   const setting = conversation.photoAlbum;
-  if (setting?.mode !== 'album' || !setting.albumId || message.attachments.length === 0) return;
+  if (setting?.mode !== 'album' || !setting.albumId || !message.attachments.some(isMedia)) return;
 
   try {
-    for (const attachment of message.attachments) {
+    for (const attachment of message.attachments.filter(isMedia)) {
       const saved = await albums.addChatPhoto({
         groupId: conversation.groupId,
         albumId: setting.albumId,
@@ -161,7 +161,10 @@ async function messageIn(conversation: IConversation, messageId: string): Promis
 
 /** The message's files the change is about: one, when a file is named, or all of them. */
 function targetsOf(message: IMessage, fileId?: string) {
-  const targets = message.attachments.filter((attachment) => !fileId || attachment.fileId === fileId);
+  // Documents have no place in an album, so they are never a target.
+  const targets = message.attachments.filter(
+    (attachment) => isMedia(attachment) && (!fileId || attachment.fileId === fileId)
+  );
   if (targets.length === 0) throw new NotFoundError('That file is not on this message');
   return targets;
 }

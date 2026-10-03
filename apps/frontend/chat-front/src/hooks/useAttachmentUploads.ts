@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { logger } from '@tumbaland/frontend-core';
 import { chatApi, newClientId } from '../services/chatApi';
+import { documentMimetype } from '../services/documents';
 import { captureVideoPoster, downscaleImage } from '../services/mediaPrep';
 import type { Attachment, PendingUpload } from '../types';
 
@@ -74,16 +75,39 @@ export function useAttachmentUploads(conversationId: string | undefined): UseAtt
 
       for (const file of Array.from(files)) {
         const id = newClientId();
+        // A document is uploaded as it is, under a type worked out from its
+        // extension where the browser gave none. Photos and videos keep theirs.
+        const docType = file.type.startsWith('image/') || file.type.startsWith('video/') ? null : documentMimetype(file);
+        const mimetype = docType ?? file.type;
         const previewUrl = URL.createObjectURL(file);
         previews.current.add(previewUrl);
 
         setUploads((current) => [
           ...current,
-          { id, name: file.name, mimetype: file.type, previewUrl, progress: 0, status: 'preparing' }
+          { id, name: file.name, mimetype, previewUrl, progress: 0, status: 'preparing' }
         ]);
 
         try {
-          const isVideo = file.type.startsWith('video/');
+          if (!docType && !mimetype.startsWith('image/') && !mimetype.startsWith('video/')) {
+            throw new Error('That kind of file cannot be sent here');
+          }
+          const isVideo = mimetype.startsWith('video/');
+
+          if (docType) {
+            const ticket = await chatApi.attachmentUploadUrl(conversationId, {
+              filename: file.name,
+              mimetype: docType,
+              sizeBytes: file.size
+            });
+            patch(id, { status: 'uploading' });
+            await putWithProgress(ticket.uploadUrl, file, docType, (progress) => patch(id, { progress }));
+            patch(id, {
+              status: 'done',
+              progress: 100,
+              attachment: { fileId: ticket.fileId, mimetype: docType, name: file.name, sizeBytes: file.size }
+            });
+            continue;
+          }
 
           // Shrink a phone photo, or take a still from a clip. Both are
           // deliberately the browser's job; see mediaPrep.

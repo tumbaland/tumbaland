@@ -5,6 +5,7 @@ import { BadRequestError, logger } from '@tumbaland/backend-core';
 import type { IAttachment, IMessage } from '../models/Message';
 import { downloadBuffer, getDownloadUrls, getUploadUrl, storedSize, uploadBuffer } from './fileServiceClient';
 import type { MessageView } from './messageService';
+import { isDocumentType } from '../validation/schemas';
 
 /**
  * Where an attachment's files live.
@@ -105,6 +106,15 @@ export async function generateThumbnail(fileId: string, mimetype: string): Promi
     });
     return null;
   }
+}
+
+/** Photos and videos, as opposed to documents. Only these go to the album. */
+export const isMedia = (attachment: Pick<IAttachment, 'mimetype'>): boolean => !isDocumentType(attachment.mimetype);
+
+/** What to call one attachment in a one-line summary or a notification. */
+export function attachmentNoun(attachment: Pick<IAttachment, 'mimetype'>): string {
+  if (isDocumentType(attachment.mimetype)) return 'Document';
+  return attachment.mimetype.startsWith('video/') ? 'Video' : 'Photo';
 }
 
 /** Every file id a set of attachments refers to, originals and derivatives. */

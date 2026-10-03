@@ -2,10 +2,12 @@ import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import LinearProgress from '@mui/material/LinearProgress';
 import Tooltip from '@mui/material/Tooltip';
+import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import { ink, surface } from '@tumbaland/frontend-core';
 import type { PendingUpload } from '../../types';
+import { isDocumentType } from '../../services/documents';
 import { firstFrameSrc } from './MediaGrid';
 
 export interface UploadTrayProps {
@@ -47,7 +49,27 @@ export function UploadTray({ uploads, onRemove }: UploadTrayProps) {
               borderColor: 'error.main'
             }}
           >
-            {upload.mimetype.startsWith('video/') ? (
+            {isDocumentType(upload.mimetype) ? (
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 0.25,
+                  height: '100%',
+                  px: 0.5,
+                  color: ink.muted
+                }}
+              >
+                <InsertDriveFileOutlinedIcon />
+                <Box sx={{ width: '100%', fontSize: 10, lineHeight: 1.2, textAlign: 'center' }}>
+                  <Box component="span" sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {upload.name}
+                  </Box>
+                </Box>
+              </Box>
+            ) : upload.mimetype.startsWith('video/') ? (
               <Box
                 component="video"
                 src={firstFrameSrc(upload.previewUrl)}

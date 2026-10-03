@@ -31,7 +31,7 @@ async function withPresence<T extends { members: Array<{ userId: string }> }>(
     presence: presence.filter((entry) => summary.members.some((member) => member.userId === entry.userId))
   }));
 }
-import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from '../validation/schemas';
+import { MAX_DOCUMENT_BYTES, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, isDocumentType } from '../validation/schemas';
 import { BadRequestError } from '@tumbaland/backend-core';
 
 export const listConversations = async (req: Request, res: Response): Promise<void> => {
@@ -265,8 +265,12 @@ export const attachmentUploadUrl = async (req: Request, res: Response): Promise<
   };
 
   // Per-file ceilings, checked server side. The schema's allowlist already
-  // rejects anything that is not an image or a video.
-  const limit = mimetype.startsWith('video/') ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+  // rejects anything that is not an image, a video or a document.
+  const limit = mimetype.startsWith('video/')
+    ? MAX_VIDEO_BYTES
+    : isDocumentType(mimetype)
+      ? MAX_DOCUMENT_BYTES
+      : MAX_IMAGE_BYTES;
   if (sizeBytes > limit) {
     throw new BadRequestError(
       `That file is too large. The limit is ${Math.floor(limit / (1024 * 1024))} MB.`

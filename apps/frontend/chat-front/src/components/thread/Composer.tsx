@@ -11,8 +11,10 @@ import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
 import SentimentSatisfiedAltIcon from '@mui/icons-material/SentimentSatisfiedAlt';
 import { PHONE, TOUCH_TARGET, brand, ink, surface } from '@tumbaland/frontend-core';
+import { DOCUMENT_ACCEPT, isDocumentType } from '../../services/documents';
 import { FullEmojiPicker, loadEmojiPicker } from './FullEmojiPicker';
 import { UploadTray } from './UploadTray';
 import { AlbumDestination } from './AlbumDestination';
@@ -61,6 +63,13 @@ export interface ComposerProps {
  */
 const ACCEPTED = 'image/*,video/*';
 
+/**
+ * Documents get a button of their own. Adding them to the photo picker would
+ * turn the phone's photo library into a file browser, and a person reaching for
+ * a picture would have to find it there.
+ */
+const ACCEPTED_DOCUMENTS = DOCUMENT_ACCEPT;
+
 /** How long Send must be held before it offers effects instead of sending. */
 const HOLD_MS = 450;
 
@@ -96,6 +105,7 @@ export function Composer({
   const recentEmoji = useRecentEmoji();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const documentRef = useRef<HTMLInputElement | null>(null);
 
   // On a phone Enter inserts a newline and the button sends; on a desktop
   // keyboard Enter sends and Shift+Enter breaks the line. Getting this the
@@ -253,7 +263,8 @@ export function Composer({
         </Box>
       )}
 
-      {!editing && uploads.length > 0 && photoAlbum && onChooseAlbum && onAlbumOff && (
+      {/* Documents never go to the album, so the choice is only offered for photos and videos. */}
+      {!editing && uploads.some((upload) => !isDocumentType(upload.mimetype)) && photoAlbum && onChooseAlbum && onAlbumOff && (
         <AlbumDestination
           photoAlbum={photoAlbum}
           skip={skipAlbum}
@@ -328,6 +339,16 @@ export function Composer({
           sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
         >
           <AddPhotoAlternateOutlinedIcon />
+        </IconButton>
+      )}
+
+      {!editing && onAddFiles && (
+        <IconButton
+          aria-label="Add document"
+          onClick={() => documentRef.current?.click()}
+          sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET, ml: -0.5 }}
+        >
+          <AttachFileIcon />
         </IconButton>
       )}
 
@@ -467,6 +488,15 @@ export function Composer({
       <FullEmojiPicker anchorEl={emojiAnchor} onClose={() => setEmojiAnchor(null)} onPick={insertEmoji} />
 
       <input ref={fileRef} type="file" accept={ACCEPTED} multiple hidden onChange={pick} data-testid="file-input" />
+      <input
+        ref={documentRef}
+        type="file"
+        accept={ACCEPTED_DOCUMENTS}
+        multiple
+        hidden
+        onChange={pick}
+        data-testid="document-input"
+      />
     </Box>
   );
 }

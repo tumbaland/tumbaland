@@ -23,7 +23,33 @@ export const ALLOWED_IMAGE_TYPES = [
 
 export const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'] as const;
 
-export const ALLOWED_UPLOAD_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+/**
+ * Documents: PDF, the Office formats, their OpenDocument equivalents, and plain
+ * text. No archives or executables. file-service serves anything it does not
+ * recognise as a download, never as a page, so these are never rendered in place.
+ */
+export const ALLOWED_DOCUMENT_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.oasis.opendocument.text',
+  'application/vnd.oasis.opendocument.spreadsheet',
+  'application/vnd.oasis.opendocument.presentation',
+  'application/rtf',
+  'text/plain',
+  'text/csv'
+] as const;
+
+export const ALLOWED_UPLOAD_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES, ...ALLOWED_DOCUMENT_TYPES];
+
+export const isDocumentType = (mimetype: string): boolean =>
+  (ALLOWED_DOCUMENT_TYPES as readonly string[]).includes(mimetype);
+
+export const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
 
 export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 /**
@@ -40,6 +66,8 @@ const attachmentSchema = z.object({
   posterFileId: z.string().optional(),
   thumbnailFileId: z.string().optional(),
   mimetype: z.enum(ALLOWED_UPLOAD_TYPES as unknown as [string, ...string[]]),
+  /** The file's own name, shown on a document. Photos and videos do not need one. */
+  name: z.string().max(255).optional(),
   sizeBytes: z.number().int().nonnegative(),
   width: z.number().int().positive().optional(),
   height: z.number().int().positive().optional(),

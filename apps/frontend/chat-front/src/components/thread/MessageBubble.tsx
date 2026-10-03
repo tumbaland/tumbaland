@@ -8,13 +8,16 @@ import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import PhotoAlbumOutlinedIcon from '@mui/icons-material/PhotoAlbumOutlined';
+import RemoveCircleOutlinedIcon from '@mui/icons-material/RemoveCircleOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import { brand, ink, surface } from '@tumbaland/frontend-core';
 import { chatColors } from './themes';
 import { linkify } from './linkify';
 import type { ThreadMessage } from '../../types';
+import { DocumentCard } from './DocumentCard';
 import { MediaGrid } from './MediaGrid';
+import { isDocumentType } from '../../services/documents';
 import { BubbleEffect } from './BubbleEffect';
 import { ReactionRow } from './ReactionRow';
 import { MemberAvatar } from './MemberAvatar';
@@ -37,6 +40,8 @@ export interface MessageBubbleProps {
   onOpenAlbum?: (albumId: string) => void;
   /** Moves this message's photos to another album: the pencil beside the mark. */
   onEditAlbum?: (messageId: string) => void;
+  /** Takes this message's photos out of their album, leaving them in chat: the minus beside the pencil. */
+  onRemoveFromAlbum?: (messageId: string) => void;
   /** Your own bubbles' colour, from the conversation's theme. */
   accent?: string;
 }
@@ -128,6 +133,7 @@ export function MessageBubble({
   onOpenMedia,
   onOpenAlbum,
   onEditAlbum,
+  onRemoveFromAlbum,
   accent = brand.pinkInk
 }: MessageBubbleProps) {
   const saved = message.deletedAt ? undefined : message.attachments.find((attachment) => attachment.albumId);
@@ -149,9 +155,11 @@ export function MessageBubble({
     if (pressTimer.current) clearTimeout(pressTimer.current);
     pressTimer.current = null;
   };
+  const documents = message.deletedAt ? [] : message.attachments.filter((a) => isDocumentType(a.mimetype));
+  const media = message.deletedAt ? [] : message.attachments.filter((a) => !isDocumentType(a.mimetype));
   const jumbo = !message.deletedAt && message.attachments.length === 0 && isJumbo(message.body);
   // A bubble that is only media gets no padding: the grid is the bubble.
-  const mediaOnly = !message.deletedAt && message.attachments.length > 0 && !message.body.trim();
+  const mediaOnly = !message.deletedAt && media.length > 0 && documents.length === 0 && !message.body.trim();
   const pending = message.delivery === 'pending';
   const failed = message.delivery === 'failed';
 
@@ -216,12 +224,16 @@ export function MessageBubble({
               </Typography>
             ) : (
               <>
-                {message.attachments.length > 0 && (
+                {media.length > 0 && (
+                  // The lightbox indexes the whole message, documents included.
                   <MediaGrid
-                    attachments={message.attachments}
-                    onOpen={(index) => onOpenMedia(message, index)}
+                    attachments={media}
+                    onOpen={(index) => onOpenMedia(message, message.attachments.indexOf(media[index]!))}
                   />
                 )}
+                {documents.map((attachment) => (
+                  <DocumentCard key={attachment.fileId} attachment={attachment} />
+                ))}
                 {message.body && (
                   <Typography
                     variant={jumbo ? 'h3' : 'body2'}
@@ -313,6 +325,16 @@ export function MessageBubble({
               sx={{ p: 0.25, color: ink.muted, '&:hover': { color: brand.pinkInk } }}
             >
               <EditOutlinedIcon sx={{ fontSize: 13 }} />
+            </IconButton>
+          )}
+          {onRemoveFromAlbum && (
+            <IconButton
+              size="small"
+              aria-label="Remove from album"
+              onClick={() => onRemoveFromAlbum(message.id)}
+              sx={{ p: 0.25, color: ink.muted, '&:hover': { color: 'error.main' } }}
+            >
+              <RemoveCircleOutlinedIcon sx={{ fontSize: 13 }} />
             </IconButton>
           )}
         </Box>
