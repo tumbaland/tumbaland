@@ -94,6 +94,8 @@ it('hedges a projected count milestone and shows its progress', () => {
   expect(screen.getByText('25 × Dinner')).toBeInTheDocument();
   // Projections are prefixed so an estimate never reads as a settled date.
   expect(screen.getByText('~in 7 weeks')).toBeInTheDocument();
+  // What is left is the headline; the projected date sits under the bar.
+  expect(screen.getByText('5 to go')).toBeInTheDocument();
   expect(screen.getByRole('progressbar', { name: '25 × Dinner progress' })).toHaveAttribute(
     'aria-valuenow',
     '80'

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { logger, useTenantFilter } from '@tumbaland/frontend-core';
 import {
   getMemories,
+  getMilestones,
   getRecentActivities,
   getRecentPhotos,
   type HomePhoto,
   type Memories,
+  type Milestones,
   type RecentActivity
 } from '../services/homeApi';
 import { getGlobalConfig } from '../config/ConfigProvider';
@@ -14,11 +16,12 @@ export interface HomeFeed {
   memories: Memories | null;
   photos: HomePhoto[];
   activities: RecentActivity[];
+  milestones: Milestones | null;
   loading: boolean;
 }
 
 /**
- * The three things the home page shows of the data itself.
+ * The four things the home page shows of the data itself.
  *
  * Settled independently: a home page that shows nothing until the slowest of
  * three calls returns is a home page nobody waits for. Each section renders as
@@ -31,6 +34,7 @@ export function useHomeFeed(): HomeFeed {
   const [memories, setMemories] = useState<Memories | null>(null);
   const [photos, setPhotos] = useState<HomePhoto[]>([]);
   const [activities, setActivities] = useState<RecentActivity[]>([]);
+  const [milestones, setMilestones] = useState<Milestones | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -43,7 +47,8 @@ export function useHomeFeed(): HomeFeed {
     await Promise.all([
       ALBUM_API_URL ? settle(getMemories(groupId), setMemories, 'memories') : Promise.resolve(),
       ALBUM_API_URL ? settle(getRecentPhotos(groupId), setPhotos, 'recent photos') : Promise.resolve(),
-      RELATIONSHIP_API_URL ? settle(getRecentActivities(groupId), setActivities, 'recent entries') : Promise.resolve()
+      RELATIONSHIP_API_URL ? settle(getRecentActivities(groupId), setActivities, 'recent entries') : Promise.resolve(),
+      RELATIONSHIP_API_URL ? settle(getMilestones(groupId), setMilestones, 'milestones') : Promise.resolve()
     ]);
 
     setLoading(false);
@@ -53,5 +58,5 @@ export function useHomeFeed(): HomeFeed {
     load();
   }, [load]);
 
-  return { memories, photos, activities, loading };
+  return { memories, photos, activities, milestones, loading };
 }

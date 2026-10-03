@@ -1,5 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -18,7 +17,6 @@ vi.mock('../hooks/useTodo', () => ({
 }));
 
 import HomePage from './HomePage';
-import { journalTodayKey } from '../components/home/modules';
 import { User } from '../types';
 
 const USER: User = { id: '1', email: 'toomas@example.com', name: 'Toomas Tahves' };
@@ -47,24 +45,12 @@ it('falls back to a generic welcome when there is no name', () => {
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Welcome to Tumbaland');
 });
 
-it('opens today in the journal from the first quick action', async () => {
-  const user = userEvent.setup();
+it('has no Log, Albums or Chat buttons: the menu beside the page already has them', () => {
   renderHome();
-
-  const actions = screen.getByRole('navigation', { name: 'Quick actions' });
-  await user.click(within(actions).getByRole('button', { name: 'Log today' }));
-
-  // The journal opens its day editor for a ?date= link.
-  expect(navigate).toHaveBeenCalledWith(`/relationship/journal?date=${journalTodayKey()}`);
-});
-
-it('deep-links straight to a sub-page from a quick action', async () => {
-  const user = userEvent.setup();
-  renderHome();
-
-  await user.click(screen.getByRole('button', { name: 'Albums' }));
-
-  expect(navigate).toHaveBeenCalledWith('/album/albums');
+  expect(screen.queryByRole('navigation', { name: 'Quick actions' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Log today' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Albums' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Chat' })).not.toBeInTheDocument();
 });
 
 it('keeps money off the shared home page', () => {
@@ -72,7 +58,7 @@ it('keeps money off the shared home page', () => {
   expect(screen.queryByRole('button', { name: /money|net worth/i })).not.toBeInTheDocument();
 });
 
-it('repeats neither the navigation nor a way back: the menu and quick actions cover both', () => {
+it('repeats neither the navigation nor a way back: the menu covers both', () => {
   window.localStorage.setItem('tumbaland:last-visited', '/album/albums/a1');
   renderHome();
 

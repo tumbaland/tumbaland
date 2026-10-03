@@ -56,6 +56,30 @@ export interface RecentActivity {
   typeId?: { _id: string; name: string; color?: string; icon?: string };
 }
 
+/** A copy of the relationship dashboard's milestone shape; change both together. */
+export interface Milestone {
+  key: string;
+  label: string;
+  /** The number it is counting to, and for a count milestone how many more it takes. */
+  target: number;
+  remaining?: number;
+  color?: string;
+  /** Reached: the day it happened, and how long ago. */
+  achievedOn?: string;
+  daysAgo?: number;
+  /** Upcoming: the day it falls on, or is projected to. */
+  expectedOn?: string;
+  daysAway?: number;
+  projected?: boolean;
+}
+
+export interface Milestones {
+  since: string | null;
+  daysTogether: number | null;
+  recent: Milestone[];
+  upcoming: Milestone[];
+}
+
 /** Whichever context the session is reading, as every scoped endpoint spells it. */
 const scope = (groupId?: string) => (groupId ? { groupId } : undefined);
 
@@ -86,6 +110,14 @@ export const getRecentActivities = async (groupId?: string, limit = 20): Promise
     params: { ...scope(groupId), limit }
   });
   return data ?? [];
+};
+
+/** The same numbers the relationship dashboard shows, answered by the same endpoint. */
+export const getMilestones = async (groupId?: string): Promise<Milestones> => {
+  const { data } = await journalApi.get<Envelope<Milestones>>('/api/statistics/milestones', {
+    params: scope(groupId)
+  });
+  return data;
 };
 
 /** Whether the home page can ask at all: a front deployed without these stays as it was. */

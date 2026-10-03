@@ -8,6 +8,7 @@ vi.mock('@tumbaland/frontend-core', async () => {
 
 vi.mock('../services/homeApi', () => ({
   getMemories: vi.fn(),
+  getMilestones: vi.fn(),
   getRecentPhotos: vi.fn(),
   getRecentActivities: vi.fn()
 }));
@@ -17,7 +18,7 @@ vi.mock('../config/ConfigProvider', () => ({
 }));
 
 import { useHomeFeed } from './useHomeFeed';
-import { getMemories, getRecentActivities, getRecentPhotos } from '../services/homeApi';
+import { getMemories, getMilestones, getRecentActivities, getRecentPhotos } from '../services/homeApi';
 import { getGlobalConfig } from '../config/ConfigProvider';
 
 const configured = { ALBUM_API_URL: 'https://album.example', RELATIONSHIP_API_URL: 'https://journal.example' };
@@ -25,6 +26,7 @@ const configured = { ALBUM_API_URL: 'https://album.example', RELATIONSHIP_API_UR
 const memories = { date: '2026-09-20', totalPhotos: 2, years: [] };
 const photos = [{ _id: 'p1', originalName: 'p1.jpg', albumId: 'a1', createdAt: '2026-09-19T00:00:00Z' }];
 const activities = [{ _id: 'e1', date: '2026-09-19T00:00:00Z' }];
+const milestones = { since: '2024-01-01', daysTogether: 628, recent: [], upcoming: [] };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -32,9 +34,10 @@ beforeEach(() => {
   vi.mocked(getMemories).mockResolvedValue(memories);
   vi.mocked(getRecentPhotos).mockResolvedValue(photos);
   vi.mocked(getRecentActivities).mockResolvedValue(activities);
+  vi.mocked(getMilestones).mockResolvedValue(milestones);
 });
 
-it('loads all three feeds', async () => {
+it('loads all four feeds', async () => {
   const { result } = renderHook(() => useHomeFeed());
 
   await waitFor(() => expect(result.current.loading).toBe(false));
@@ -42,6 +45,7 @@ it('loads all three feeds', async () => {
   expect(result.current.memories).toEqual(memories);
   expect(result.current.photos).toEqual(photos);
   expect(result.current.activities).toEqual(activities);
+  expect(result.current.milestones).toEqual(milestones);
 });
 
 it('keeps the sections that worked when one feed fails', async () => {
@@ -62,12 +66,14 @@ it('finishes loading even when every feed fails', async () => {
   vi.mocked(getMemories).mockRejectedValue(new Error('down'));
   vi.mocked(getRecentPhotos).mockRejectedValue(new Error('down'));
   vi.mocked(getRecentActivities).mockRejectedValue(new Error('down'));
+  vi.mocked(getMilestones).mockRejectedValue(new Error('down'));
 
   const { result } = renderHook(() => useHomeFeed());
 
   await waitFor(() => expect(result.current.loading).toBe(false));
 
   expect(result.current.memories).toBeNull();
+  expect(result.current.milestones).toBeNull();
 });
 
 it('asks for nothing a front was not given a URL for', async () => {
@@ -81,6 +87,7 @@ it('asks for nothing a front was not given a URL for', async () => {
   expect(getMemories).not.toHaveBeenCalled();
   expect(getRecentPhotos).not.toHaveBeenCalled();
   expect(getRecentActivities).not.toHaveBeenCalled();
+  expect(getMilestones).not.toHaveBeenCalled();
 });
 
 it('scopes every call to the tenant being read', async () => {
@@ -93,4 +100,5 @@ it('scopes every call to the tenant being read', async () => {
   expect(getMemories).toHaveBeenCalledWith(undefined);
   expect(getRecentPhotos).toHaveBeenCalledWith(undefined);
   expect(getRecentActivities).toHaveBeenCalledWith(undefined);
+  expect(getMilestones).toHaveBeenCalledWith(undefined);
 });

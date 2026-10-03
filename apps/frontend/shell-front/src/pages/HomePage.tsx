@@ -3,8 +3,8 @@ import { Box } from '@mui/material';
 import { useNavigate } from 'react-router';
 import BgImageBox from '../components/BgImageBox';
 import { GreetingHeader } from '../components/home/GreetingHeader';
-import { QuickActions } from '../components/home/QuickActions';
 import { DailyTodo } from '../components/home/DailyTodo';
+import { HomeMilestones } from '../components/home/HomeMilestones';
 import { MemoryCard } from '../components/home/MemoryCard';
 import { RecentPhotos } from '../components/home/RecentPhotos';
 import { RecentActivity } from '../components/home/RecentActivity';
@@ -28,16 +28,15 @@ interface HomePageProps {
  * are the last few journal entries and the newest photos, so the page shows
  * that the thing is being kept rather than listing the rooms it is kept in.
  *
- * No launcher: the module list and "continue where you left off" repeated the
- * navigation and the quick actions, so they were taken out.
+ * No launcher: the module list, "continue where you left off" and the Log,
+ * Albums and Chat buttons all repeated the menu beside the page, so they were
+ * taken out.
  */
 export function HomePage({ user }: HomePageProps) {
   const navigate = useNavigate();
-  const { memories, photos, activities } = useHomeFeed();
+  const { memories, photos, activities, milestones } = useHomeFeed();
 
   const handleOpen = useCallback((route: string) => navigate(route), [navigate]);
-
-  const column = { display: 'flex', flexDirection: 'column', gap: { xs: 2.5, md: 3 }, minWidth: 0 } as const;
 
   return (
     <Box sx={{ position: 'relative', width: '100%', alignSelf: 'flex-start', minHeight: '100%' }}>
@@ -63,26 +62,26 @@ export function HomePage({ user }: HomePageProps) {
             first year. The page reads fine without it. */}
         {memories && <MemoryCard memories={memories} onOpen={handleOpen} />}
 
-        <QuickActions onOpen={handleOpen} />
-
-        <RecentPhotos photos={photos} onOpen={handleOpen} />
-
+        {/* Under the memory: the day count changes every morning and the
+            rows say what is coming, beside what was written this week. Side by
+            side where there is room, stacked on a phone. auto-fit drops an
+            empty track, so when one of the two renders nothing (no start date,
+            or a quiet journal) the other takes the whole row. */}
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1.35fr) minmax(0, 1fr)' },
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
             gap: { xs: 2.5, md: 3 },
             alignItems: 'start'
           }}
         >
-          <Box sx={column}>
-            <RecentActivity activities={activities} onOpen={handleOpen} />
-          </Box>
-
-          <Box sx={column}>
-            <DailyTodo />
-          </Box>
+          {milestones && <HomeMilestones milestones={milestones} onOpen={handleOpen} />}
+          <RecentActivity activities={activities} onOpen={handleOpen} />
         </Box>
+
+        <RecentPhotos photos={photos} onOpen={handleOpen} />
+
+        <DailyTodo />
       </Box>
     </Box>
   );

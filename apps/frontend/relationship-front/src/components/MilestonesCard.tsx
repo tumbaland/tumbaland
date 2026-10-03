@@ -60,6 +60,17 @@ const timingOf = (milestone: Milestone): string => {
   return milestone.projected ? `~${when}` : when;
 };
 
+/**
+ * The headline on the right of a row. A count milestone says how much is left,
+ * because that is the thing you can act on; its date is a projection and sits
+ * under the bar.
+ */
+const headlineOf = (milestone: Milestone): string => {
+  if (milestone.achievedOn) return agoLabel(milestone.daysAgo ?? 0);
+  if (milestone.remaining !== undefined) return `${milestone.remaining} to go`;
+  return timingOf(milestone);
+};
+
 const tooltipOf = (milestone: Milestone): string => {
   if (milestone.achievedOn) return `Reached ${formatDay(milestone.achievedOn)}`;
   if (!milestone.expectedOn) return milestone.label;
@@ -110,23 +121,30 @@ const MilestoneList: React.FC<MilestoneListProps> = ({ icon, title, emptyText, a
                       variant="caption"
                       sx={{ fontWeight: 600, color: accent, whiteSpace: 'nowrap' }}
                     >
-                      {milestone.achievedOn ? agoLabel(milestone.daysAgo ?? 0) : timingOf(milestone)}
+                      {headlineOf(milestone)}
                     </Typography>
                   </Box>
 
                   {progress !== null && (
-                    <LinearProgress
-                      variant="determinate"
-                      value={progress}
-                      aria-label={`${milestone.label} progress`}
-                      sx={{
-                        mt: 0.75,
-                        height: 4,
-                        borderRadius: 2,
-                        bgcolor: alpha(dot, 0.15),
-                        '& .MuiLinearProgress-bar': { bgcolor: dot }
-                      }}
-                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.75 }}>
+                      <LinearProgress
+                        variant="determinate"
+                        value={progress}
+                        aria-label={`${milestone.label} progress`}
+                        sx={{
+                          flexGrow: 1,
+                          height: 4,
+                          borderRadius: 2,
+                          bgcolor: alpha(dot, 0.15),
+                          '& .MuiLinearProgress-bar': { bgcolor: dot }
+                        }}
+                      />
+                      {milestone.daysAway !== undefined && (
+                        <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
+                          {timingOf(milestone)}
+                        </Typography>
+                      )}
+                    </Box>
                   )}
                 </Box>
               </Tooltip>
