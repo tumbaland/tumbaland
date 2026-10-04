@@ -1,11 +1,18 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import GroupCard from './GroupCard';
 import { Group } from '../../types';
 
-const group: Group = { _id: 'g1', name: 'Family', members: [{ email: 'a@example.com', role: 'owner' }, { email: 'b@example.com', role: 'member' }] };
+const group: Group = {
+  _id: 'g1',
+  name: 'Family',
+  members: [
+    { email: 'a@example.com', role: 'owner' },
+    { email: 'b@example.com', role: 'member' }
+  ]
+};
 
 function renderCard(overrides: Partial<{ group: Group; canModify: boolean; userRole: string }> = {}) {
   const onMenuOpen = vi.fn();

@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { authService } from './authService';
 
 beforeEach(() => authService.clearAuthCache());
@@ -19,7 +19,10 @@ it('checks auth against the configured auth service url', async () => {
 
 it('redirects to the configured auth front url', () => {
   const originalLocation = window.location;
-  Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, href: 'https://app.example/groups' } });
+  Object.defineProperty(window, 'location', {
+    writable: true,
+    value: { ...originalLocation, href: 'https://app.example/groups' }
+  });
 
   authService.redirectToLogin();
 

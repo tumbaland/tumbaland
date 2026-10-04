@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { useEffect } from 'react';
-import { describe, vi } from 'vitest';
+import { describe, vi } from 'vite-plus/test';
 import { useCollageEditor } from '../../hooks/useCollageEditor';
 import CollageStage, { ResolvePhoto, pinchGeometry } from './CollageStage';
 import { CollageDoc } from './collageDoc';
@@ -46,7 +46,7 @@ function Harness({
   const editor = useCollageEditor();
   useEffect(() => {
     editor.init(doc);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   if (!editor.doc) return null;
   return (
@@ -176,7 +176,12 @@ it('drags an item via pointer move/up, repositioning it', () => {
 });
 
 describe('two fingers on a photo', () => {
-  const touch = (pointerId: number, clientX: number, clientY: number) => ({ pointerId, pointerType: 'touch', clientX, clientY });
+  const touch = (pointerId: number, clientX: number, clientY: number) => ({
+    pointerId,
+    pointerType: 'touch',
+    clientX,
+    clientY
+  });
   const box = (container: HTMLElement) => container.querySelector('[data-item-id="photo-item-1"]') as HTMLElement;
 
   it('spreads to resize it about its centre and turns to rotate it', () => {
@@ -250,7 +255,6 @@ describe('pinchGeometry', () => {
     const moved = pinchGeometry(start, from, { a: { x: 50, y: 20 }, b: { x: 150, y: 20 } }, 0.5);
     expect(moved).toEqual({ x: 200, y: 140, width: 200, height: 100, rotation: 0 });
   });
-
 });
 
 it('resizes an item via the resize handle', () => {
@@ -416,8 +420,29 @@ describe('stickers, shapes and styled text', () => {
         background: '#ffff00',
         rotation: 30
       },
-      { id: 'sticker', kind: 'sticker', text: '🎉', x: 300, y: 0, width: 100, height: 100, fontSize: 32, color: '#000' },
-      { id: 'heart', kind: 'shape', shape: 'heart', text: '', x: 500, y: 0, width: 120, height: 100, fontSize: 32, color: '#e91e63' }
+      {
+        id: 'sticker',
+        kind: 'sticker',
+        text: '🎉',
+        x: 300,
+        y: 0,
+        width: 100,
+        height: 100,
+        fontSize: 32,
+        color: '#000'
+      },
+      {
+        id: 'heart',
+        kind: 'shape',
+        shape: 'heart',
+        text: '',
+        x: 500,
+        y: 0,
+        width: 120,
+        height: 100,
+        fontSize: 32,
+        color: '#e91e63'
+      }
     ]
   };
 
@@ -448,7 +473,12 @@ describe('stickers, shapes and styled text', () => {
   it('turns a text with two fingers, as it does a photo', () => {
     const { container } = render(<Harness doc={overlayDoc} />);
     const box = container.querySelector('[data-item-id="sticker"]') as HTMLElement;
-    const touch = (pointerId: number, clientX: number, clientY: number) => ({ pointerId, pointerType: 'touch', clientX, clientY });
+    const touch = (pointerId: number, clientX: number, clientY: number) => ({
+      pointerId,
+      pointerType: 'touch',
+      clientX,
+      clientY
+    });
 
     fireEvent.pointerDown(box, touch(1, 350, 50));
     fireEvent.pointerDown(box, touch(2, 400, 50));
@@ -463,7 +493,11 @@ describe('stickers, shapes and styled text', () => {
     const { container } = render(
       <Harness
         doc={baseDoc}
-        resolvePhoto={() => ({ src: 'https://cdn.example/clip.mp4', posterSrc: 'https://cdn.example/clip.jpg', mimetype: 'video/mp4' })}
+        resolvePhoto={() => ({
+          src: 'https://cdn.example/clip.mp4',
+          posterSrc: 'https://cdn.example/clip.jpg',
+          mimetype: 'video/mp4'
+        })}
       />
     );
     const video = container.querySelector('video')!;
@@ -479,10 +513,18 @@ describe('stickers, shapes and styled text', () => {
       const editor = useCollageEditor();
       useEffect(() => {
         editor.init(editorDoc);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // oxlint-disable-next-line react-hooks/exhaustive-deps
       }, []);
       if (!editor.doc) return null;
-      return <CollageStage editor={editor} resolvePhoto={() => undefined} readOnly={false} zoom={1} onDropFile={onDropFile} />;
+      return (
+        <CollageStage
+          editor={editor}
+          resolvePhoto={() => undefined}
+          readOnly={false}
+          zoom={1}
+          onDropFile={onDropFile}
+        />
+      );
     }
     const { container } = render(<DropHarness />);
 

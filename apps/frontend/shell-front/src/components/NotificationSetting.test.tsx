@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { render as rtlRender, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MenuList from '@mui/material/MenuList';
@@ -66,9 +66,7 @@ describe('when notifications can be turned on', () => {
 
     render(<NotificationSetting />);
 
-    await waitFor(() =>
-      expect(screen.getByRole('switch', { name: 'Message notifications' })).toBeChecked()
-    );
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Message notifications' })).toBeChecked());
   });
 
   it('shows off when permission is granted but nothing is subscribed', async () => {
@@ -78,9 +76,7 @@ describe('when notifications can be turned on', () => {
 
     render(<NotificationSetting />);
 
-    await waitFor(() =>
-      expect(screen.getByRole('switch', { name: 'Message notifications' })).not.toBeChecked()
-    );
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Message notifications' })).not.toBeChecked());
   });
 
   it('unsubscribes when switched off', async () => {
@@ -115,6 +111,30 @@ describe('when notifications can be turned on', () => {
     await userEvent.click(screen.getByText('Message notifications'));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('switch')).toBeChecked();
+  });
+
+  it('stays off when the service worker never becomes ready', async () => {
+    // Nothing to read the subscription from, so the switch simply stays off.
+    pushSupport.mockReturnValue('ready');
+    Object.defineProperty(navigator, 'serviceWorker', {
+      configurable: true,
+      value: { ready: Promise.reject(new Error('no service worker')) }
+    });
+
+    render(<NotificationSetting />);
+
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Message notifications' })).not.toBeChecked());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('toggles once when the switch itself is tapped', async () => {
+    // The row's click does the work; the switch must not toggle a second time.
+    render(<NotificationSetting />);
+
+    await userEvent.click(screen.getByRole('switch', { name: 'Message notifications' }));
+
+    expect(enableNotifications).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.getByRole('switch')).toBeChecked());
   });
 
   it('stays off when permission is refused', async () => {

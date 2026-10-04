@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
@@ -59,9 +59,42 @@ const mockedGetDays = getDays as unknown as ReturnType<typeof vi.fn>;
 const mockedSaveDay = saveDay as unknown as ReturnType<typeof vi.fn>;
 const mockedGetPlaces = getPlaces as unknown as ReturnType<typeof vi.fn>;
 
-const booleanType = { _id: 'b1', id: 'b1', name: 'Kissed', slug: 'kissed', valueType: 'boolean', isActive: true, sortOrder: 0, createdAt: '', updatedAt: '', userId: 'u1' };
-const numberType = { _id: 'n1', id: 'n1', name: 'Exercise', slug: 'exercise', valueType: 'number', isActive: true, sortOrder: 1, createdAt: '', updatedAt: '', userId: 'u1' };
-const stringType = { _id: 's1', id: 's1', name: 'Notes', slug: 'notes', valueType: 'string', isActive: true, sortOrder: 2, createdAt: '', updatedAt: '', userId: 'u1' };
+const booleanType = {
+  _id: 'b1',
+  id: 'b1',
+  name: 'Kissed',
+  slug: 'kissed',
+  valueType: 'boolean',
+  isActive: true,
+  sortOrder: 0,
+  createdAt: '',
+  updatedAt: '',
+  userId: 'u1'
+};
+const numberType = {
+  _id: 'n1',
+  id: 'n1',
+  name: 'Exercise',
+  slug: 'exercise',
+  valueType: 'number',
+  isActive: true,
+  sortOrder: 1,
+  createdAt: '',
+  updatedAt: '',
+  userId: 'u1'
+};
+const stringType = {
+  _id: 's1',
+  id: 's1',
+  name: 'Notes',
+  slug: 'notes',
+  valueType: 'string',
+  isActive: true,
+  sortOrder: 2,
+  createdAt: '',
+  updatedAt: '',
+  userId: 'u1'
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -122,9 +155,7 @@ it('toggles a boolean type on and saves it with no extra fields', async () => {
   await userEvent.click(screen.getByText('Kissed'));
   await userEvent.click(screen.getByRole('button', { name: 'Save day' }));
 
-  await waitFor(() =>
-    expect(mockedSaveDay).toHaveBeenCalledWith('2024-01-01', [{ typeId: 'b1' }], 'g1')
-  );
+  await waitFor(() => expect(mockedSaveDay).toHaveBeenCalledWith('2024-01-01', [{ typeId: 'b1' }], 'g1'));
   expect(onSaved).toHaveBeenCalled();
   expect(onClose).toHaveBeenCalled();
 });
@@ -233,7 +264,10 @@ it('fetches saved places for the scope when a type tracks a location', async () 
 });
 
 it('shows the place picker only for types that track a location', async () => {
-  mockedGetTypes.mockResolvedValue({ data: [booleanType, locationType], pagination: {} as ActivityTypesResponse['pagination'] });
+  mockedGetTypes.mockResolvedValue({
+    data: [booleanType, locationType],
+    pagination: {} as ActivityTypesResponse['pagination']
+  });
   render(<DayEditorDialog open date="2024-01-01" onClose={vi.fn()} onSaved={vi.fn()} />);
 
   await screen.findByText('Kissed');

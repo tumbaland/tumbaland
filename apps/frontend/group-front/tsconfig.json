@@ -12,10 +12,8 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "types": ["node", "vitest/globals"],
-    "baseUrl": ".",
-     "ignoreDeprecations": "6.0",
-    "paths": {
-    },
+    "ignoreDeprecations": "6.0",
+    "paths": {},
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,

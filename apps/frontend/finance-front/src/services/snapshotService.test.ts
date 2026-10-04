@@ -1,9 +1,13 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { getSnapshots, saveSnapshot, deleteSnapshot, snapshotMonth } from './snapshotService';
 import { Snapshot } from '../types';
 
 function mockFetchOnce(body: unknown) {
-  (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ ok: true, status: 200, json: async () => body } as Response);
+  (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    ok: true,
+    status: 200,
+    json: async () => body
+  } as Response);
 }
 
 describe('snapshotService', () => {

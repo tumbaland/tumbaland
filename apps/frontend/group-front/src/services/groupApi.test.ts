@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../config/ConfigProvider', () => ({
   getGlobalConfig: () => ({
@@ -22,7 +22,10 @@ describe('groupApi onUnauthorized', () => {
       json: async () => ({ message: 'unauthorized' })
     }) as unknown as typeof fetch;
     const originalLocation = window.location;
-    Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, href: 'https://app.example/groups' } });
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...originalLocation, href: 'https://app.example/groups' }
+    });
 
     await expect(groupApi.listMyGroups()).rejects.toThrow();
 
@@ -32,7 +35,7 @@ describe('groupApi onUnauthorized', () => {
 });
 
 describe('groupApi', () => {
-  it('lists the user\'s groups, defaulting to an empty array', async () => {
+  it("lists the user's groups, defaulting to an empty array", async () => {
     mockFetchOnce({ data: [{ _id: 'g1', name: 'Family' }] });
     expect(await groupApi.listMyGroups()).toEqual([{ _id: 'g1', name: 'Family' }]);
 
@@ -40,7 +43,7 @@ describe('groupApi', () => {
     expect(await groupApi.listMyGroups()).toEqual([]);
   });
 
-  it('gets the user\'s group ids, defaulting to an empty array', async () => {
+  it("gets the user's group ids, defaulting to an empty array", async () => {
     mockFetchOnce({ data: ['g1', 'g2'] });
     expect(await groupApi.getMyGroupIds()).toEqual(['g1', 'g2']);
 

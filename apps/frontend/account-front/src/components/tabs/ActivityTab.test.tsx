@@ -1,11 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../../services/auditService', async () => {
-  const actual = await vi.importActual<typeof import('../../services/auditService')>(
-    '../../services/auditService'
-  );
+  const actual = await vi.importActual<typeof import('../../services/auditService')>('../../services/auditService');
   return { ...actual, auditService: { list: vi.fn() } };
 });
 
@@ -57,9 +55,7 @@ describe('reading the trail', () => {
   });
 
   it('says what an update actually changed, not just that it changed', async () => {
-    await renderTab([
-      entry({ action: 'update', changes: { hours: { from: 3, to: 2 } } })
-    ]);
+    await renderTab([entry({ action: 'update', changes: { hours: { from: 3, to: 2 } } })]);
 
     // The whole reason the trail stores before-and-after: "Claude changed an
     // activity" is barely worth reading.
@@ -67,9 +63,7 @@ describe('reading the trail', () => {
   });
 
   it('spells out an absent value rather than leaving a gap', async () => {
-    await renderTab([
-      entry({ action: 'update', changes: { description: { from: null, to: 'Sushi' } } })
-    ]);
+    await renderTab([entry({ action: 'update', changes: { description: { from: null, to: 'Sushi' } } })]);
 
     // A change from nothing to something and a change nobody can see look
     // identical when the cell is simply empty.
@@ -77,9 +71,7 @@ describe('reading the trail', () => {
   });
 
   it('shows what a delete removed, since nothing else holds it', async () => {
-    await renderTab([
-      entry({ action: 'delete', snapshot: { description: 'Naraka Bladepoint' } })
-    ]);
+    await renderTab([entry({ action: 'delete', snapshot: { description: 'Naraka Bladepoint' } })]);
 
     expect(await screen.findByText(/Naraka Bladepoint/)).toBeInTheDocument();
     expect(screen.getByText(/removed/)).toBeInTheDocument();
@@ -114,9 +106,7 @@ describe('reading the trail', () => {
 
     await user.click(screen.getByRole('button', { name: 'Tool calls' }));
 
-    await waitFor(() =>
-      expect(mocked.list).toHaveBeenLastCalledWith(expect.objectContaining({ action: 'call' }))
-    );
+    await waitFor(() => expect(mocked.list).toHaveBeenLastCalledWith(expect.objectContaining({ action: 'call' })));
   });
 
   it('groups by day, with today named rather than dated', async () => {
@@ -131,10 +121,7 @@ describe('reading the trail', () => {
       return date.toISOString();
     };
 
-    await renderTab([
-      entry({ at: daysAgo(1) }),
-      entry({ id: 'e2', at: daysAgo(9) })
-    ]);
+    await renderTab([entry({ at: daysAgo(1) }), entry({ id: 'e2', at: daysAgo(9) })]);
 
     expect(await screen.findByText('Yesterday')).toBeInTheDocument();
     // Older days get a real date; "9 days ago" is arithmetic nobody wants to do.
@@ -174,17 +161,20 @@ describe('filtering', () => {
     // Named for what it is to a person: nobody thinks of their photos as
     // "album-service".
     await waitFor(() =>
-      expect(mocked.list).toHaveBeenLastCalledWith(
-        expect.objectContaining({ service: 'album-service' })
-      )
+      expect(mocked.list).toHaveBeenLastCalledWith(expect.objectContaining({ service: 'album-service' }))
     );
   });
 
   it('reads a record from any service, not only the journal', async () => {
     await renderTab([
       entry({ resource: 'photo', service: 'album-service' }),
-      entry({ id: 'e2', resource: 'transaction', service: 'finance-service', action: 'update',
-              changes: { amount: { from: 10, to: 12 } } })
+      entry({
+        id: 'e2',
+        resource: 'transaction',
+        service: 'finance-service',
+        action: 'update',
+        changes: { amount: { from: 10, to: 12 } }
+      })
     ]);
 
     expect(await screen.findByText(/added a photo/)).toBeInTheDocument();
@@ -195,9 +185,7 @@ describe('filtering', () => {
   });
 
   it('covers account changes too, which is where a new key would show up', async () => {
-    await renderTab([
-      entry({ resource: 'api_key', service: 'auth-service', actorKind: 'person', actorLabel: 'Tom' })
-    ]);
+    await renderTab([entry({ resource: 'api_key', service: 'auth-service', actorKind: 'person', actorLabel: 'Tom' })]);
 
     // A credential nobody remembers creating is the one that matters.
     expect(await screen.findByText(/added an api key/)).toBeInTheDocument();
@@ -209,9 +197,7 @@ describe('filtering', () => {
 
     await user.click(screen.getByRole('button', { name: 'Removed' }));
 
-    await waitFor(() =>
-      expect(mocked.list).toHaveBeenLastCalledWith(expect.objectContaining({ action: 'delete' }))
-    );
+    await waitFor(() => expect(mocked.list).toHaveBeenLastCalledWith(expect.objectContaining({ action: 'delete' })));
   });
 
   it('restarts the listing rather than stacking two queries', async () => {
@@ -298,9 +284,7 @@ function stubIntersectionObserver() {
 
 describe('scrolling to the end loads more', () => {
   const twoPages = (first: boolean) => ({
-    events: first
-      ? [entry({ actorLabel: 'Claude' })]
-      : [entry({ id: 'e2', actorLabel: 'Tom', actorKind: 'person' })],
+    events: first ? [entry({ actorLabel: 'Claude' })] : [entry({ id: 'e2', actorLabel: 'Tom', actorKind: 'person' })],
     total: 2,
     page: first ? 1 : 2,
     totalPages: 2

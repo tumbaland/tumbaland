@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { render, screen } from '@testing-library/react';
 import { CollagePeopleFaces, CollagePerson, personColour, RemoteSelections } from './CollagePeople';
 import { CollageDoc } from './collageDoc';

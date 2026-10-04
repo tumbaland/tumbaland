@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { APPS, USER_APPS, getAppByRoute } from '../config/apps';
@@ -127,7 +127,14 @@ describe('chat', () => {
     const onToggleChat = vi.fn();
     render(
       <MemoryRouter initialEntries={['/album']}>
-        <ModuleHeader app={undefined} currentRoute="/album" mobile={false} unreadChat={2} onToggleChat={onToggleChat} chatOpen />
+        <ModuleHeader
+          app={undefined}
+          currentRoute="/album"
+          mobile={false}
+          unreadChat={2}
+          onToggleChat={onToggleChat}
+          chatOpen
+        />
       </MemoryRouter>
     );
 

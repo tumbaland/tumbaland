@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { ReactNode } from 'react';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 // Only ProtectedRoute is stubbed: the module also backs ConfigProvider, which
 // authService pulls in transitively.

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 // Leaflet needs a real layout box to initialise, which jsdom cannot give it.
 // The map is stubbed down to the behaviour this component actually drives:
@@ -103,9 +103,7 @@ it('searches the geocoder once the query is long enough and lists the hits', asy
 
 it('hides a geocoder hit that duplicates an already-saved place', async () => {
   const user = userEvent.setup();
-  mockedSearch.mockResolvedValue([
-    { label: 'Sushi House (OSM)', lat: 59.44051, lng: 24.74533, detail: 'same spot' }
-  ]);
+  mockedSearch.mockResolvedValue([{ label: 'Sushi House (OSM)', lat: 59.44051, lng: 24.74533, detail: 'same spot' }]);
   render(<LocationPicker value={null} onChange={vi.fn()} savedPlaces={[savedPlace]} />);
 
   await user.type(screen.getByRole('combobox'), 'sushi');
@@ -117,11 +115,7 @@ it('hides a geocoder hit that duplicates an already-saved place', async () => {
 
 it('shows the map and the current coordinates once a place is set', () => {
   render(
-    <LocationPicker
-      value={{ label: 'Sushi House', lat: 59.4405, lng: 24.7453 }}
-      onChange={vi.fn()}
-      savedPlaces={[]}
-    />
+    <LocationPicker value={{ label: 'Sushi House', lat: 59.4405, lng: 24.7453 }} onChange={vi.fn()} savedPlaces={[]} />
   );
 
   expect(screen.getByTestId('map')).toBeInTheDocument();
@@ -154,11 +148,7 @@ it('places a pin where the map is clicked, naming it when no place is set', asyn
 it('keeps the existing label when the pin is moved', () => {
   const onChange = vi.fn();
   render(
-    <LocationPicker
-      value={{ label: 'Sushi House', lat: 59.4405, lng: 24.7453 }}
-      onChange={onChange}
-      savedPlaces={[]}
-    />
+    <LocationPicker value={{ label: 'Sushi House', lat: 59.4405, lng: 24.7453 }} onChange={onChange} savedPlaces={[]} />
   );
 
   markerDragEnd?.({ target: { getLatLng: () => ({ lat: 59.5, lng: 24.8 }) } });
@@ -171,11 +161,7 @@ it('clears the place and closes the map', async () => {
   const user = userEvent.setup();
   const onChange = vi.fn();
   render(
-    <LocationPicker
-      value={{ label: 'Sushi House', lat: 59.4405, lng: 24.7453 }}
-      onChange={onChange}
-      savedPlaces={[]}
-    />
+    <LocationPicker value={{ label: 'Sushi House', lat: 59.4405, lng: 24.7453 }} onChange={onChange} savedPlaces={[]} />
   );
 
   await user.click(screen.getByRole('button', { name: /remove this place/i }));

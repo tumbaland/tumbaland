@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, lazyPlugins } from 'vite-plus';
 import react from '@vitejs/plugin-react';
 import { federation } from '@module-federation/vite';
 import { TUMBALAND_FEDERATION_SHARED } from '@tumbaland/frontend-core/federation';
@@ -6,7 +6,7 @@ import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [
+  plugins: lazyPlugins(() => [
     react(),
     // The module-federation host. No remotes are listed here: where each module
     // lives is deployment config, so their URLs come from config.json at runtime
@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     ...(process.env.VITEST
       ? []
       : [federation({ name: 'shell', remotes: {}, shared: TUMBALAND_FEDERATION_SHARED, dts: false })])
-  ],
+  ]),
   server: {
     port: 3000
   },

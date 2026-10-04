@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { act, renderHook } from '@testing-library/react';
 import { MOTION_INTERVAL_MS, MovingItem, useMotionReport, useRemoteMotion } from './useCollageMotion';
 

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
 const setBadge = vi.fn();
@@ -42,7 +42,12 @@ describe('useUnreadChat', () => {
 
   it('ignores a response body that finishes after sign-out', async () => {
     let resolveBody!: (body: unknown) => void;
-    const json = vi.fn(() => new Promise((resolve) => { resolveBody = resolve; }));
+    const json = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveBody = resolve;
+        })
+    );
     fetchMock.mockResolvedValue({ ok: true, json });
     const { result, rerender } = renderHook(({ enabled }) => useUnreadChat(enabled), {
       initialProps: { enabled: true }

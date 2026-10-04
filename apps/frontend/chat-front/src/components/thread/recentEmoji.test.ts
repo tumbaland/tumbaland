@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vite-plus/test';
 import { act, renderHook } from '@testing-library/react';
 import { QUICK_REACTIONS } from './EmojiPicker';
 import { emojiIn, recordEmoji, resetRecentEmojiCache, useRecentEmoji } from './recentEmoji';

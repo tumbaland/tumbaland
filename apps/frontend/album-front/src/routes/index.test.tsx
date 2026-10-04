@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import AppRoutes from './index';
 
 vi.mock('../pages/DashboardPage', () => ({ default: () => <div>dashboard page</div> }));

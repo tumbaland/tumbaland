@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('@mui/x-charts/BarChart', () => ({
   BarChart: ({ series }: { series: { label: string; data: number[] }[] }) => (
@@ -17,9 +17,22 @@ import CategoryBreakdown from './CategoryBreakdown';
 import { Analytics } from '../../services/cashflowService';
 
 const year = (y: number) => ({
-  year: y, income: 0, expense: 0, consumption: 0, invested: 0, divested: 0, savings: 0, savingsRate: null,
-  months: 12, from: `${y}-01`, to: `${y}-12`, partial: false,
-  incomeChange: null, incomeChangePct: null, expenseChange: null, expenseChangePct: null
+  year: y,
+  income: 0,
+  expense: 0,
+  consumption: 0,
+  invested: 0,
+  divested: 0,
+  savings: 0,
+  savingsRate: null,
+  months: 12,
+  from: `${y}-01`,
+  to: `${y}-12`,
+  partial: false,
+  incomeChange: null,
+  incomeChangePct: null,
+  expenseChange: null,
+  expenseChangePct: null
 });
 
 const analytics: Analytics = {
@@ -28,24 +41,57 @@ const analytics: Analytics = {
   months: [],
   trailing: {
     current: {
-      income: 0, expense: 0, consumption: 0, invested: 0, divested: 0, savings: 0, savingsRate: null,
-      months: 12, from: '2025-01', to: '2025-12'
+      income: 0,
+      expense: 0,
+      consumption: 0,
+      invested: 0,
+      divested: 0,
+      savings: 0,
+      savingsRate: null,
+      months: 12,
+      from: '2025-01',
+      to: '2025-12'
     },
     previous: null
   },
   categoryTrends: [
-    { category: 'Groceries', byYear: { 2024: 3000, 2025: 4000 }, total: 7000, latest: 4000, previous: 3000, change: 1000, changePct: 33.3, perMonth: 333 },
-    { category: 'Transport', byYear: { 2024: 1000, 2025: 800 }, total: 1800, latest: 800, previous: 1000, change: -200, changePct: -20, perMonth: 67 },
-    { category: 'Investments', byYear: { 2025: 24000 }, total: 24000, latest: 24000, previous: 0, change: 24000, changePct: null, perMonth: 2000 }
+    {
+      category: 'Groceries',
+      byYear: { 2024: 3000, 2025: 4000 },
+      total: 7000,
+      latest: 4000,
+      previous: 3000,
+      change: 1000,
+      changePct: 33.3,
+      perMonth: 333
+    },
+    {
+      category: 'Transport',
+      byYear: { 2024: 1000, 2025: 800 },
+      total: 1800,
+      latest: 800,
+      previous: 1000,
+      change: -200,
+      changePct: -20,
+      perMonth: 67
+    },
+    {
+      category: 'Investments',
+      byYear: { 2025: 24000 },
+      total: 24000,
+      latest: 24000,
+      previous: 0,
+      change: 24000,
+      changePct: null,
+      perMonth: 2000
+    }
   ],
   incomeSources: [],
   currency: 'EUR'
 };
 
 it('renders nothing without spending categories', () => {
-  const { container } = render(
-    <CategoryBreakdown analytics={{ ...analytics, categoryTrends: [] }} />
-  );
+  const { container } = render(<CategoryBreakdown analytics={{ ...analytics, categoryTrends: [] }} />);
   expect(container).toBeEmptyDOMElement();
 });
 
@@ -64,11 +110,7 @@ it('explains where the investing money went instead', () => {
 });
 
 it('omits the notice when nothing was invested', () => {
-  render(
-    <CategoryBreakdown
-      analytics={{ ...analytics, categoryTrends: analytics.categoryTrends.slice(0, 2) }}
-    />
-  );
+  render(<CategoryBreakdown analytics={{ ...analytics, categoryTrends: analytics.categoryTrends.slice(0, 2) }} />);
 
   expect(screen.queryByText(/bought an asset/i)).not.toBeInTheDocument();
 });
@@ -103,8 +145,7 @@ it('drills into one category from the picker', async () => {
 });
 
 /** The card a query belongs to — category names repeat across them. */
-const card = (title: string | RegExp) =>
-  screen.getByText(title).closest('.MuiCardContent-root') as HTMLElement;
+const card = (title: string | RegExp) => screen.getByText(title).closest('.MuiCardContent-root') as HTMLElement;
 
 it('drills in by clicking a category in the share list', async () => {
   render(<CategoryBreakdown analytics={analytics} />);
@@ -168,7 +209,16 @@ it('handles a year with no spending in the chosen category', async () => {
       analytics={{
         ...analytics,
         categoryTrends: [
-          { category: 'Travel', byYear: { 2025: 300 }, total: 300, latest: 300, previous: 0, change: 300, changePct: null, perMonth: 25 }
+          {
+            category: 'Travel',
+            byYear: { 2025: 300 },
+            total: 300,
+            latest: 300,
+            previous: 0,
+            change: 300,
+            changePct: null,
+            perMonth: 25
+          }
         ]
       }}
     />
@@ -195,7 +245,16 @@ it('shows an absolute change when there is no base to divide by', async () => {
       analytics={{
         ...analytics,
         categoryTrends: [
-          { category: 'Travel', byYear: { 2025: 300 }, total: 300, latest: 300, previous: 0, change: 300, changePct: null, perMonth: 25 }
+          {
+            category: 'Travel',
+            byYear: { 2025: 300 },
+            total: 300,
+            latest: 300,
+            previous: 0,
+            change: 300,
+            changePct: null,
+            perMonth: 25
+          }
         ]
       }}
     />
@@ -213,7 +272,16 @@ it('handles a latest year with no spending at all', () => {
       analytics={{
         ...analytics,
         categoryTrends: [
-          { category: 'Rent', byYear: { 2024: 100 }, total: 100, latest: 0, previous: 100, change: -100, changePct: -100, perMonth: 0 }
+          {
+            category: 'Rent',
+            byYear: { 2024: 100 },
+            total: 100,
+            latest: 0,
+            previous: 100,
+            change: -100,
+            changePct: -100,
+            perMonth: 0
+          }
         ]
       }}
     />

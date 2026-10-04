@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { albumService } from './albumService';
 
 function mockFetchOnce(body: unknown, init: { ok?: boolean; status?: number } = {}) {

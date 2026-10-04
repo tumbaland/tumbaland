@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { getStatementSettings, updateStatementSettings } from './statementSettingsService';
 
 function mockFetchOnce(body: unknown) {

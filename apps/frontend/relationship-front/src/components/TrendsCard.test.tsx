@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
@@ -176,14 +176,8 @@ it('scales every bar against the busiest window on the card', () => {
 
   // 20 is the busiest window across both rows, so it fills the bar and the
   // quieter type reads as the quarter of it that it is.
-  expect(screen.getByRole('progressbar', { name: 'Busy current window' })).toHaveAttribute(
-    'aria-valuenow',
-    '100'
-  );
-  expect(screen.getByRole('progressbar', { name: 'Quiet current window' })).toHaveAttribute(
-    'aria-valuenow',
-    '25'
-  );
+  expect(screen.getByRole('progressbar', { name: 'Busy current window' })).toHaveAttribute('aria-valuenow', '100');
+  expect(screen.getByRole('progressbar', { name: 'Quiet current window' })).toHaveAttribute('aria-valuenow', '25');
 });
 
 it('lists at most maxItems types', () => {

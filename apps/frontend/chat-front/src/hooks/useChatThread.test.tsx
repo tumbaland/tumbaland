@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ChatEvent, Message } from '../types';
 
@@ -115,7 +115,9 @@ describe('loadUntil', () => {
   });
 
   it('says the message is gone when the pages walk past where it was', async () => {
-    listMessages.mockResolvedValueOnce(page(500, 451, 'cursor-451')).mockResolvedValueOnce(page(450, 351, 'cursor-351'));
+    listMessages
+      .mockResolvedValueOnce(page(500, 451, 'cursor-451'))
+      .mockResolvedValueOnce(page(450, 351, 'cursor-351'));
     const { result } = await openThread();
 
     let outcome: string | undefined;

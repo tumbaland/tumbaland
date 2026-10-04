@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { checkRoutes } from './connectionCheck';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
+import { canCheck, checkRoutes } from './connectionCheck';
 
 /** A stand-in peer that announces the given candidate types, then the end of gathering. */
 function fakePeer(types: string[], { finishes = true } = {}) {
@@ -69,5 +69,76 @@ describe('checkRoutes', () => {
     const { peer, factory } = fakePeer([]);
     await checkRoutes(servers, factory);
     expect(peer.createDataChannel).toHaveBeenCalledWith('check');
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe('canCheck', () => {
+  it('is only possible where the browser has peer connections', () => {
+    vi.stubGlobal('RTCPeerConnection', undefined);
+    expect(canCheck()).toBe(false);
+
+    vi.stubGlobal('RTCPeerConnection', class {});
+    expect(canCheck()).toBe(true);
+  });
+});
+
+describe('checkRoutes on its own', () => {
+  it('opens a real peer connection with the given servers when none is passed in', async () => {
+    const created: Array<{ config: RTCConfiguration }> = [];
+    class FakePeer {
+      onicecandidate: ((event: { candidate: { type: string } | null }) => void) | null = null;
+      onicegatheringstatechange: (() => void) | null = null;
+      iceGatheringState = 'new';
+      close = vi.fn();
+      createDataChannel = vi.fn();
+      createOffer = vi.fn(async () => ({ type: 'offer', sdp: '' }));
+      constructor(public config: RTCConfiguration) {
+        created.push(this);
+      }
+      setLocalDescription = vi.fn(async () => {
+        this.onicecandidate?.({ candidate: { type: 'relay' } });
+      });
+    }
+    vi.stubGlobal('RTCPeerConnection', FakePeer);
+
+    const routes = await checkRoutes(servers);
+
+    expect(created[0]?.config).toEqual({ iceServers: servers });
+    expect(routes.relay).toBe(true);
+  });
+
+  it('stops when the browser says gathering is complete', async () => {
+    const { peer, factory } = fakePeer(['host'], { finishes: false });
+    peer.setLocalDescription.mockImplementation(async () => {
+      peer.onicecandidate?.({ candidate: { type: 'host' } });
+      peer.iceGatheringState = 'complete';
+      peer.onicegatheringstatechange?.();
+    });
+
+    expect(await checkRoutes(servers, factory)).toEqual({ local: true, internet: false, relay: false });
+  });
+
+  it('keeps waiting while gathering is only part way', async () => {
+    const { peer, factory } = fakePeer(['host'], { finishes: false });
+    peer.setLocalDescription.mockImplementation(async () => {
+      peer.iceGatheringState = 'gathering';
+      peer.onicegatheringstatechange?.();
+      peer.onicecandidate?.({ candidate: { type: 'host' } });
+      peer.onicecandidate?.({ candidate: null });
+    });
+
+    expect(await checkRoutes(servers, factory)).toEqual({ local: true, internet: false, relay: false });
+  });
+
+  it('reports no routes, rather than failing, when the offer cannot be made', async () => {
+    const { peer, factory } = fakePeer([]);
+    peer.createOffer.mockRejectedValue(new Error('no offer'));
+
+    expect(await checkRoutes(servers, factory)).toEqual({ local: false, internet: false, relay: false });
+    expect(peer.close).toHaveBeenCalled();
   });
 });

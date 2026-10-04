@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import type { ComponentProps } from 'react';
 import type DayEditorDialog from '../components/DayEditorDialog';
 import type ActivityTypesDialog from '../components/ActivityTypesDialog';
@@ -49,7 +49,18 @@ const mockedGetDays = getDays as unknown as ReturnType<typeof vi.fn>;
 type GetDaysOptions = NonNullable<Parameters<typeof getDays>[0]>;
 const mockedGetActivityTypes = getActivityTypes as unknown as ReturnType<typeof vi.fn>;
 
-const readingType = { _id: 't1', id: 't1', name: 'Reading', slug: 'reading', color: '#111', isActive: true, sortOrder: 0, createdAt: '', updatedAt: '', userId: 'u1' };
+const readingType = {
+  _id: 't1',
+  id: 't1',
+  name: 'Reading',
+  slug: 'reading',
+  color: '#111',
+  isActive: true,
+  sortOrder: 0,
+  createdAt: '',
+  updatedAt: '',
+  userId: 'u1'
+};
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
@@ -224,9 +235,7 @@ it('drops the activity filter when that type no longer exists', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Manage types' }));
   await userEvent.click(screen.getByText('change-types'));
 
-  await waitFor(() =>
-    expect(mockedGetDays).toHaveBeenLastCalledWith(expect.objectContaining({ typeId: undefined }))
-  );
+  await waitFor(() => expect(mockedGetDays).toHaveBeenLastCalledWith(expect.objectContaining({ typeId: undefined })));
 });
 
 it('loads more days via the Load older days button', async () => {

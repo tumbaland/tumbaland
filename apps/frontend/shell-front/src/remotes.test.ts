@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 const loadRemote = vi.fn();
 const registerRemotes = vi.fn();
@@ -39,7 +39,11 @@ it('registers each configured app against its own origin, once', async () => {
   const entries = registerRemotes.mock.calls[0][0] as { name: string; entry: string }[];
   // The trailing slash on the configured URL must not double up.
   expect(entries).toContainEqual({ name: 'album', entry: 'https://album.example/remoteEntry.js', type: 'module' });
-  expect(entries).toContainEqual({ name: 'relationship', entry: 'https://journal.example/remoteEntry.js', type: 'module' });
+  expect(entries).toContainEqual({
+    name: 'relationship',
+    entry: 'https://journal.example/remoteEntry.js',
+    type: 'module'
+  });
 });
 
 it('leaves out an app this deployment has no URL for', async () => {
@@ -72,9 +76,7 @@ it('fails with the module’s name and address rather than the runtime’s diagn
   vi.spyOn(console, 'error').mockImplementation(() => {});
   loadRemote.mockRejectedValue(new Error('ScriptExternalLoadError: ... see https://module-federation.io'));
 
-  await expect(resolveLazy(remoteComponent(album))).rejects.toThrow(
-    'Could not reach Album at https://album.example/.'
-  );
+  await expect(resolveLazy(remoteComponent(album))).rejects.toThrow('Could not reach Album at https://album.example/.');
 });
 
 it('fails clearly when the deployment has no URL for the app', async () => {

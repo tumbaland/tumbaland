@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { documentMimetype, extensionLabel, formatSize, isDocumentType } from './documents';
 
 describe('documentMimetype', () => {

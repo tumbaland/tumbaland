@@ -79,7 +79,7 @@ const PortfolioPlanner: React.FC = () => {
 
   const nameByTicker = useMemo(() => {
     const m: Record<string, string> = {};
-    trackedTickers.forEach(t => (m[t.ticker] = t.displayName));
+    trackedTickers.forEach((t) => (m[t.ticker] = t.displayName));
     return m;
   }, [trackedTickers]);
 
@@ -88,7 +88,7 @@ const PortfolioPlanner: React.FC = () => {
   // is bounded too — the full collection is unbounded and mostly irrelevant here.
   useEffect(() => {
     if (holdings.length === 0) return;
-    const portfolioTickers = [...new Set(holdings.map(p => p.ticker))];
+    const portfolioTickers = [...new Set(holdings.map((p) => p.ticker))];
     setLoadingPrices(true);
     setPriceError(null);
 
@@ -104,7 +104,7 @@ const PortfolioPlanner: React.FC = () => {
      */
     const load = (basis: ReturnBasis) =>
       Promise.all(
-        portfolioTickers.map(ticker =>
+        portfolioTickers.map((ticker) =>
           getTickerPriceHistory({
             ticker,
             // Weekly is only worth loading for its depth, so it is not clipped
@@ -113,12 +113,12 @@ const PortfolioPlanner: React.FC = () => {
             interval: basis
           })
         )
-      ).then(perTicker => {
+      ).then((perTicker) => {
         const rawMap: Record<string, PricePoint[]> = {};
         perTicker
           .flat()
-          .filter(d => d.price > 0)
-          .forEach(d => {
+          .filter((d) => d.price > 0)
+          .forEach((d) => {
             if (!rawMap[d.ticker]) rawMap[d.ticker] = [];
             rawMap[d.ticker].push({ date: d.date, price: d.price });
           });
@@ -150,7 +150,7 @@ const PortfolioPlanner: React.FC = () => {
 
   const runSim = () => {
     const quantityByTicker: Record<string, number> = {};
-    holdings.forEach(h => (quantityByTicker[h.ticker] = h.quantity));
+    holdings.forEach((h) => (quantityByTicker[h.ticker] = h.quantity));
     setSim(
       runFrontierSimulation({
         pricesByTicker,
@@ -229,7 +229,7 @@ const PortfolioPlanner: React.FC = () => {
     if (shellFrontUrl && window.top?.location) window.top.location.href = `${shellFrontUrl}/payments`;
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (Object.keys(pricesByTicker).length >= 2 && hasEnoughHistory) runSim();
   }, [pricesByTicker]);
@@ -238,14 +238,16 @@ const PortfolioPlanner: React.FC = () => {
   // user's plan doesn't reset to Max Sharpe on every visit.
   const [targetVol, setTargetVol] = usePersistedState<number | null>('finance-planner-target-vol', null);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { if (sim && targetVol === null) setTargetVol(sim.maxSharpe.vol); }, [sim]);
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (sim && targetVol === null) setTargetVol(sim.maxSharpe.vol);
+  }, [sim]);
 
   // Efficient frontier point at or below targetVol: highest return at that risk level
   const targetPortfolio = useMemo(() => {
     if (!sim) return null;
     const vol = targetVol ?? sim.maxSharpe.vol;
-    const candidates = sim.points.filter(p => p.vol <= vol);
+    const candidates = sim.points.filter((p) => p.vol <= vol);
     if (candidates.length === 0) return sim.minVol;
     return candidates.reduce((b, p) => (p.ret > b.ret ? p : b));
   }, [sim, targetVol]);
@@ -253,14 +255,12 @@ const PortfolioPlanner: React.FC = () => {
   // Per-holding performance stats
   const holdingStats = useMemo<HoldingStat[]>(() => {
     return holdings
-      .map(p => {
+      .map((p) => {
         const prices = pricesByTicker[p.ticker];
         // Each holding's own newest close — unlike the frontier, a row's
         // current value has no reason to wait for the other tickers.
         const latestPrice = prices?.length ? prices[prices.length - 1].price : null;
-        const returnPct = latestPrice != null
-          ? ((latestPrice - p.avgBuyPrice) / p.avgBuyPrice) * 100
-          : null;
+        const returnPct = latestPrice != null ? ((latestPrice - p.avgBuyPrice) / p.avgBuyPrice) * 100 : null;
         const currentValue = latestPrice != null ? latestPrice * p.quantity : null;
         return { ...p, latestPrice, returnPct, currentValue };
       })
@@ -279,16 +279,22 @@ const PortfolioPlanner: React.FC = () => {
     );
   }
 
-  const tickersWithoutData = holdings.map(p => p.ticker).filter(t => !pricesByTicker[t]);
+  const tickersWithoutData = holdings.map((p) => p.ticker).filter((t) => !pricesByTicker[t]);
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>Portfolio Planner</Typography>
-      {priceError && <Alert severity="error" sx={{ mb: 2 }}>{priceError}</Alert>}
+      <Typography variant="h4" sx={{ mb: 3 }}>
+        Portfolio Planner
+      </Typography>
+      {priceError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {priceError}
+        </Alert>
+      )}
       {holdings.length === 0 && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          Add holdings in the Investments page to optimize your allocation — until then the
-          projection below runs on manual assumptions.
+          Add holdings in the Investments page to optimize your allocation — until then the projection below runs on
+          manual assumptions.
         </Alert>
       )}
       {tickersWithoutData.length > 0 && (
@@ -297,7 +303,11 @@ const PortfolioPlanner: React.FC = () => {
         </Alert>
       )}
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+      <Tabs
+        value={tab}
+        onChange={(_, v) => setTab(v)}
+        sx={{ mb: 2, borderBottom: '1px solid', borderColor: 'divider' }}
+      >
         <Tab label="Holdings" />
         <Tab label="Frontier" />
         <Tab label="Projection" />
@@ -349,31 +359,31 @@ const PortfolioPlanner: React.FC = () => {
             }
           >
             <AlertTitle>Not enough overlapping price history to plan with</AlertTitle>
-            The efficient frontier is estimated from the days on which <em>all</em> your holdings
-            traded. Those overlap for {alignedSeries.spanDays} days ({alignedSeries.dates.length}{' '}
-            {basis} closes across {alignedSeries.tickers.length} holdings), which is too little to
-            tell how they move together — so the frontier is not shown rather than shown wrong.
+            The efficient frontier is estimated from the days on which <em>all</em> your holdings traded. Those overlap
+            for {alignedSeries.spanDays} days ({alignedSeries.dates.length} {basis} closes across{' '}
+            {alignedSeries.tickers.length} holdings), which is too little to tell how they move together — so the
+            frontier is not shown rather than shown wrong.
             <br />
             <br />
             {clippedByPlan ? (
               <>
-                Your plan keeps {retentionDays} days of price history, which is what the range above
-                is bounded by. Plans with full history keep every close ever fetched.
+                Your plan keeps {retentionDays} days of price history, which is what the range above is bounded by.
+                Plans with full history keep every close ever fetched.
               </>
             ) : (
               <>
-                Your plan is not what limits this — that much history simply has not been collected
-                yet. The newest holding sets the overlap for all of them. Fetching the full weekly
-                history for each instrument, from the sync button on the Tracked tickers tab, is
-                usually the fastest way to widen it.
+                Your plan is not what limits this — that much history simply has not been collected yet. The newest
+                holding sets the overlap for all of them. Fetching the full weekly history for each instrument, from the
+                sync button on the Tracked tickers tab, is usually the fastest way to widen it.
               </>
             )}
           </Alert>
         ) : (
-          holdings.length > 0 && Object.keys(pricesByTicker).length < 2 && (
+          holdings.length > 0 &&
+          Object.keys(pricesByTicker).length < 2 && (
             <Alert severity="info">
-              Need price history for at least 2 holdings to run the optimizer.
-              Open each ticker in Tracked Tickers and fetch its historical data first.
+              Need price history for at least 2 holdings to run the optimizer. Open each ticker in Tracked Tickers and
+              fetch its historical data first.
             </Alert>
           )
         )}

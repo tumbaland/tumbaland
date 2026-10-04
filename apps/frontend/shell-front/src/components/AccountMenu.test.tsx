@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../services/pushNotifications', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../services/pushNotifications')>()),
@@ -109,7 +109,6 @@ it('opens as a bottom sheet on phones with the same entries', () => {
   expect(document.querySelector('.MuiDrawer-root')).not.toBeNull();
   expect(document.querySelector('.MuiPopover-root')).toBeNull();
 });
-
 
 it('holds no money switch or entry: those live under Profile > Features and the main menu', () => {
   renderMenu({ route: '/' });

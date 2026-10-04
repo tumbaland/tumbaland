@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { getPlaces, getPlaceVisits } from './places';
 
 function mockFetchOnce(body: unknown) {

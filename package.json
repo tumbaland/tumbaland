@@ -15,40 +15,47 @@
     "dev": "concurrently \"npm run dev:back\" \"npm run dev:front\"",
     "dev:back": "concurrently \"npm run dev --workspace=auth-service\" \"npm run dev --workspace=public-service\" \"npm run dev --workspace=album-service\" \"npm run dev --workspace=finance-service\" \"npm run dev --workspace=relationship-service\" \"npm run dev --workspace=payment-service\" \"npm run dev --workspace=group-service\" \"npm run dev --workspace=file-service\" \"npm run dev --workspace=chat-service\" \"npm run dev --workspace=mcp-service\"",
     "dev:front": "concurrently \"npm run dev --workspace=account-front\" \"npm run dev --workspace=auth-front\" \"npm run dev --workspace=shell-front\" \"npm run dev --workspace=album-front\" \"npm run dev --workspace=finance-front\" \"npm run dev --workspace=relationship-front\" \"npm run dev --workspace=payment-front\" \"npm run dev --workspace=group-front\" \"npm run dev --workspace=chat-front\"",
-    "lint": "eslint .",
+    "lint": "vp lint .",
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "npm run build --workspace=@tumbaland/frontend-core && playwright test",
     "test:e2e:full": "E2E_WEB_SERVER_COMMAND=\"npm run dev\" npm run test:e2e",
     "test:coverage": "npm run test:coverage --workspaces --if-present",
     "coverage:report": "node scripts/coverage-report.js",
-    "format": "prettier --write .",
+    "format": "vp fmt .",
     "sync:libs": "node scripts/sync-lib-versions.mjs",
     "sync:libs:check": "node scripts/sync-lib-versions.mjs --check",
-    "lint:fix": "eslint . --fix",
+    "lint:fix": "vp lint . --fix",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "overrides": {
     "shell-quote": "^1.9.0",
-    "babel-plugin-istanbul": "^8.0.0"
+    "babel-plugin-istanbul": "^8.0.0",
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.0.0",
+    "vitest": "5.0.1"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
     "@types/jest": "^30.0.0",
     "@types/supertest": "^7.2.1",
+    "@vitest/coverage-v8": "5.0.1",
     "concurrently": "^10.0.5",
-    "eslint": "^10.10.0",
-    "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.12.0",
     "jest": "^30.5.1",
     "jsdom": "^30.0.1",
     "nodemon": "^3.1.14",
-    "prettier": "^3.9.6",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.70.0",
-    "vitest": "^4.1.11"
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.0.0",
+    "vite-plus": "1.0.0",
+    "vitest": "5.0.1"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "npm",
+      "version": "11.17.0",
+      "onFail": "download"
+    }
   }
 }

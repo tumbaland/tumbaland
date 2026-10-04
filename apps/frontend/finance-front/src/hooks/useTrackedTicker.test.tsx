@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../services/trackedTickerService', () => ({
   getTrackedTickers: vi.fn(),
@@ -19,9 +19,12 @@ import {
 
 function wrapper() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return { Wrapper: ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  ), queryClient };
+  return {
+    Wrapper: ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    ),
+    queryClient
+  };
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -49,7 +52,10 @@ it('creates a tracked ticker and invalidates trackedTickers', async () => {
 });
 
 it('updates a tracked ticker', async () => {
-  (trackedTickerService.updateTrackedTicker as ReturnType<typeof vi.fn>).mockResolvedValue({ _id: 't1', isActive: false });
+  (trackedTickerService.updateTrackedTicker as ReturnType<typeof vi.fn>).mockResolvedValue({
+    _id: 't1',
+    isActive: false
+  });
   const { Wrapper } = wrapper();
 
   const { result } = renderHook(() => useUpdateTrackedTicker(), { wrapper: Wrapper });
@@ -60,7 +66,10 @@ it('updates a tracked ticker', async () => {
 });
 
 it('refreshes holdings and trades after an update, since a rename re-points them', async () => {
-  (trackedTickerService.updateTrackedTicker as ReturnType<typeof vi.fn>).mockResolvedValue({ _id: 't1', ticker: 'VUSA.DEX' });
+  (trackedTickerService.updateTrackedTicker as ReturnType<typeof vi.fn>).mockResolvedValue({
+    _id: 't1',
+    ticker: 'VUSA.DEX'
+  });
   const { Wrapper, queryClient } = wrapper();
   const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 

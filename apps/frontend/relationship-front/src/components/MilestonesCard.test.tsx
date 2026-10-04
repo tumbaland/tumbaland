@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
@@ -96,10 +96,7 @@ it('hedges a projected count milestone and shows its progress', () => {
   expect(screen.getByText('~in 7 weeks')).toBeInTheDocument();
   // What is left is the headline; the projected date sits under the bar.
   expect(screen.getByText('5 to go')).toBeInTheDocument();
-  expect(screen.getByRole('progressbar', { name: '25 × Dinner progress' })).toHaveAttribute(
-    'aria-valuenow',
-    '80'
-  );
+  expect(screen.getByRole('progressbar', { name: '25 × Dinner progress' })).toHaveAttribute('aria-valuenow', '80');
 });
 
 it('gives a date milestone no progress bar — its distance is already in words', () => {
@@ -141,11 +138,7 @@ it('says so in each column when only one side has anything', () => {
 it('caps each column at maxItems', () => {
   mockedUseMilestones.mockReturnValue({
     milestones: result({
-      upcoming: [
-        upcomingDate(),
-        upcomingCount(),
-        upcomingCount({ key: 'type-count:t2:50', label: '50 × Cinema' })
-      ]
+      upcoming: [upcomingDate(), upcomingCount(), upcomingCount({ key: 'type-count:t2:50', label: '50 × Cinema' })]
     }),
     loading: false,
     error: null

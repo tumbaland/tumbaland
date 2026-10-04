@@ -91,7 +91,7 @@ export function ScreenEffect({ effect, onDone }: ScreenEffectProps) {
     const timer = setTimeout(onDone, lasts * 1000 + 100);
     return () => clearTimeout(timer);
     // The pieces are fixed for the life of one burst; a new burst remounts.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [reduceMotion]);
 
   if (reduceMotion) return null;

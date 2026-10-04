@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../../services/places', () => ({ getPlaceVisits: vi.fn() }));
 
@@ -63,9 +63,7 @@ it('shows a spinner until the visits arrive', () => {
 it('requests the visits for this pin, scoped to the group', async () => {
   renderPopup({}, 'g1');
 
-  await waitFor(() =>
-    expect(mockedGetVisits).toHaveBeenCalledWith(59.4405, 24.7453, { groupId: 'g1', limit: 12 })
-  );
+  await waitFor(() => expect(mockedGetVisits).toHaveBeenCalledWith(59.4405, 24.7453, { groupId: 'g1', limit: 12 }));
 });
 
 it('lists visits with a link into that day in the journal', async () => {

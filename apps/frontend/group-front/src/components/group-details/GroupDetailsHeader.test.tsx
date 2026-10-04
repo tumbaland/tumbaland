@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import GroupDetailsHeader from './GroupDetailsHeader';
 
 it('shows the group name and calls onBack', async () => {
@@ -43,7 +43,13 @@ it('says how many members there are and what the viewer is', () => {
 
 it('uses the singular for one member and marks the group with its initials', () => {
   render(
-    <GroupDetailsHeader groupName="Book club" onBack={vi.fn()} onEdit={vi.fn()} currentUserRole="member" memberCount={1} />
+    <GroupDetailsHeader
+      groupName="Book club"
+      onBack={vi.fn()}
+      onEdit={vi.fn()}
+      currentUserRole="member"
+      memberCount={1}
+    />
   );
   expect(screen.getByText("1 member · You're a member")).toBeInTheDocument();
   expect(screen.getByText('BC')).toBeInTheDocument();

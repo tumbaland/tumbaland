@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../config/ConfigProvider', () => ({
   getGlobalConfig: () => ({
@@ -28,7 +28,10 @@ describe('paymentApi.createCheckoutSession', () => {
 
     expect(result).toEqual({ sessionId: 's1', url: 'https://stripe.example' });
     const [, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(init).toMatchObject({ method: 'POST', body: JSON.stringify({ planCode: 'pro', successUrl: 'https://ok', cancelUrl: 'https://cancel' }) });
+    expect(init).toMatchObject({
+      method: 'POST',
+      body: JSON.stringify({ planCode: 'pro', successUrl: 'https://ok', cancelUrl: 'https://cancel' })
+    });
   });
 
   it('preserves the wrapper for a free-plan checkout (no status fields, but a `free` flag)', async () => {
@@ -118,7 +121,10 @@ describe('onUnauthorized', () => {
       json: async () => ({ message: 'unauthorized' })
     }) as unknown as typeof fetch;
     const originalLocation = window.location;
-    Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, href: 'https://app.example/plans' } });
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...originalLocation, href: 'https://app.example/plans' }
+    });
 
     await expect(paymentApi.listPlans()).rejects.toThrow();
 

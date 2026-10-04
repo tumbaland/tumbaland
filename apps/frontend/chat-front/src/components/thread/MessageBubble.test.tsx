@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MessageBubble, canChange, isJumbo } from './MessageBubble';
@@ -24,7 +24,10 @@ const message = (overrides: Partial<ThreadMessage> = {}): ThreadMessage => ({
 
 const noop = () => {};
 
-const renderBubble = (overrides: Partial<ThreadMessage> = {}, props: Partial<Parameters<typeof MessageBubble>[0]> = {}) =>
+const renderBubble = (
+  overrides: Partial<ThreadMessage> = {},
+  props: Partial<Parameters<typeof MessageBubble>[0]> = {}
+) =>
   render(
     <MessageBubble
       message={message(overrides)}

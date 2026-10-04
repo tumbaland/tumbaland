@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 const mockedUpdate = vi.fn();
 const mockedBulk = vi.fn();
@@ -207,9 +207,7 @@ describe('remembering the correction', () => {
     await typeCategory('Groceries');
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() =>
-      expect(mockedCreateRule).toHaveBeenCalledWith(expect.objectContaining({ pattern: 'RIMI' }))
-    );
+    await waitFor(() => expect(mockedCreateRule).toHaveBeenCalledWith(expect.objectContaining({ pattern: 'RIMI' })));
   });
 
   it('writes no rule when the box is cleared', async () => {
@@ -245,10 +243,7 @@ describe('remembering the correction', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() =>
-      expect(notify).toHaveBeenCalledWith(
-        'Category changed, but the rule for RIMI could not be saved',
-        'error'
-      )
+      expect(notify).toHaveBeenCalledWith('Category changed, but the rule for RIMI could not be saved', 'error')
     );
     // The move did happen, so the dialog has nothing left to offer
     expect(onClose).toHaveBeenCalled();

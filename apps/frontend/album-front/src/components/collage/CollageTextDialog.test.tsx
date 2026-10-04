@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, vi } from 'vitest';
+import { describe, vi } from 'vite-plus/test';
 import CollageTextDialog from './CollageTextDialog';
 import { CollageTextItem } from './collageDoc';
 

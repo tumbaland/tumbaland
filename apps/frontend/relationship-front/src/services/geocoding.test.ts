@@ -1,4 +1,4 @@
-import { vi, beforeEach, afterEach } from 'vitest';
+import { vi, beforeEach, afterEach } from 'vite-plus/test';
 import { searchPlaces } from './geocoding';
 
 const mockedFetch = () => global.fetch as ReturnType<typeof vi.fn>;
@@ -19,18 +19,17 @@ afterEach(() => {
 });
 
 describe('searchPlaces', () => {
-  it.each([['', 0], ['ko', 0], ['  k  ', 0]])(
-    'does not call the geocoder for a query shorter than 3 characters (%j)',
-    async (query) => {
-      await expect(searchPlaces(query as string)).resolves.toEqual([]);
-      expect(mockedFetch()).not.toHaveBeenCalled();
-    }
-  );
+  it.each([
+    ['', 0],
+    ['ko', 0],
+    ['  k  ', 0]
+  ])('does not call the geocoder for a query shorter than 3 characters (%j)', async (query) => {
+    await expect(searchPlaces(query as string)).resolves.toEqual([]);
+    expect(mockedFetch()).not.toHaveBeenCalled();
+  });
 
   it('maps Nominatim hits into results, preferring the short name', async () => {
-    mockHits([
-      { name: 'Sushi House', display_name: 'Sushi House, Pikk 71, Tallinn', lat: '59.4405', lon: '24.7453' }
-    ]);
+    mockHits([{ name: 'Sushi House', display_name: 'Sushi House, Pikk 71, Tallinn', lat: '59.4405', lon: '24.7453' }]);
 
     await expect(searchPlaces('sushi house')).resolves.toEqual([
       {

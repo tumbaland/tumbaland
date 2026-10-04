@@ -166,6 +166,12 @@ function apiResponseFor(path: string): unknown {
   if (path === '/api/photos') {
     return { success: true, data: { photos: [], pagination: { page: 1, limit: 20, total: 0, pages: 0 } } };
   }
+  if (path === '/api/photos/memories') {
+    return { success: true, data: { date: '2026-01-01', totalPhotos: 0, years: [] } };
+  }
+  if (path === '/api/photos/recent') {
+    return { success: true, data: { photos: [] } };
+  }
 
   return { success: true, data: [] };
 }
@@ -210,6 +216,24 @@ function albumStatistics() {
 }
 
 function relationshipStatistics(path: string): unknown {
+  if (path === '/api/statistics/milestones') {
+    return { success: true, data: { since: null, daysTogether: null, recent: [], upcoming: [] } };
+  }
+  if (path === '/api/statistics/streaks') {
+    return {
+      success: true,
+      data: {
+        currentStreak: 0,
+        longestStreak: 0,
+        longestStreakStart: null,
+        longestStreakEnd: null,
+        totalLoggedDays: 0,
+        lastEntryDate: null,
+        daysSinceLastEntry: null,
+        types: []
+      }
+    };
+  }
   if (path === '/api/statistics/monthly-hours') {
     return { success: true, data: [], generatedAt: new Date(0).toISOString() };
   }

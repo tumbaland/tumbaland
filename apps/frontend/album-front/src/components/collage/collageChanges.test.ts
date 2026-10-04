@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { applyDocChange, diffDocs, reorderItems, toServerChanges } from './collageChanges';
 import { CollageDoc, CollagePhotoItem } from './collageDoc';
 

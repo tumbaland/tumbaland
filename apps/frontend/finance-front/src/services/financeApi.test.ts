@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../config/ConfigProvider', () => ({
   getGlobalConfig: () => ({ FINANCE_API_URL: 'http://localhost:4003', AUTH_FRONT_URL: 'http://localhost:3004' })
@@ -18,7 +18,10 @@ function mock401() {
 it('redirects to the auth front on a 401 response', async () => {
   mock401();
   const originalLocation = window.location;
-  Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, href: 'https://app.example/dashboard' } });
+  Object.defineProperty(window, 'location', {
+    writable: true,
+    value: { ...originalLocation, href: 'https://app.example/dashboard' }
+  });
 
   await expect(financeApi.get('/holdings')).rejects.toThrow();
 

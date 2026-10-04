@@ -1,5 +1,5 @@
-import { defineConfig } from 'vitest/config';
-import { loadEnv } from 'vite';
+import { defineConfig, lazyPlugins } from 'vite-plus';
+import { loadEnv } from 'vite-plus';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
 
   return {
-    plugins: [react()],
+    plugins: lazyPlugins(() => [react()]),
     server: {
       port: 3004
     },

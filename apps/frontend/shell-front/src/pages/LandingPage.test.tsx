@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vite-plus/test';
 
 const redirectToLogin = vi.fn();
 
@@ -76,7 +76,7 @@ it('keeps to the fundamentals, with no settings on show', () => {
   expect(screen.queryByText(/dark mode|light mode|chat theme/i)).not.toBeInTheDocument();
 });
 
-it('says the screens are made up, rather than passing them off as somebody\'s', () => {
+it("says the screens are made up, rather than passing them off as somebody's", () => {
   // They are the app's own layout, but the evenings, the messages and the
   // holiday in them are invented, and a page that shows data owes that line.
   renderPage();

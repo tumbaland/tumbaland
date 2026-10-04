@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
@@ -93,9 +93,7 @@ it('puts the exact date and cadence in the nudge tooltip', async () => {
   renderCards();
 
   await userEvent.hover(screen.getByText('Date night'));
-  expect(
-    await screen.findByText('Last logged Feb 4, 2026 — usually every 17 days')
-  ).toBeInTheDocument();
+  expect(await screen.findByText('Last logged Feb 4, 2026 — usually every 17 days')).toBeInTheDocument();
 });
 
 it('reports how long it has been when the streak is broken', () => {

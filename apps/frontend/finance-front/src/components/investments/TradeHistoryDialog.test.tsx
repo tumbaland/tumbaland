@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 const mockedCreateMutateAsync = vi.fn();
 const mockedDeleteMutateAsync = vi.fn();
@@ -36,9 +36,7 @@ const position = {
 
 const renderDialog = (props: Partial<React.ComponentProps<typeof TradeHistoryDialog>> = {}) => {
   const notify = vi.fn();
-  render(
-    <TradeHistoryDialog open onClose={vi.fn()} ticker="AAPL" notify={notify} {...props} />
-  );
+  render(<TradeHistoryDialog open onClose={vi.fn()} ticker="AAPL" notify={notify} {...props} />);
   return { notify };
 };
 
@@ -167,9 +165,7 @@ it('deletes a trade after confirming', async () => {
   mockedDeleteMutateAsync.mockResolvedValue({});
   const { notify } = renderDialog();
 
-  const deleteButtons = screen
-    .getAllByRole('button')
-    .filter((b) => b.querySelector('[data-testid="DeleteIcon"]'));
+  const deleteButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="DeleteIcon"]'));
   await userEvent.click(deleteButtons[0]);
   await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
@@ -181,9 +177,7 @@ it('notifies when deleting fails', async () => {
   mockedDeleteMutateAsync.mockRejectedValue(new Error('nope'));
   const { notify } = renderDialog();
 
-  const deleteButtons = screen
-    .getAllByRole('button')
-    .filter((b) => b.querySelector('[data-testid="DeleteIcon"]'));
+  const deleteButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="DeleteIcon"]'));
   await userEvent.click(deleteButtons[0]);
   await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
 

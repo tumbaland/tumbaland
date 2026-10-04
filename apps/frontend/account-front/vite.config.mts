@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, lazyPlugins } from 'vite-plus';
 import react from '@vitejs/plugin-react';
 import { federation } from '@module-federation/vite';
 import {
@@ -10,7 +10,7 @@ import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [
+  plugins: lazyPlugins(() => [
     react(),
     // Besides running standalone, account-front is a module-federation remote:
     // shell-front loads `./App` from this origin's remoteEntry.js. Vitest has
@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => ({
             dts: false
           })
         ])
-  ],
+  ]),
   server: {
     port: 3007,
     // Absolute asset URLs in dev, so the shell's page fetches them from here.

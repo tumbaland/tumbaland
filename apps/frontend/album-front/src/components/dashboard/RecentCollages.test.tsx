@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useSearchParams } from 'react-router';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../../hooks/useCollage', () => ({ useCollageList: vi.fn() }));
 

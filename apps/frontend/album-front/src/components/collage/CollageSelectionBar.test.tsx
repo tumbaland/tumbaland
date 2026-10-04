@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import CollageSelectionBar from './CollageSelectionBar';
 
 const handlers = () => ({ onEdit: vi.fn(), onBringForward: vi.fn(), onSendBackward: vi.fn(), onDelete: vi.fn() });
@@ -10,7 +10,9 @@ describe('CollageSelectionBar', () => {
     const on = handlers();
     render(<CollageSelectionBar kind="photo" {...on} />);
 
-    expect(screen.getByRole('toolbar', { name: 'Selected photo' })).toHaveTextContent(/Edit.*Forward.*Backward.*Delete/);
+    expect(screen.getByRole('toolbar', { name: 'Selected photo' })).toHaveTextContent(
+      /Edit.*Forward.*Backward.*Delete/
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Edit photo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Bring forward' }));
     await userEvent.click(screen.getByRole('button', { name: 'Send backward' }));

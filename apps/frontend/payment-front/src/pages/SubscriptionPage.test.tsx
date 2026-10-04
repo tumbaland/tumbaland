@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../services/paymentApi', () => ({
   paymentApi: {
@@ -96,7 +96,13 @@ it('shows subscription history excluding the current subscription, covering acti
   mockedGetMySubscription.mockResolvedValue({ _id: 's1', planCode: 'pro', status: 'active' });
   mockedListMySubscriptions.mockResolvedValue([
     { _id: 's1', planCode: 'pro', status: 'active' }, // filtered out (current)
-    { _id: 's2', planCode: 'basic', status: 'active', createdAt: '2024-01-01T00:00:00.000Z', renewsAt: '2024-02-01T00:00:00.000Z' },
+    {
+      _id: 's2',
+      planCode: 'basic',
+      status: 'active',
+      createdAt: '2024-01-01T00:00:00.000Z',
+      renewsAt: '2024-02-01T00:00:00.000Z'
+    },
     { _id: 's3', planCode: 'free', status: 'canceled', canceledAt: '2024-03-01T00:00:00.000Z' },
     { _id: 's4', planCode: 'trial', status: 'past_due' }
   ]);

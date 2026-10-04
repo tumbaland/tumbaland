@@ -1,16 +1,25 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { render, screen } from '@testing-library/react';
 import { ThreadHeader, statusLine } from './ThreadHeader';
 import { activeLabel } from './clock';
 import type { ConversationMember, Presence } from '../../types';
 
 const now = new Date('2026-09-22T12:00:00');
-const member = (userId: string, name: string): ConversationMember => ({ userId, email: `${userId}@x`, name, joinedAt: '' });
+const member = (userId: string, name: string): ConversationMember => ({
+  userId,
+  email: `${userId}@x`,
+  name,
+  joinedAt: ''
+});
 const TOM = member('u-tom', 'Tom');
 const IRJA = member('u-irja', 'Irja');
 const MARI = member('u-mari', 'Mari');
 const at = (minutesAgo: number) => new Date(now.getTime() - minutesAgo * 60_000).toISOString();
-const seen = (userId: string, online: boolean, lastActiveAt: string | null): Presence => ({ userId, online, lastActiveAt });
+const seen = (userId: string, online: boolean, lastActiveAt: string | null): Presence => ({
+  userId,
+  online,
+  lastActiveAt
+});
 
 describe('activeLabel', () => {
   it.each([
@@ -117,7 +126,9 @@ describe('ThreadHeader', () => {
   });
 
   it('draws nothing before the members have loaded', () => {
-    const { container } = render(<ThreadHeader members={[]} currentUserId="u-tom" title="" presence={{}} typingNames={[]} />);
+    const { container } = render(
+      <ThreadHeader members={[]} currentUserId="u-tom" title="" presence={{}} typingNames={[]} />
+    );
     expect(container).toBeEmptyDOMElement();
   });
 });

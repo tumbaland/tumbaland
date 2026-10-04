@@ -1,8 +1,12 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { getActivityDescriptions, getRecentActivitiesSummary } from './activities';
 
 function mockFetchOnce(body: unknown) {
-  (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ ok: true, status: 200, json: async () => body } as Response);
+  (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    ok: true,
+    status: 200,
+    json: async () => body
+  } as Response);
 }
 
 describe('getActivityDescriptions', () => {

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import CollageCropSelector from './CollageCropSelector';
 import { CollageCrop } from './collageDoc';
 

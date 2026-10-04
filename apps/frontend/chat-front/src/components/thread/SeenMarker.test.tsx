@@ -1,9 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { render, screen } from '@testing-library/react';
 import { SeenMarker, placeSeenMarkers } from './SeenMarker';
 import type { ConversationMember, ThreadMessage } from '../../types';
 
-const message = (id: string, senderId: string, createdAt: string, extra: Partial<ThreadMessage> = {}): ThreadMessage => ({
+const message = (
+  id: string,
+  senderId: string,
+  createdAt: string,
+  extra: Partial<ThreadMessage> = {}
+): ThreadMessage => ({
   id,
   conversationId: 'c1',
   senderId,

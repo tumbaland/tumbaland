@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../../services/deviceService', () => ({
   deviceService: { list: vi.fn(), signOut: vi.fn(), signOutOthers: vi.fn() }

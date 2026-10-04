@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import type { ComponentProps } from 'react';
 import type TickerSearch from './TickerSearch';
 
@@ -26,7 +26,20 @@ vi.mock('../../services/tickerPriceHistoryService', () => ({
 
 vi.mock('./TickerSearch', () => ({
   default: ({ onSelect }: ComponentProps<typeof TickerSearch>) => (
-    <button onClick={() => onSelect({ symbol: 'MSFT', name: 'Microsoft', type: 'Equity', region: 'United States', currency: 'USD', matchScore: '1.0000' })}>pick MSFT</button>
+    <button
+      onClick={() =>
+        onSelect({
+          symbol: 'MSFT',
+          name: 'Microsoft',
+          type: 'Equity',
+          region: 'United States',
+          currency: 'USD',
+          matchScore: '1.0000'
+        })
+      }
+    >
+      pick MSFT
+    </button>
   )
 }));
 
@@ -57,11 +70,25 @@ const mockedCoverage = getTickerCoverage as unknown as ReturnType<typeof vi.fn>;
 const coverageFor = (overrides: Record<string, unknown> = {}) => [
   {
     ticker: 'AAPL',
-    daily: { count: 143, first: '2026-01-16T00:00:00.000Z', last: new Date().toISOString(), fetchedAt: '2026-08-11T01:00:07.000Z' },
-    weekly: { count: 622, first: '2015-01-20T00:00:00.000Z', last: new Date().toISOString(), fetchedAt: '2026-08-11T01:00:07.000Z' },
+    daily: {
+      count: 143,
+      first: '2026-01-16T00:00:00.000Z',
+      last: new Date().toISOString(),
+      fetchedAt: '2026-08-11T01:00:07.000Z'
+    },
+    weekly: {
+      count: 622,
+      first: '2015-01-20T00:00:00.000Z',
+      last: new Date().toISOString(),
+      fetchedAt: '2026-08-11T01:00:07.000Z'
+    },
     ...overrides
   },
-  { ticker: 'BND', daily: { count: 0, first: null, last: null, fetchedAt: null }, weekly: { count: 0, first: null, last: null, fetchedAt: null } }
+  {
+    ticker: 'BND',
+    daily: { count: 0, first: null, last: null, fetchedAt: null },
+    weekly: { count: 0, first: null, last: null, fetchedAt: null }
+  }
 ];
 
 /**
@@ -351,10 +378,7 @@ it('notifies with a shared-allowance hint when a sync fails', async () => {
   await openSync();
   await userEvent.click(screen.getByRole('button', { name: /last ~100 days/i }));
 
-  expect(notify).toHaveBeenCalledWith(
-    expect.stringContaining('Failed to sync AAPL'),
-    'error'
-  );
+  expect(notify).toHaveBeenCalledWith(expect.stringContaining('Failed to sync AAPL'), 'error');
 });
 
 it('shows how much history is stored and when it was last updated', async () => {
@@ -378,7 +402,12 @@ it('separates when we last fetched from the session we last got', async () => {
   mockedCoverage.mockResolvedValue([
     {
       ticker: 'AAPL',
-      daily: { count: 143, first: '2026-01-16T00:00:00.000Z', last: '2026-08-07T00:00:00.000Z', fetchedAt: '2026-08-11T01:00:07.000Z' },
+      daily: {
+        count: 143,
+        first: '2026-01-16T00:00:00.000Z',
+        last: '2026-08-07T00:00:00.000Z',
+        fetchedAt: '2026-08-11T01:00:07.000Z'
+      },
       weekly: { count: 0, first: null, last: null, fetchedAt: null }
     }
   ]);
@@ -400,10 +429,19 @@ it('flags a daily series that has stopped updating', async () => {
   mockedCoverage.mockResolvedValue([
     {
       ticker: 'AAPL',
-      daily: { count: 143, first: '2026-01-16T00:00:00.000Z', last: '2026-06-04T00:00:00.000Z', fetchedAt: '2026-08-11T01:00:07.000Z' },
+      daily: {
+        count: 143,
+        first: '2026-01-16T00:00:00.000Z',
+        last: '2026-06-04T00:00:00.000Z',
+        fetchedAt: '2026-08-11T01:00:07.000Z'
+      },
       weekly: { count: 0, first: null, last: null, fetchedAt: null }
     },
-    { ticker: 'BND', daily: { count: 0, first: null, last: null, fetchedAt: null }, weekly: { count: 0, first: null, last: null, fetchedAt: null } }
+    {
+      ticker: 'BND',
+      daily: { count: 0, first: null, last: null, fetchedAt: null },
+      weekly: { count: 0, first: null, last: null, fetchedAt: null }
+    }
   ]);
   render(<TickersTab tickers={tickers} notify={vi.fn()} />);
 
@@ -418,7 +456,12 @@ it('recommends the weekly fetch when no long history is stored', async () => {
   mockedCoverage.mockResolvedValue([
     {
       ticker: 'AAPL',
-      daily: { count: 143, first: '2026-01-16T00:00:00.000Z', last: new Date().toISOString(), fetchedAt: '2026-08-11T01:00:07.000Z' },
+      daily: {
+        count: 143,
+        first: '2026-01-16T00:00:00.000Z',
+        last: new Date().toISOString(),
+        fetchedAt: '2026-08-11T01:00:07.000Z'
+      },
       weekly: { count: 0, first: null, last: null, fetchedAt: null }
     }
   ]);

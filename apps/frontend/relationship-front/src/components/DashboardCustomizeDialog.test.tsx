@@ -1,13 +1,34 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import type { ComponentProps } from 'react';
 import DashboardCustomizeDialog from './DashboardCustomizeDialog';
 import { ActivityType } from '../services/types';
 
 const types: ActivityType[] = [
-  { _id: 't1', id: 't1', name: 'Reading', slug: 'reading', color: '#111', isActive: true, sortOrder: 0, createdAt: '', updatedAt: '', userId: 'u1' },
-  { _id: 't2', id: 't2', name: 'Gaming', slug: 'gaming', isActive: true, sortOrder: 1, createdAt: '', updatedAt: '', userId: 'u1' }
+  {
+    _id: 't1',
+    id: 't1',
+    name: 'Reading',
+    slug: 'reading',
+    color: '#111',
+    isActive: true,
+    sortOrder: 0,
+    createdAt: '',
+    updatedAt: '',
+    userId: 'u1'
+  },
+  {
+    _id: 't2',
+    id: 't2',
+    name: 'Gaming',
+    slug: 'gaming',
+    isActive: true,
+    sortOrder: 1,
+    createdAt: '',
+    updatedAt: '',
+    userId: 'u1'
+  }
 ];
 
 function renderDialog(

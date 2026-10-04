@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import TransactionFilters, {
   EMPTY_FILTERS,
   toQuery,
@@ -147,9 +147,7 @@ describe('period presets', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '2024' }));
 
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ from: '2024-01-01', to: '2024-12-31' })
-    );
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ from: '2024-01-01', to: '2024-12-31' }));
   });
 
   it('clears the period when the active chip is clicked again', async () => {

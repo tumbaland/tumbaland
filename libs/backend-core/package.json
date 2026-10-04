@@ -17,7 +17,7 @@
     "release:beta": "commit-and-tag-version --prerelease beta && npm run build && npm publish --access public --tag beta",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "lint": "eslint .",
+    "lint": "vp lint .",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [

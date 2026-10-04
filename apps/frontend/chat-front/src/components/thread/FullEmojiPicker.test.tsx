@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { render, screen, waitFor } from '@testing-library/react';
 
 // The real package registers a custom element and opens an IndexedDB, neither
@@ -74,9 +74,7 @@ describe('FullEmojiPicker', () => {
     const onPick = vi.fn();
     const onClose = vi.fn();
     const anchor = document.createElement('button');
-    const { baseElement } = render(
-      <FullEmojiPicker anchorEl={anchor} onClose={onClose} onPick={onPick} />
-    );
+    const { baseElement } = render(<FullEmojiPicker anchorEl={anchor} onClose={onClose} onPick={onPick} />);
 
     const element = await waitFor(() => {
       const found = baseElement.querySelector('emoji-picker');

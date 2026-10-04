@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../services/paymentApi', () => ({
   paymentApi: { listMySubscriptions: vi.fn() }
@@ -59,9 +59,7 @@ it('renders a row per subscription with formatted dates and dashed fallbacks', a
 });
 
 it('falls back to the default chip color for an unrecognized status', async () => {
-  mockedListMySubscriptions.mockResolvedValue([
-    { _id: 's1', planCode: 'pro', status: 'unknown_status' as never }
-  ]);
+  mockedListMySubscriptions.mockResolvedValue([{ _id: 's1', planCode: 'pro', status: 'unknown_status' as never }]);
 
   render(<AllSubscriptionsPage />);
 

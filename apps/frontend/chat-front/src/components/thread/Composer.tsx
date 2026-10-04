@@ -126,7 +126,7 @@ export function Composer({
     }
     // Keyed on the id alone: a live update to the message's text must not
     // overwrite what is being typed over it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [editingId]);
 
   useEffect(() => {
@@ -264,19 +264,21 @@ export function Composer({
       )}
 
       {/* Documents never go to the album, so the choice is only offered for photos and videos. */}
-      {!editing && uploads.some((upload) => !isDocumentType(upload.mimetype)) && photoAlbum && onChooseAlbum && onAlbumOff && (
-        <AlbumDestination
-          photoAlbum={photoAlbum}
-          skip={skipAlbum}
-          onToggleSkip={() => setSkipAlbum((skip) => !skip)}
-          onChoose={onChooseAlbum}
-          onTurnOff={onAlbumOff}
-        />
-      )}
+      {!editing &&
+        uploads.some((upload) => !isDocumentType(upload.mimetype)) &&
+        photoAlbum &&
+        onChooseAlbum &&
+        onAlbumOff && (
+          <AlbumDestination
+            photoAlbum={photoAlbum}
+            skip={skipAlbum}
+            onToggleSkip={() => setSkipAlbum((skip) => !skip)}
+            onChoose={onChooseAlbum}
+            onTurnOff={onAlbumOff}
+          />
+        )}
 
-      {!editing && uploads.length > 0 && onRemoveUpload && (
-        <UploadTray uploads={uploads} onRemove={onRemoveUpload} />
-      )}
+      {!editing && uploads.length > 0 && onRemoveUpload && <UploadTray uploads={uploads} onRemove={onRemoveUpload} />}
 
       {/* On a phone, while writing only: a thread being read keeps its height,
           and the keyboard opening already reshapes the screen. On a desktop
@@ -329,131 +331,130 @@ export function Composer({
       )}
 
       <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5, p: 1 }}>
-      {/* One button. On a phone the system picker already offers the camera
+        {/* One button. On a phone the system picker already offers the camera
           beside the library, so a separate camera button was the same thing
           twice. */}
-      {!editing && onAddFiles && (
-        <IconButton
-          aria-label="Add photo or video"
-          onClick={() => fileRef.current?.click()}
-          sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
-        >
-          <AddPhotoAlternateOutlinedIcon />
-        </IconButton>
-      )}
-
-      {!editing && onAddFiles && (
-        <IconButton
-          aria-label="Add document"
-          onClick={() => documentRef.current?.click()}
-          sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET, ml: -0.5 }}
-        >
-          <AttachFileIcon />
-        </IconButton>
-      )}
-
-      <InputBase
-        inputRef={inputRef}
-        value={value}
-        onChange={(event) => {
-          setValue(event.target.value);
-          if (!editing) onTyping();
-        }}
-        onKeyDown={onKeyDown}
-        onPaste={onPaste}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder="Message"
-        multiline
-        maxRows={6}
-        disabled={disabled}
-        inputProps={{ 'aria-label': 'Message' }}
-        // Inside the box, at its end, so the message gets the row's width and
-        // the only thing beside it is the photo button.
-        endAdornment={
+        {!editing && onAddFiles && (
           <IconButton
-            aria-label="Add emoji"
-            onPointerEnter={() => void loadEmojiPicker().catch(() => {})}
-            onFocus={() => void loadEmojiPicker().catch(() => {})}
-            // Keeps the focus, and on a phone the keyboard, in the message box.
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={(event) => setEmojiAnchor(event.currentTarget)}
-            sx={{
-              // Level with the last line as the box grows, and pulled into
-              // its padding so it does not make a one-line box any taller.
-              alignSelf: 'flex-end',
-              width: 36,
-              height: 36,
-              // The theme gives every icon button a 44px minimum on a phone,
-              // which made the box 52px against the 44px photo and Send
-              // buttons beside it, and left them sitting low. Undone inside
-              // the same query, or the theme's rule wins by coming later.
-              [PHONE]: { minWidth: 36, minHeight: 36 },
-              my: -0.5,
-              mr: -1,
-              ml: 0.5,
-              color: ink.muted,
-              bgcolor: 'transparent'
-            }}
+            aria-label="Add photo or video"
+            onClick={() => fileRef.current?.click()}
+            sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
           >
-            <SentimentSatisfiedAltIcon fontSize="small" />
+            <AddPhotoAlternateOutlinedIcon />
           </IconButton>
-        }
-        sx={{
-          flex: 1,
-          // As tall as the buttons beside it, so one line of text sits level
-          // with Send rather than a few pixels below its top. Longer messages
-          // still grow upwards from here.
-          minHeight: TOUCH_TARGET,
-          boxSizing: 'border-box',
-          px: 1.5,
-          py: 1,
-          borderRadius: 3,
-          bgcolor: surface.sunken,
-          // 16px or larger, or iOS Safari zooms the page on focus and never
-          // zooms back out.
-          fontSize: 16,
-          lineHeight: 1.4
-        }}
-      />
+        )}
 
-      <IconButton
-        type="submit"
-        aria-label={editing ? 'Save edit' : 'Send'}
-        aria-haspopup={offerEffects ? 'menu' : undefined}
-        disabled={!canSend}
-        onPointerDown={startHold}
-        onPointerUp={cancelHold}
-        onPointerLeave={cancelHold}
-        onPointerCancel={cancelHold}
-        onContextMenu={(event) => {
-          if (!offerEffects) return;
-          event.preventDefault();
-          cancelHold();
-          setEffectAnchor(event.currentTarget);
-        }}
-        onClick={(event) => {
-          // The press that opened the menu ends in a click; it chose nothing yet.
-          if (held.current) {
-            event.preventDefault();
-            held.current = false;
+        {!editing && onAddFiles && (
+          <IconButton
+            aria-label="Add document"
+            onClick={() => documentRef.current?.click()}
+            sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET, ml: -0.5 }}
+          >
+            <AttachFileIcon />
+          </IconButton>
+        )}
+
+        <InputBase
+          inputRef={inputRef}
+          value={value}
+          onChange={(event) => {
+            setValue(event.target.value);
+            if (!editing) onTyping();
+          }}
+          onKeyDown={onKeyDown}
+          onPaste={onPaste}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder="Message"
+          multiline
+          maxRows={6}
+          disabled={disabled}
+          inputProps={{ 'aria-label': 'Message' }}
+          // Inside the box, at its end, so the message gets the row's width and
+          // the only thing beside it is the photo button.
+          endAdornment={
+            <IconButton
+              aria-label="Add emoji"
+              onPointerEnter={() => void loadEmojiPicker().catch(() => {})}
+              onFocus={() => void loadEmojiPicker().catch(() => {})}
+              // Keeps the focus, and on a phone the keyboard, in the message box.
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={(event) => setEmojiAnchor(event.currentTarget)}
+              sx={{
+                // Level with the last line as the box grows, and pulled into
+                // its padding so it does not make a one-line box any taller.
+                alignSelf: 'flex-end',
+                width: 36,
+                height: 36,
+                // The theme gives every icon button a 44px minimum on a phone,
+                // which made the box 52px against the 44px photo and Send
+                // buttons beside it, and left them sitting low. Undone inside
+                // the same query, or the theme's rule wins by coming later.
+                [PHONE]: { minWidth: 36, minHeight: 36 },
+                my: -0.5,
+                mr: -1,
+                ml: 0.5,
+                color: ink.muted,
+                bgcolor: 'transparent'
+              }}
+            >
+              <SentimentSatisfiedAltIcon fontSize="small" />
+            </IconButton>
           }
-        }}
-        sx={{
-          width: TOUCH_TARGET,
-          height: TOUCH_TARGET,
-          // A long press on a phone would otherwise select or preview the button.
-          WebkitTouchCallout: 'none',
-          userSelect: 'none',
-          color: '#fff',
-          bgcolor: accent,
-          '&:hover': { bgcolor: accent, filter: 'brightness(0.94)' },
-          '&.Mui-disabled': { bgcolor: surface.sunken, color: ink.muted }
-        }}
-      >
-        {editing ? <CheckIcon fontSize="small" /> : <SendIcon fontSize="small" />}
-      </IconButton>
+          sx={{
+            flex: 1,
+            // As tall as the buttons beside it, so one line of text sits level
+            // with Send rather than a few pixels below its top. Longer messages
+            // still grow upwards from here.
+            minHeight: TOUCH_TARGET,
+            boxSizing: 'border-box',
+            px: 1.5,
+            py: 1,
+            borderRadius: 3,
+            bgcolor: surface.sunken,
+            // 16px or larger, or iOS Safari zooms the page on focus and never
+            // zooms back out.
+            fontSize: 16,
+            lineHeight: 1.4
+          }}
+        />
 
+        <IconButton
+          type="submit"
+          aria-label={editing ? 'Save edit' : 'Send'}
+          aria-haspopup={offerEffects ? 'menu' : undefined}
+          disabled={!canSend}
+          onPointerDown={startHold}
+          onPointerUp={cancelHold}
+          onPointerLeave={cancelHold}
+          onPointerCancel={cancelHold}
+          onContextMenu={(event) => {
+            if (!offerEffects) return;
+            event.preventDefault();
+            cancelHold();
+            setEffectAnchor(event.currentTarget);
+          }}
+          onClick={(event) => {
+            // The press that opened the menu ends in a click; it chose nothing yet.
+            if (held.current) {
+              event.preventDefault();
+              held.current = false;
+            }
+          }}
+          sx={{
+            width: TOUCH_TARGET,
+            height: TOUCH_TARGET,
+            // A long press on a phone would otherwise select or preview the button.
+            WebkitTouchCallout: 'none',
+            userSelect: 'none',
+            color: '#fff',
+            bgcolor: accent,
+            '&:hover': { bgcolor: accent, filter: 'brightness(0.94)' },
+            '&.Mui-disabled': { bgcolor: surface.sunken, color: ink.muted }
+          }}
+        >
+          {editing ? <CheckIcon fontSize="small" /> : <SendIcon fontSize="small" />}
+        </IconButton>
       </Box>
 
       {/* The full picker here rather than the six quick reactions: writing a

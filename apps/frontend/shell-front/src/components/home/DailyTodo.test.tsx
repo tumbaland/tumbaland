@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vite-plus/test';
 
 const fetchTodo = vi.fn();
 const state = {
@@ -15,8 +15,7 @@ vi.mock('../../hooks/useTodo', () => ({
 
 import { DailyTodo } from './DailyTodo';
 
-const LONG_TODO =
-  "Explore Helsinki's historic Market Square and Old Market Hall (Finland), then walk the waterfront";
+const LONG_TODO = "Explore Helsinki's historic Market Square and Old Market Hall (Finland), then walk the waterfront";
 
 beforeEach(() => {
   fetchTodo.mockReset();

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vite-plus/test';
 
 const navigate = vi.fn();
 vi.mock('react-router', async () => {
@@ -51,7 +51,14 @@ beforeEach(() => {
   URL.createObjectURL = vi.fn(() => 'blob:preview');
   URL.revokeObjectURL = vi.fn();
   vi.mocked(listConversations).mockResolvedValue([
-    { id: 'c1', title: '', members: [{ userId: 'me', name: 'Me', email: '' }, { userId: 'p', name: 'Mari', email: '' }] }
+    {
+      id: 'c1',
+      title: '',
+      members: [
+        { userId: 'me', name: 'Me', email: '' },
+        { userId: 'p', name: 'Mari', email: '' }
+      ]
+    }
   ]);
   vi.mocked(listAlbums).mockResolvedValue([{ _id: 'a1', name: 'Summer', photoCount: 3 }]);
 });

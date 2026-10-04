@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../services/paymentApi', () => ({
   paymentApi: { listMyPayments: vi.fn() }
@@ -38,7 +38,14 @@ it('shows the empty state when there are no payments', async () => {
 
 it('renders a row per payment covering each status icon/color branch and the amount formatting', async () => {
   mockedListMyPayments.mockResolvedValue([
-    { _id: 'p1', type: 'subscription', status: 'succeeded', amountCents: 1999, currency: 'usd', createdAt: '2024-01-01T00:00:00.000Z' },
+    {
+      _id: 'p1',
+      type: 'subscription',
+      status: 'succeeded',
+      amountCents: 1999,
+      currency: 'usd',
+      createdAt: '2024-01-01T00:00:00.000Z'
+    },
     { _id: 'p2', type: 'one_time', status: 'failed', amountCents: 500, createdAt: '2024-01-02T00:00:00.000Z' },
     { _id: 'p3', type: 'one_time', status: 'pending', createdAt: '2024-01-03T00:00:00.000Z' }, // no amountCents -> '—'
     { _id: 'p4', type: 'one_time', status: 'refunded', amountCents: 100, createdAt: '2024-01-04T00:00:00.000Z' } // default branch

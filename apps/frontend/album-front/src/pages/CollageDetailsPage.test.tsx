@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { afterEach, beforeEach, describe, vi } from 'vitest';
+import { afterEach, beforeEach, describe, vi } from 'vite-plus/test';
 
 const mockedNavigate = vi.fn();
 vi.mock('react-router', async (importOriginal) => {

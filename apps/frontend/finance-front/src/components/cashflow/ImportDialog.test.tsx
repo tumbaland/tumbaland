@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 const mockedImport = vi.fn();
 vi.mock('../../hooks/useCashflow', () => ({
@@ -26,8 +26,7 @@ const upload = async (contents = 'Kliendi konto;x\nrow') => {
   await userEvent.upload(input, file);
 };
 
-const renderDialog = (props = {}) =>
-  render(<ImportDialog open onClose={vi.fn()} {...props} />);
+const renderDialog = (props = {}) => render(<ImportDialog open onClose={vi.fn()} {...props} />);
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -44,9 +43,7 @@ it('sends the file contents and shows what came in', async () => {
   await upload('Kliendi konto;a\nrow-data');
 
   // Sent as bytes, not text: decoding client-side would corrupt a Latin-1 file
-  await waitFor(() =>
-    expect(mockedImport).toHaveBeenCalledWith({ csv: expect.any(ArrayBuffer), groupId: 'g1' })
-  );
+  await waitFor(() => expect(mockedImport).toHaveBeenCalledWith({ csv: expect.any(ArrayBuffer), groupId: 'g1' }));
   const sent = mockedImport.mock.calls[0][0].csv as ArrayBuffer;
   expect(new TextDecoder().decode(sent)).toBe('Kliendi konto;a\nrow-data');
   expect(await screen.findByText('3 transactions imported')).toBeInTheDocument();
@@ -232,7 +229,12 @@ describe('a Pensionikeskus statement', () => {
     funds: ['LHV Pensionifond Indeks III', 'SEB pensionifond indeks'],
     byPillar: [
       { pillar: 'II' as const, count: 7, amount: 4249, action: 'Imported — never appears on a bank statement' },
-      { pillar: 'III' as const, count: 3, amount: 6000, action: 'Already paid by bank transfer; only unmatched ones imported' }
+      {
+        pillar: 'III' as const,
+        count: 3,
+        amount: 6000,
+        action: 'Already paid by bank transfer; only unmatched ones imported'
+      }
     ],
     ...over
   });
@@ -286,9 +288,7 @@ describe('a Pensionikeskus statement', () => {
 
     await upload();
 
-    expect(
-      await screen.findByText(/LHV Pensionifond Indeks III, SEB pensionifond indeks/)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/LHV Pensionifond Indeks III, SEB pensionifond indeks/)).toBeInTheDocument();
   });
 
   it('tells the reader a pension statement is accepted at all', () => {
@@ -340,9 +340,7 @@ describe('choosing the file type', () => {
     await pickFormat('Pensionikeskus account statement');
     await upload();
 
-    expect(mockedImport).toHaveBeenCalledWith(
-      expect.objectContaining({ format: 'pensionikeskus' })
-    );
+    expect(mockedImport).toHaveBeenCalledWith(expect.objectContaining({ format: 'pensionikeskus' }));
   });
 
   it('warns that a mismatched file will be refused', async () => {
@@ -350,24 +348,18 @@ describe('choosing the file type', () => {
 
     await pickFormat('SEB account statement');
 
-    expect(
-      screen.getByText('The file will be refused if it is not a SEB account statement.')
-    ).toBeInTheDocument();
+    expect(screen.getByText('The file will be refused if it is not a SEB account statement.')).toBeInTheDocument();
   });
 
   it('surfaces the server refusing a file of the wrong type', async () => {
     // Reading a statement as a category list would silently do nothing
-    mockedImport.mockRejectedValue(
-      new Error('This looks like a SEB account statement, not a Tumbaland export.')
-    );
+    mockedImport.mockRejectedValue(new Error('This looks like a SEB account statement, not a Tumbaland export.'));
     renderDialog();
 
     await pickFormat('Tumbaland export');
     await upload();
 
-    expect(
-      await screen.findByText(/This looks like a SEB account statement/)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/This looks like a SEB account statement/)).toBeInTheDocument();
   });
 
   it('keeps the choice between files, for uploading several of a kind', async () => {

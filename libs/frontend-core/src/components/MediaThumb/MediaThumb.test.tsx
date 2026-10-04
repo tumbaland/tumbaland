@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { fireEvent, render } from '@testing-library/react';
 import { MediaThumb } from './MediaThumb';
 
@@ -30,7 +30,9 @@ describe('MediaThumb', () => {
 
   it('reports a video frame arriving the way an image reports loading', () => {
     const onLoad = vi.fn();
-    const { container } = render(<MediaThumb src="https://files.test/v.mp4" mimetype="video/quicktime" onLoad={onLoad} />);
+    const { container } = render(
+      <MediaThumb src="https://files.test/v.mp4" mimetype="video/quicktime" onLoad={onLoad} />
+    );
 
     fireEvent.loadedData(container.querySelector('video')!);
 

@@ -9,9 +9,7 @@ const path = require('path');
 const repoRoot = path.join(__dirname, '..', '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
 const ciYml = fs.readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8');
-const filterKeys = new Set(
-  [...ciYml.matchAll(/^ {12}([\w./-]+):\s*$/gm)].map((m) => m[1])
-);
+const filterKeys = new Set([...ciYml.matchAll(/^ {12}([\w./-]+):\s*$/gm)].map((m) => m[1]));
 
 function listWorkspaceDirs(globPattern) {
   const base = globPattern.replace(/\/\*$/, '');
@@ -44,7 +42,9 @@ if (missingLibs.length) {
   problems.push(`libs/* missing from ci.yml's paths-filter: ${missingLibs.join(', ')}`);
 }
 if (staleAppKeys.length) {
-  problems.push(`ci.yml filters a workspace that no longer exists on disk (remove the entry): ${staleAppKeys.join(', ')}`);
+  problems.push(
+    `ci.yml filters a workspace that no longer exists on disk (remove the entry): ${staleAppKeys.join(', ')}`
+  );
 }
 
 /**
@@ -56,14 +56,23 @@ if (staleAppKeys.length) {
  * enforced despite being configured. A missing script has to be loud, because
  * the symptom of it otherwise is a green tick over work nobody checked.
  */
-const REQUIRED_SCRIPTS = ['test', 'test:coverage', 'typecheck', 'lint'];
+const REQUIRED_SCRIPTS = ['test', 'test:coverage', 'typecheck'];
+
+/**
+ * Linting runs once over the whole repo from the root, where Vite+ is
+ * installed. A backend service is installed and built on its own and does not
+ * carry Vite+, so a `lint` script there would only fail; the libraries and
+ * frontends keep one (publish-libs runs the library's).
+ */
+const LINT_WORKSPACES = (workspace) => workspace.startsWith('libs/') || workspace.startsWith('apps/frontend/');
 
 const missingScripts = [];
 for (const workspace of [...appWorkspaces, ...libWorkspaces]) {
   const manifest = path.join(repoRoot, workspace, 'package.json');
   if (!fs.existsSync(manifest)) continue;
   const scripts = JSON.parse(fs.readFileSync(manifest, 'utf8')).scripts ?? {};
-  const absent = REQUIRED_SCRIPTS.filter((name) => !scripts[name]);
+  const required = LINT_WORKSPACES(workspace) ? [...REQUIRED_SCRIPTS, 'lint'] : REQUIRED_SCRIPTS;
+  const absent = required.filter((name) => !scripts[name]);
   if (absent.length) missingScripts.push(`${workspace} (${absent.join(', ')})`);
 }
 
@@ -81,9 +90,7 @@ if (missingScripts.length) {
 const CONFIG_FILES = ['jest.config.js', 'vite.config.mts', 'vite.config.ts', 'vitest.config.ts'];
 const withoutThresholds = [];
 for (const workspace of [...appWorkspaces, ...libWorkspaces]) {
-  const config = CONFIG_FILES.map((name) => path.join(repoRoot, workspace, name)).find((f) =>
-    fs.existsSync(f)
-  );
+  const config = CONFIG_FILES.map((name) => path.join(repoRoot, workspace, name)).find((f) => fs.existsSync(f));
   if (!config) {
     withoutThresholds.push(`${workspace} (no test config found)`);
     continue;
@@ -95,9 +102,7 @@ for (const workspace of [...appWorkspaces, ...libWorkspaces]) {
 }
 
 if (withoutThresholds.length) {
-  problems.push(
-    `Workspaces whose coverage is measured but not enforced: ${withoutThresholds.join(', ')}`
-  );
+  problems.push(`Workspaces whose coverage is measured but not enforced: ${withoutThresholds.join(', ')}`);
 }
 
 if (problems.length) {

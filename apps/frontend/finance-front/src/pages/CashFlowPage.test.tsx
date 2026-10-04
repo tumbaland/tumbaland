@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
@@ -68,20 +68,46 @@ const summary = {
 const analytics = {
   years: [
     {
-      year: 2026, income: 3000, expense: 900, consumption: 900, invested: 0,
-      divested: 0, savings: 2100, savingsRate: 70, months: 12, from: '2026-01', to: '2026-12',
-      incomeChange: null, incomeChangePct: null, expenseChange: null, expenseChangePct: null,
+      year: 2026,
+      income: 3000,
+      expense: 900,
+      consumption: 900,
+      invested: 0,
+      divested: 0,
+      savings: 2100,
+      savingsRate: 70,
+      months: 12,
+      from: '2026-01',
+      to: '2026-12',
+      incomeChange: null,
+      incomeChangePct: null,
+      expenseChange: null,
+      expenseChangePct: null,
       partial: false
     }
   ],
   trailing: {
     current: {
-      income: 36000, expense: 12000, consumption: 12000, invested: 0,
-      savings: 24000, savingsRate: 66.67, months: 12, from: '2025-09', to: '2026-08'
+      income: 36000,
+      expense: 12000,
+      consumption: 12000,
+      invested: 0,
+      savings: 24000,
+      savingsRate: 66.67,
+      months: 12,
+      from: '2025-09',
+      to: '2026-08'
     },
     previous: {
-      income: 30000, expense: 15000, consumption: 15000, invested: 0,
-      savings: 15000, savingsRate: 50, months: 12, from: '2024-09', to: '2025-08'
+      income: 30000,
+      expense: 15000,
+      consumption: 15000,
+      invested: 0,
+      savings: 15000,
+      savingsRate: 50,
+      months: 12,
+      from: '2024-09',
+      to: '2025-08'
     }
   },
 
@@ -89,8 +115,14 @@ const analytics = {
   months: [{ period: '2026-07', income: 3000, expense: 900, savings: 2100 }],
   categoryTrends: [
     {
-      category: 'Groceries', byYear: { 2026: 900 }, total: 900,
-      latest: 900, previous: 0, change: 900, changePct: null, perMonth: 75
+      category: 'Groceries',
+      byYear: { 2026: 900 },
+      total: 900,
+      latest: 900,
+      previous: 0,
+      change: 900,
+      changePct: null,
+      perMonth: 75
     }
   ],
   incomeSources: [],
@@ -106,26 +138,42 @@ const recurring = {
   lapsedCount: 0,
   payments: [
     {
-      key: 'spotify ab', merchant: 'SPOTIFY AB', category: 'Subscriptions', cadence: 'monthly' as const,
-      intervalDays: 30, occurrences: 6, regularity: 1, amount: 11.99, amountVariation: 0,
-      monthlyEquivalent: 12.17, yearlyEquivalent: 145.98, firstCharge: '2026-04-01',
-      lastCharge: '2026-09-01', nextExpected: '2026-10-01', daysUntilNext: 28,
-      status: 'active' as const, priceChange: null
+      key: 'spotify ab',
+      merchant: 'SPOTIFY AB',
+      category: 'Subscriptions',
+      cadence: 'monthly' as const,
+      intervalDays: 30,
+      occurrences: 6,
+      regularity: 1,
+      amount: 11.99,
+      amountVariation: 0,
+      monthlyEquivalent: 12.17,
+      yearlyEquivalent: 145.98,
+      firstCharge: '2026-04-01',
+      lastCharge: '2026-09-01',
+      nextExpected: '2026-10-01',
+      daysUntilNext: 28,
+      status: 'active' as const,
+      priceChange: null
     }
   ]
 };
 
 function setMobile(isMobile: boolean) {
   window.matchMedia = ((query: string) => ({
-    matches: isMobile, media: query, onchange: null,
-    addListener: () => {}, removeListener: () => {},
-    addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false
+    matches: isMobile,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false
   })) as unknown as typeof window.matchMedia;
 }
 
 /** Move to the Transactions tab, where the table and filters live. */
-const openTransactions = async () =>
-  userEvent.click(screen.getByRole('tab', { name: /transactions/i }));
+const openTransactions = async () => userEvent.click(screen.getByRole('tab', { name: /transactions/i }));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -215,9 +263,7 @@ it('passes a category filter into the query and resets to the first page', async
   await userEvent.click(screen.getByRole('option', { name: 'Groceries' }));
 
   await waitFor(() =>
-    expect(mockedUseTransactions).toHaveBeenLastCalledWith(
-      expect.objectContaining({ category: 'Groceries', skip: 0 })
-    )
+    expect(mockedUseTransactions).toHaveBeenLastCalledWith(expect.objectContaining({ category: 'Groceries', skip: 0 }))
   );
 });
 
@@ -240,9 +286,7 @@ it('clears every filter at once', async () => {
   await userEvent.click(await screen.findByRole('button', { name: /clear filters/i }));
 
   await waitFor(() =>
-    expect(mockedUseTransactions).toHaveBeenLastCalledWith(
-      expect.not.objectContaining({ search: expect.anything() })
-    )
+    expect(mockedUseTransactions).toHaveBeenLastCalledWith(expect.not.objectContaining({ search: expect.anything() }))
   );
 });
 
@@ -271,9 +315,7 @@ it('pages forward and back', async () => {
 
   await userEvent.click(screen.getByRole('button', { name: 'Next' }));
 
-  await waitFor(() =>
-    expect(mockedUseTransactions).toHaveBeenLastCalledWith(expect.objectContaining({ skip: 100 }))
-  );
+  await waitFor(() => expect(mockedUseTransactions).toHaveBeenLastCalledWith(expect.objectContaining({ skip: 100 })));
 });
 
 it('deletes a transaction after confirming', async () => {
@@ -384,9 +426,7 @@ describe('exporting for categorising elsewhere', () => {
     await userEvent.click(screen.getByRole('option', { name: 'Groceries' }));
     await userEvent.click(screen.getByRole('button', { name: /export/i }));
 
-    await waitFor(() =>
-      expect(mockedExport).toHaveBeenCalledWith(expect.objectContaining({ category: 'Groceries' }))
-    );
+    await waitFor(() => expect(mockedExport).toHaveBeenCalledWith(expect.objectContaining({ category: 'Groceries' })));
   });
 
   it('says how many rows the button will take', async () => {

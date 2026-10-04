@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
@@ -18,8 +18,16 @@ import { ActivityType } from '../services/types';
 const mockedGetMonthlyStatistics = getMonthlyStatistics as unknown as ReturnType<typeof vi.fn>;
 
 const featuredType: ActivityType = {
-  _id: 't1', id: 't1', name: 'Reading', slug: 'reading', color: '#111',
-  isActive: true, sortOrder: 0, createdAt: '', updatedAt: '', userId: 'u1'
+  _id: 't1',
+  id: 't1',
+  name: 'Reading',
+  slug: 'reading',
+  color: '#111',
+  isActive: true,
+  sortOrder: 0,
+  createdAt: '',
+  updatedAt: '',
+  userId: 'u1'
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -56,9 +64,15 @@ it('renders together/apart segments without a featured type', async () => {
   expect(screen.queryByText(/days \(/)).not.toBeInTheDocument(); // no featured-type chip
 });
 
-it('splits out the featured type\'s days into its own segment', async () => {
+it("splits out the featured type's days into its own segment", async () => {
   mockedGetMonthlyStatistics.mockResolvedValue([
-    { month: '1', year: 2024, totalDays: 31, daysWithEntries: 10, types: [{ slug: 'reading', count: 5, uniqueDays: 4 }] }
+    {
+      month: '1',
+      year: 2024,
+      totalDays: 31,
+      daysWithEntries: 10,
+      types: [{ slug: 'reading', count: 5, uniqueDays: 4 }]
+    }
   ]);
 
   render(<TotalDaysChart featuredType={featuredType} />);

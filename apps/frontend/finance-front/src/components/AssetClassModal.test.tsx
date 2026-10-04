@@ -1,23 +1,29 @@
 import type { SetStateAction } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('./GroupSelector', () => ({ default: () => <div>group selector</div> }));
 
 import AssetClassModal, { AssetClassFormValues } from './AssetClassModal';
 
 function renderModal(overrides: Partial<{ title: string; form: Partial<AssetClassFormValues> }> = {}) {
-  const form: AssetClassFormValues = { name: '', description: '', color: '', kind: 'asset', groupId: undefined, ...overrides.form };
+  const form: AssetClassFormValues = {
+    name: '',
+    description: '',
+    color: '',
+    kind: 'asset',
+    groupId: undefined,
+    ...overrides.form
+  };
   // setForm's updater closes over the SyntheticEvent, whose `target` is the live DOM node — if we
   // deferred calling it until after the test's `await` settles, the controlled input would already
   // have snapped its value back to the (unchanged) `form` prop. Apply the updater immediately, the
   // same tick React invokes setForm, to capture the real typed value.
   const results: AssetClassFormValues[] = [];
   const setForm = vi.fn((updater: SetStateAction<AssetClassFormValues>) => {
-    const next = typeof updater === 'function'
-      ? (updater as (f: AssetClassFormValues) => AssetClassFormValues)(form)
-      : updater;
+    const next =
+      typeof updater === 'function' ? (updater as (f: AssetClassFormValues) => AssetClassFormValues)(form) : updater;
     results.push(next);
   });
   const onSubmit = vi.fn();

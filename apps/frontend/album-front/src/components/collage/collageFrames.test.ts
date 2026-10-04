@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vite-plus/test';
 import { normalizeCollageConfig, photoHasFrame, CollageDoc } from './collageDoc';
 
 const docWith = (overrides: Partial<CollageDoc>): CollageDoc => ({

@@ -1,5 +1,5 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vite-plus/test';
 
 const checkAuth = vi.fn();
 
@@ -45,7 +45,11 @@ it('treats a failed check as signed out rather than hanging on the loader', asyn
 
 it('does not set state after unmount', async () => {
   let resolve: (value: { authenticated: boolean }) => void = () => {};
-  checkAuth.mockReturnValue(new Promise((r) => { resolve = r; }));
+  checkAuth.mockReturnValue(
+    new Promise((r) => {
+      resolve = r;
+    })
+  );
   const { unmount } = renderHook(() => useAuthState());
   unmount();
   resolve({ authenticated: true });

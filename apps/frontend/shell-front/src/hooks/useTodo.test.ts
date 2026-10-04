@@ -1,5 +1,5 @@
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../services/publicApi', () => ({
   publicApi: { get: vi.fn() }
@@ -41,7 +41,11 @@ it('sets an error message when the fetch rejects', async () => {
 
 it('ignores a concurrent fetchTodo call while one is already in flight', async () => {
   let resolveFirst: (value: { todo: string }) => void = () => {};
-  mockedGet.mockReturnValueOnce(new Promise((resolve) => { resolveFirst = resolve; }));
+  mockedGet.mockReturnValueOnce(
+    new Promise((resolve) => {
+      resolveFirst = resolve;
+    })
+  );
   const { result } = renderHook(() => useTodo());
 
   await act(async () => {

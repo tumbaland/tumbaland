@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, lazyPlugins } from 'vite-plus';
 import react from '@vitejs/plugin-react';
 import { federation } from '@module-federation/vite';
 import {
@@ -10,7 +10,7 @@ import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [
+  plugins: lazyPlugins(() => [
     react(),
     // Besides running standalone, album-front is a module-federation remote:
     // shell-front loads `./App` from this origin's remoteEntry.js. Vitest has
@@ -22,11 +22,16 @@ export default defineConfig(({ mode }) => ({
             name: 'album',
             filename: TUMBALAND_REMOTE_ENTRY,
             exposes: { [TUMBALAND_REMOTE_MODULE]: './src/federation/RemoteApp.tsx' },
-            shared: TUMBALAND_FEDERATION_SHARED,
+            shared: {
+              ...TUMBALAND_FEDERATION_SHARED,
+              // MUI evaluates JSX while its chart dependencies load. In dev,
+              // federation's deferred runtime leaves those exports undefined.
+              ...(mode === 'development' && { 'react/jsx-runtime': { singleton: true, eager: true } })
+            },
             dts: false
           })
         ])
-  ],
+  ]),
   server: {
     port: 3002,
     // Absolute asset URLs in dev, so the shell's page fetches them from here.

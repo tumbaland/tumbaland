@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { getHoldings, addHolding, updateHolding, deleteHolding } from './holdingService';
 
 function mockFetchOnce(body: unknown, init: { ok?: boolean; status?: number } = {}) {

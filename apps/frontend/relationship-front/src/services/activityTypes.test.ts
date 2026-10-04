@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import {
   getActivityTypes,
   getActivityTypeById,
@@ -9,7 +9,11 @@ import {
 } from './activityTypes';
 
 function mockFetchOnce(body: unknown) {
-  (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ ok: true, status: 200, json: async () => body } as Response);
+  (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    ok: true,
+    status: 200,
+    json: async () => body
+  } as Response);
 }
 
 describe('getActivityTypes', () => {
@@ -21,7 +25,10 @@ describe('getActivityTypes', () => {
 
     const result = await getActivityTypes({ isActive: true, limit: 50, page: 1, groupId: 'g1' });
 
-    expect(result).toEqual({ data: [{ _id: 't1', name: 'Reading' }], pagination: { page: 1, limit: 50, total: 1, totalPages: 1 } });
+    expect(result).toEqual({
+      data: [{ _id: 't1', name: 'Reading' }],
+      pagination: { page: 1, limit: 50, total: 1, totalPages: 1 }
+    });
     const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(String(url)).toContain('isActive=true');
     expect(String(url)).toContain('groupId=g1');

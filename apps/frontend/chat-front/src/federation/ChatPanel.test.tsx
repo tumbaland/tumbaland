@@ -1,11 +1,13 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vite-plus/test';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Conversation } from '../types';
 
 const ensureMyConversations = vi.fn();
 vi.mock('../services/chatApi', () => ({ chatApi: { ensureMyConversations: () => ensureMyConversations() } }));
-vi.mock('../config/ConfigProvider', () => ({ ConfigProvider: ({ children }: { children: React.ReactNode }) => children }));
+vi.mock('../config/ConfigProvider', () => ({
+  ConfigProvider: ({ children }: { children: React.ReactNode }) => children
+}));
 vi.mock('../hooks/useCurrentUser', () => ({ useCurrentUser: () => ({ user: { id: 'u-tom' }, loading: false }) }));
 vi.mock('../pages/ThreadPage', () => ({
   default: ({ conversationId, onBack }: { conversationId: string; onBack?: () => void }) => (

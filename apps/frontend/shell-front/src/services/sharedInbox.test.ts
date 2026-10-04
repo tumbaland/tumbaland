@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { clearShare, isMedia, readShare, sharedMessage } from './sharedInbox';
 
 /** Just enough of CacheStorage for one named cache, laid out the way sw.js writes it. */
@@ -16,13 +16,16 @@ function fakeCaches(entries: Record<string, Response>) {
   return storage;
 }
 
-const json = (value: unknown) => new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } });
+const json = (value: unknown) =>
+  new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } });
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('sharedMessage', () => {
   it('uses the text when the link is already in it, as YouTube sends it', () => {
-    expect(sharedMessage({ title: 'Watch on YouTube', text: 'https://youtu.be/abc', url: '' })).toBe('https://youtu.be/abc');
+    expect(sharedMessage({ title: 'Watch on YouTube', text: 'https://youtu.be/abc', url: '' })).toBe(
+      'https://youtu.be/abc'
+    );
   });
 
   it('adds the url under the text when the text does not carry it', () => {
@@ -32,7 +35,9 @@ describe('sharedMessage', () => {
   });
 
   it('does not repeat a link sent in both fields', () => {
-    expect(sharedMessage({ title: '', text: 'https://example.com', url: 'https://example.com' })).toBe('https://example.com');
+    expect(sharedMessage({ title: '', text: 'https://example.com', url: 'https://example.com' })).toBe(
+      'https://example.com'
+    );
   });
 
   it('falls back to the title when nothing else came', () => {

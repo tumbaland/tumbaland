@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../services/categoryRuleService', () => ({
   getCategoryRules: vi.fn(),
@@ -54,10 +54,7 @@ it('creates a rule, sending the group as scope rather than as a field', async ()
   const { result } = renderHook(() => useCreateCategoryRule(), { wrapper: Wrapper });
   await result.current.mutateAsync({ pattern: 'RIMI', category: 'Groceries', groupId: 'g1' });
 
-  expect(service.createCategoryRule).toHaveBeenCalledWith(
-    { pattern: 'RIMI', category: 'Groceries' },
-    'g1'
-  );
+  expect(service.createCategoryRule).toHaveBeenCalledWith({ pattern: 'RIMI', category: 'Groceries' }, 'g1');
 });
 
 it('updates a rule by id', async () => {

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import ChangeRoleDialog from './ChangeRoleDialog';
 import { GroupMember } from '../../types';
 
@@ -9,7 +9,7 @@ it('renders nothing when there is no member', () => {
   expect(container).toBeEmptyDOMElement();
 });
 
-it('preselects the member\'s current role', () => {
+it("preselects the member's current role", () => {
   const member: GroupMember = { email: 'a@example.com', role: 'admin' };
   render(<ChangeRoleDialog open onClose={vi.fn()} member={member} onSave={vi.fn()} />);
   expect(screen.getByRole('radio', { name: 'Admin' })).toBeChecked();

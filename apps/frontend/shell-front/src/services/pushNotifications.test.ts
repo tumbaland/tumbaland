@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 vi.mock('../config/ConfigProvider', () => ({
   getGlobalConfig: () => globalConfig
@@ -34,7 +34,12 @@ const pushManager = {
 function setupBrowser(
   options: { permission?: NotificationPermission; hasPush?: boolean; standalone?: boolean; ua?: string } = {}
 ) {
-  const { permission = 'default', hasPush = true, standalone = false, ua = 'Mozilla/5.0 (Linux; Android 14)' } = options;
+  const {
+    permission = 'default',
+    hasPush = true,
+    standalone = false,
+    ua = 'Mozilla/5.0 (Linux; Android 14)'
+  } = options;
 
   vi.stubGlobal('navigator', {
     userAgent: ua,
@@ -112,9 +117,7 @@ describe('isStandalone', () => {
   });
 
   it('is false in an ordinary tab', () => {
-    expect(
-      isStandalone({ matchMedia: () => ({ matches: false }), navigator: {} } as unknown as Window)
-    ).toBe(false);
+    expect(isStandalone({ matchMedia: () => ({ matches: false }), navigator: {} } as unknown as Window)).toBe(false);
   });
 });
 
@@ -165,9 +168,7 @@ describe('enableNotifications', () => {
     Notification.requestPermission.mockResolvedValue('granted');
 
     expect(await enableNotifications()).toBe('ready');
-    expect(pushManager.subscribe).toHaveBeenCalledWith(
-      expect.objectContaining({ userVisibleOnly: true })
-    );
+    expect(pushManager.subscribe).toHaveBeenCalledWith(expect.objectContaining({ userVisibleOnly: true }));
     expect(fetch).toHaveBeenCalledWith(
       'https://chat-api.test/api/chat/push/subscriptions',
       expect.objectContaining({ method: 'POST', credentials: 'include' })

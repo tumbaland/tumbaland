@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { DOWNSCALE_THRESHOLD_BYTES, MAX_IMAGE_EDGE, captureVideoPoster, downscaleImage } from './mediaPrep';
 
 /** A File of a given size and type, without allocating the bytes. */
@@ -242,7 +242,12 @@ describe('captureVideoPoster', () => {
 
   it('draws a 4K frame at a bubble-sized resolution, but reports the clip’s own size', async () => {
     const video = stubVideo({ width: 3840, height: 2160 });
-    const canvas = { width: 0, height: 0, getContext: () => ({ drawImage: vi.fn() }), toBlob: (callback: (blob: Blob | null) => void) => callback(new Blob(['p'])) };
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: () => ({ drawImage: vi.fn() }),
+      toBlob: (callback: (blob: Blob | null) => void) => callback(new Blob(['p']))
+    };
     vi.spyOn(document, 'createElement').mockImplementation(
       (tag: string) => (tag === 'video' ? video : canvas) as unknown as HTMLElement
     );

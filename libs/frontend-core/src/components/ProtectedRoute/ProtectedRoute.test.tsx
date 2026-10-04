@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { ProtectedRoute } from './ProtectedRoute';
 
 const authService = {

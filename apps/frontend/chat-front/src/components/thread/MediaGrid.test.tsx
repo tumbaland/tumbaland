@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CHAT_FILE_DRAG_TYPE, MediaGrid, columnsFor, formatDuration, isVideo, previewSrc } from './MediaGrid';
@@ -115,9 +115,7 @@ describe('MediaGrid', () => {
   });
 
   it('shows a clip’s duration', () => {
-    render(
-      <MediaGrid attachments={[video({ posterUrl: 'https://files/p', durationMs: 42_000 })]} onOpen={() => {}} />
-    );
+    render(<MediaGrid attachments={[video({ posterUrl: 'https://files/p', durationMs: 42_000 })]} onOpen={() => {}} />);
 
     expect(screen.getByText('0:42')).toBeInTheDocument();
   });
@@ -144,7 +142,9 @@ describe('a video with no poster', () => {
   it('shows the video’s own first frame instead of a broken image', () => {
     const { container } = render(
       <MediaGrid
-        attachments={[{ fileId: 'v1', mimetype: 'video/mp4', sizeBytes: 1, url: 'https://files.test/v1?token=x', posterUrl: null }]}
+        attachments={[
+          { fileId: 'v1', mimetype: 'video/mp4', sizeBytes: 1, url: 'https://files.test/v1?token=x', posterUrl: null }
+        ]}
         onOpen={() => {}}
       />
     );
@@ -158,7 +158,13 @@ describe('a video with no poster', () => {
     const { container } = render(
       <MediaGrid
         attachments={[
-          { fileId: 'v1', mimetype: 'video/mp4', sizeBytes: 1, url: 'https://files.test/v1', posterUrl: 'https://files.test/p1' }
+          {
+            fileId: 'v1',
+            mimetype: 'video/mp4',
+            sizeBytes: 1,
+            url: 'https://files.test/v1',
+            posterUrl: 'https://files.test/p1'
+          }
         ]}
         onOpen={() => {}}
       />
@@ -174,7 +180,15 @@ describe('dragging a photo out', () => {
   it('carries its file id, for a collage beside the chat to place it', () => {
     render(
       <MediaGrid
-        attachments={[{ fileId: 'file-7', url: 'https://files.test/7', thumbnailUrl: 'https://files.test/7t', mimetype: 'image/jpeg', sizeBytes: 1 }]}
+        attachments={[
+          {
+            fileId: 'file-7',
+            url: 'https://files.test/7',
+            thumbnailUrl: 'https://files.test/7t',
+            mimetype: 'image/jpeg',
+            sizeBytes: 1
+          }
+        ]}
         onOpen={() => {}}
       />
     );

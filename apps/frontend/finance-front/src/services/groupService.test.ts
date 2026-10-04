@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { getUserGroups } from './groupService';
 
 it('reads user groups from the configured group-service url', async () => {

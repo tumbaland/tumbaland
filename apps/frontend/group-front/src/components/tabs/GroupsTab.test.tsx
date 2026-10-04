@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../../services/groupApi', () => ({
   groupApi: {
@@ -28,7 +28,14 @@ const mockedDeleteGroup = groupApi.deleteGroup as unknown as ReturnType<typeof v
 const mockedGetCurrentUser = authService.getCurrentUser as unknown as ReturnType<typeof vi.fn>;
 
 const groups: Group[] = [
-  { _id: 'g1', name: 'Family', members: [{ email: 'owner@example.com', role: 'owner' }, { email: 'me@example.com', role: 'admin' }] },
+  {
+    _id: 'g1',
+    name: 'Family',
+    members: [
+      { email: 'owner@example.com', role: 'owner' },
+      { email: 'me@example.com', role: 'admin' }
+    ]
+  },
   { _id: 'g2', name: 'Work', members: [{ email: 'me@example.com', role: 'member' }] }
 ];
 
@@ -113,7 +120,7 @@ it('shows an error message when creating a group fails', async () => {
   expect(await screen.findByText('name taken')).toBeInTheDocument();
 });
 
-it('edits a group\'s name via its card menu (available to owner/admin)', async () => {
+it("edits a group's name via its card menu (available to owner/admin)", async () => {
   mockedListMyGroups.mockResolvedValue(groups);
   mockedUpdateGroup.mockResolvedValue({ _id: 'g1', name: 'Family Renamed' });
   renderTab();

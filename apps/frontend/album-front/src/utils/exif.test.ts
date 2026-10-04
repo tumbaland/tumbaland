@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vite-plus/test';
 
 vi.mock('exifr/dist/lite.esm.mjs', () => ({ default: { parse: vi.fn() } }));
 

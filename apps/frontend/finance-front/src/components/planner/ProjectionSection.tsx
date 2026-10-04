@@ -85,14 +85,17 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
 
   // Fallback assumptions when there's no price history to derive a basis from.
   const [growth, setGrowth] = usePersistedState('finance-planner-growth', String(SCENARIO_PRESETS.base.growth));
-  const [volatility, setVolatility] = usePersistedState('finance-planner-volatility', String(SCENARIO_PRESETS.base.volatility));
+  const [volatility, setVolatility] = usePersistedState(
+    'finance-planner-volatility',
+    String(SCENARIO_PRESETS.base.volatility)
+  );
 
   // Follow the real portfolio: default the projection to the frontier target
   // and the starting capital to the actual portfolio value, until the user
   // overrides either by hand.
   useEffect(() => {
     if (sim && !sourceTouched.current) setSource(sim.current ? 'current' : 'target');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [sim]);
   useEffect(() => {
     if (portfolioValue > 0 && !capitalTouched.current) {
@@ -110,12 +113,13 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
 
   // A history-derived expected return gets shrunk toward the long-run anchor
   // before driving a multi-decade projection — see shrinkExpectedReturn.
-  const growthPct = basisPoint && sim
-    // Trading-day equivalents, not raw observations: a weekly fit has five
-    // times fewer data points for the same stretch of market, and counting
-    // points would shrink a decade of weekly history as if it were a fortnight.
-    ? shrinkExpectedReturn(basisPoint.ret, sim.breakdown.equivalentTradingDays)
-    : parseFloat(growth);
+  const growthPct =
+    basisPoint && sim
+      ? // Trading-day equivalents, not raw observations: a weekly fit has five
+        // times fewer data points for the same stretch of market, and counting
+        // points would shrink a decade of weekly history as if it were a fortnight.
+        shrinkExpectedReturn(basisPoint.ret, sim.breakdown.equivalentTradingDays)
+      : parseFloat(growth);
   const volatilityPct = basisPoint ? basisPoint.vol : parseFloat(volatility);
 
   const params: ProjectionParams | null = useMemo(() => {
@@ -156,17 +160,17 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
 
   const downloadCSV = () => {
     if (rows.length === 0) return;
-    const csv = [
-      ['Year', 'Money Invested', 'Gain from Market', 'Portfolio Total Value', 'Inflation Adjusted Value']
-    ];
-    rows.forEach(r => csv.push([
-      r.year.toString(),
-      Math.round(r.moneyInvested).toString(),
-      Math.round(r.gainFromMarket).toString(),
-      Math.round(r.portfolioTotalValue).toString(),
-      Math.round(r.inflationAdjustedValue).toString()
-    ]));
-    const blob = new Blob([csv.map(r => r.join(',')).join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const csv = [['Year', 'Money Invested', 'Gain from Market', 'Portfolio Total Value', 'Inflation Adjusted Value']];
+    rows.forEach((r) =>
+      csv.push([
+        r.year.toString(),
+        Math.round(r.moneyInvested).toString(),
+        Math.round(r.gainFromMarket).toString(),
+        Math.round(r.portfolioTotalValue).toString(),
+        Math.round(r.inflationAdjustedValue).toString()
+      ])
+    );
+    const blob = new Blob([csv.map((r) => r.join(',')).join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -179,9 +183,17 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
     ? [
         { label: 'Total Invested', value: formatCurrency(finalRow.moneyInvested), color: 'text.primary' },
         { label: 'Expected Value', value: formatCurrency(finalRow.portfolioTotalValue), color: 'primary.main' },
-        ...(finalP50 != null ? [{ label: 'Median (Monte Carlo)', value: formatCurrency(finalP50), color: 'text.primary' }] : []),
+        ...(finalP50 != null
+          ? [{ label: 'Median (Monte Carlo)', value: formatCurrency(finalP50), color: 'text.primary' }]
+          : []),
         ...(finalP10 != null && finalP90 != null
-          ? [{ label: 'Likely Range (p10–p90)', value: `${formatCurrency(finalP10)} – ${formatCurrency(finalP90)}`, color: 'text.secondary' }]
+          ? [
+              {
+                label: 'Likely Range (p10–p90)',
+                value: `${formatCurrency(finalP10)} – ${formatCurrency(finalP90)}`,
+                color: 'text.secondary'
+              }
+            ]
           : []),
         { label: 'Inflation Adjusted', value: formatCurrency(finalRow.inflationAdjustedValue), color: 'warning.main' },
         {
@@ -190,7 +202,13 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
           color: 'success.main'
         },
         ...(goalValue !== undefined
-          ? [{ label: 'Years to Goal', value: goalYear ? `${goalYear} years` : 'Not reached', color: goalYear ? 'primary.main' : 'text.secondary' }]
+          ? [
+              {
+                label: 'Years to Goal',
+                value: goalYear ? `${goalYear} years` : 'Not reached',
+                color: goalYear ? 'primary.main' : 'text.secondary'
+              }
+            ]
           : [])
       ]
     : [];
@@ -210,7 +228,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
             type="number"
             size="small"
             value={startingCapital}
-            onChange={e => {
+            onChange={(e) => {
               capitalTouched.current = true;
               setStartingCapital(e.target.value);
             }}
@@ -224,7 +242,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
             type="number"
             size="small"
             value={contribution}
-            onChange={e => setContribution(e.target.value)}
+            onChange={(e) => setContribution(e.target.value)}
             fullWidth
             sx={compactFieldSx}
             slotProps={{ htmlInput: { min: 0, step: 50 } }}
@@ -234,7 +252,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
             type="number"
             size="small"
             value={years}
-            onChange={e => setYears(e.target.value)}
+            onChange={(e) => setYears(e.target.value)}
             fullWidth
             sx={compactFieldSx}
             slotProps={{ htmlInput: { min: 1, max: MAX_YEARS } }}
@@ -244,7 +262,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
             type="number"
             size="small"
             value={goal}
-            onChange={e => setGoal(e.target.value)}
+            onChange={(e) => setGoal(e.target.value)}
             fullWidth
             sx={compactFieldSx}
             slotProps={{ htmlInput: { min: 0, step: 500 } }}
@@ -257,7 +275,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
               <Select
                 label="Projection Basis"
                 value={source}
-                onChange={e => {
+                onChange={(e) => {
                   sourceTouched.current = true;
                   setSource(e.target.value as PlanSource);
                 }}
@@ -276,7 +294,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
                 type="number"
                 size="small"
                 value={growth}
-                onChange={e => setGrowth(e.target.value)}
+                onChange={(e) => setGrowth(e.target.value)}
                 fullWidth
                 sx={compactFieldSx}
                 slotProps={{ htmlInput: { min: 0, max: 50, step: 0.1 } }}
@@ -286,7 +304,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
                 type="number"
                 size="small"
                 value={volatility}
-                onChange={e => setVolatility(e.target.value)}
+                onChange={(e) => setVolatility(e.target.value)}
                 fullWidth
                 sx={compactFieldSx}
                 slotProps={{ htmlInput: { min: 0, max: 80, step: 0.5 } }}
@@ -299,7 +317,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
             type="number"
             size="small"
             value={inflation}
-            onChange={e => setInflation(e.target.value)}
+            onChange={(e) => setInflation(e.target.value)}
             fullWidth
             sx={compactFieldSx}
             slotProps={{ htmlInput: { min: 0, max: 20, step: 0.1 } }}
@@ -308,9 +326,8 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
           {basisPoint && sim && (
             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
               Assumes <b>{growthPct.toFixed(1)}%</b> expected return · <b>{basisPoint.vol.toFixed(1)}%</b> volatility —{' '}
-              {basisPoint.ret.toFixed(1)}% annualized, derived from your holdings&apos; price history
-              ({sim.dataPoints} trading days) and shrunk toward a long-run {LONG_RUN_RETURN_PCT}% to
-              avoid extrapolating a short sample
+              {basisPoint.ret.toFixed(1)}% annualized, derived from your holdings&apos; price history ({sim.dataPoints}{' '}
+              trading days) and shrunk toward a long-run {LONG_RUN_RETURN_PCT}% to avoid extrapolating a short sample
             </Typography>
           )}
         </Box>
@@ -327,12 +344,23 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
               mt: 2
             }}
           >
-            {summaryItems.map(item => (
-              <Paper key={item.label} elevation={0} sx={{ minWidth: 0, p: 1.5, bgcolor: 'action.hover', borderRadius: 2 }}>
-                <Typography variant="caption" sx={{
-                  color: "text.secondary"
-                }}>{item.label}</Typography>
-                <Typography variant="body2" sx={{ fontWeight: 700, color: item.color, overflowWrap: 'break-word' }}>{item.value}</Typography>
+            {summaryItems.map((item) => (
+              <Paper
+                key={item.label}
+                elevation={0}
+                sx={{ minWidth: 0, p: 1.5, bgcolor: 'action.hover', borderRadius: 2 }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary'
+                  }}
+                >
+                  {item.label}
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700, color: item.color, overflowWrap: 'break-word' }}>
+                  {item.value}
+                </Typography>
               </Paper>
             ))}
           </Box>
@@ -344,8 +372,8 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
             <StockGrowthChart data={rows} goal={goalValue} mcBands={bands || undefined} />
             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
               The blue line is the expected (average) compound path; the shaded band spans the 10th–90th percentile of{' '}
-              {MC_SIMULATIONS.toLocaleString()} Monte Carlo simulations with fat-tailed (Student&apos;s t) monthly returns,
-              so its median sits below the average path — that is expected, not a bug.
+              {MC_SIMULATIONS.toLocaleString()} Monte Carlo simulations with fat-tailed (Student&apos;s t) monthly
+              returns, so its median sits below the average path — that is expected, not a bug.
             </Typography>
           </Box>
         )}
@@ -353,16 +381,20 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
         {/* Yearly table */}
         {rows.length > 0 && (
           <Box sx={{ mt: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+            <Box
+              sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}
+            >
               <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', m: 0 }}>
                 <TableChart sx={{ mr: 1 }} />
                 Detailed Yearly Breakdown
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button variant="text" size="small" onClick={() => setShowYearlyTable(v => !v)}>
+                <Button variant="text" size="small" onClick={() => setShowYearlyTable((v) => !v)}>
                   {showYearlyTable ? 'Hide table' : 'Show table'}
                 </Button>
-                <Button variant="outlined" size="small" onClick={downloadCSV}>Download CSV</Button>
+                <Button variant="outlined" size="small" onClick={downloadCSV}>
+                  Download CSV
+                </Button>
               </Box>
             </Box>
 
@@ -372,14 +404,22 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Year</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Money Invested</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Gain from Market</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Portfolio Total Value</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Inflation Adjusted Value</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                        Money Invested
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                        Gain from Market
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                        Portfolio Total Value
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                        Inflation Adjusted Value
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {rows.map(row => (
+                    {rows.map((row) => (
                       <TableRow key={row.year} hover>
                         <TableCell sx={{ fontWeight: 'medium' }}>{row.year}</TableCell>
                         <TableCell align="right">{formatCurrency(row.moneyInvested)}</TableCell>
@@ -407,8 +447,8 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
               <Alert severity="info" sx={{ mt: 2 }}>
                 <Typography variant="body2">
                   <strong>Note:</strong> Projections assume monthly contributions and compounding. Real market
-                  performance will vary significantly year to year. Results are for educational purposes only and
-                  should not be considered as investment advice.
+                  performance will vary significantly year to year. Results are for educational purposes only and should
+                  not be considered as investment advice.
                 </Typography>
               </Alert>
             </Collapse>

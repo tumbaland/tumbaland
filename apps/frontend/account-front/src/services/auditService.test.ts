@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 // Hoisted: `vi.mock` is lifted above ordinary declarations, so a plain const
 // would not exist yet when the factory runs.

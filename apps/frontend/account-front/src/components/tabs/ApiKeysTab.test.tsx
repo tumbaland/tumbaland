@@ -1,11 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../../services/apiKeyService', async () => {
-  const actual = await vi.importActual<typeof import('../../services/apiKeyService')>(
-    '../../services/apiKeyService'
-  );
+  const actual = await vi.importActual<typeof import('../../services/apiKeyService')>('../../services/apiKeyService');
   return {
     ...actual,
     apiKeyService: {
@@ -317,9 +315,7 @@ it('sends exactly the scopes that are ticked', async () => {
   await user.click(screen.getByLabelText('Photos — read'));
   await user.click(screen.getByRole('button', { name: 'Create key' }));
 
-  expect(mocked.create).toHaveBeenCalledWith(
-    expect.objectContaining({ scopes: ['relationship:read', 'album:read'] })
-  );
+  expect(mocked.create).toHaveBeenCalledWith(expect.objectContaining({ scopes: ['relationship:read', 'album:read'] }));
 });
 
 it('reports a failed creation and keeps the dialog open so the input is not lost', async () => {

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient } from '@tanstack/react-query';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 /**
  * A stand-in for this app's real routes, with the shape that matters: its

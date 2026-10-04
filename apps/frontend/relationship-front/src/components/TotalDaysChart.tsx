@@ -78,7 +78,7 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedYear, tenantGroupId]);
 
   if (loading) {
@@ -144,9 +144,7 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({
   const featuredColor = featuredType?.color || theme.palette.error.main;
 
   const series = [
-    ...(featuredType
-      ? [{ data: featuredData, label: featuredLabel, stack: 'days', color: featuredColor }]
-      : []),
+    ...(featuredType ? [{ data: featuredData, label: featuredLabel, stack: 'days', color: featuredColor }] : []),
     { data: togetherData, label: togetherLabel, stack: 'days', color: COLOR_TOGETHER },
     { data: apartData, label: apartLabel, stack: 'days', color: COLOR_APART }
   ];

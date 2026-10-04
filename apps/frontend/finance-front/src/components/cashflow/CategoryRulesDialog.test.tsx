@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { CategoryRule } from '../../services/categoryRuleService';
 
 const mockedCreate = vi.fn();
@@ -39,13 +39,7 @@ const renderDialog = (props = {}) => {
   const notify = vi.fn();
   const onClose = vi.fn();
   render(
-    <CategoryRulesDialog
-      open
-      onClose={onClose}
-      categories={['Groceries', 'Transport']}
-      notify={notify}
-      {...props}
-    />
+    <CategoryRulesDialog open onClose={onClose} categories={['Groceries', 'Transport']} notify={notify} {...props} />
   );
   return { notify, onClose };
 };
@@ -150,9 +144,7 @@ describe('adding a rule', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'Money in' }));
     await addRule('ACME', 'Consulting');
 
-    await waitFor(() =>
-      expect(mockedCreate).toHaveBeenCalledWith(expect.objectContaining({ type: 'income' }))
-    );
+    await waitFor(() => expect(mockedCreate).toHaveBeenCalledWith(expect.objectContaining({ type: 'income' })));
   });
 
   it('refuses a rule with no text to match on', async () => {
@@ -200,9 +192,7 @@ describe('reordering', () => {
 
     await userEvent.click(screen.getByLabelText('Move BOLT FOOD later'));
 
-    await waitFor(() =>
-      expect(mockedMove).toHaveBeenCalledWith({ id: 'r1', direction: 'down', groupId: 'g1' })
-    );
+    await waitFor(() => expect(mockedMove).toHaveBeenCalledWith({ id: 'r1', direction: 'down', groupId: 'g1' }));
   });
 
   it('moves a rule earlier', async () => {
@@ -211,9 +201,7 @@ describe('reordering', () => {
 
     await userEvent.click(screen.getByLabelText('Move BOLT earlier'));
 
-    await waitFor(() =>
-      expect(mockedMove).toHaveBeenCalledWith({ id: 'r2', direction: 'up', groupId: undefined })
-    );
+    await waitFor(() => expect(mockedMove).toHaveBeenCalledWith({ id: 'r2', direction: 'up', groupId: undefined }));
   });
 
   it('offers no way to move the first rule earlier or the last one later', () => {
@@ -276,9 +264,7 @@ describe('applying to what is already imported', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Apply now/ }));
 
-    await waitFor(() =>
-      expect(mockedApply).toHaveBeenCalledWith({ onlyUncategorised: true, groupId: 'g1' })
-    );
+    await waitFor(() => expect(mockedApply).toHaveBeenCalledWith({ onlyUncategorised: true, groupId: 'g1' }));
     expect(notify).toHaveBeenCalledWith('Recategorised 40 of 120 transactions', 'success');
   });
 
@@ -302,9 +288,7 @@ describe('applying to what is already imported', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Apply now/ }));
 
-    await waitFor(() =>
-      expect(notify).toHaveBeenCalledWith('Nothing left for these rules to change', 'success')
-    );
+    await waitFor(() => expect(notify).toHaveBeenCalledWith('Nothing left for these rules to change', 'success'));
   });
 
   it('reports a failure', async () => {
@@ -335,8 +319,7 @@ describe('your name on statements', () => {
   it('says what happens while no name is recorded', () => {
     renderDialog();
 
-    expect(screen.getByText(/only transfers between accounts the statement itself covers/i))
-      .toBeInTheDocument();
+    expect(screen.getByText(/only transfers between accounts the statement itself covers/i)).toBeInTheDocument();
   });
 
   it('adds a name', async () => {
@@ -385,9 +368,7 @@ describe('your name on statements', () => {
     await userEvent.click(screen.getAllByTestId('CancelIcon')[0]);
 
     await waitFor(() =>
-      expect(mockedSaveSettings).toHaveBeenCalledWith(
-        expect.objectContaining({ ownerNames: ['SMITH ALEX'] })
-      )
+      expect(mockedSaveSettings).toHaveBeenCalledWith(expect.objectContaining({ ownerNames: ['SMITH ALEX'] }))
     );
     expect(notify).toHaveBeenCalledWith('ALEX SMITH removed', 'success');
   });

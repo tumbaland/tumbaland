@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../services/groupService', () => ({
   getUserGroups: vi.fn()
@@ -65,9 +65,11 @@ it('auto-generates a slug from the name and submits, then closes', async () => {
   await userEvent.type(screen.getByLabelText(/^Name/), 'My Cool Activity!!');
   await userEvent.click(screen.getByRole('button', { name: 'Create' }));
 
-  await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(
-    expect.objectContaining({ name: 'My Cool Activity!!', slug: 'my-cool-activity' })
-  ));
+  await waitFor(() =>
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'My Cool Activity!!', slug: 'my-cool-activity' })
+    )
+  );
   expect(onClose).toHaveBeenCalled();
 });
 
@@ -120,14 +122,9 @@ it('submits hasLocation when location tracking is switched on', async () => {
   );
 });
 
-it('reflects an existing type\'s location setting when editing', () => {
+it("reflects an existing type's location setting when editing", () => {
   render(
-    <ActivityTypeDialog
-      open
-      onClose={vi.fn()}
-      onSubmit={vi.fn()}
-      initialData={{ ...initialData, hasLocation: true }}
-    />
+    <ActivityTypeDialog open onClose={vi.fn()} onSubmit={vi.fn()} initialData={{ ...initialData, hasLocation: true }} />
   );
 
   expect(screen.getByLabelText('Track where it happened')).toBeChecked();

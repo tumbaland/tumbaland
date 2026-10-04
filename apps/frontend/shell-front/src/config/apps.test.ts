@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 import { USER_APPS, getAppByRoute, getMainApps, getUserApps } from './apps';
 
 const inNativeApp = () => {

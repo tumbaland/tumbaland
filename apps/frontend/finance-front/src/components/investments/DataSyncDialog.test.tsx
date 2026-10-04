@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { closeDate, fetchedAtLabel, isStale, sessionsSince } from './DataSyncDialog';
 
 /**
@@ -36,7 +36,7 @@ describe('sessionsSince', () => {
 });
 
 describe('closeDate', () => {
-  it('names the exact session, in the viewer\'s locale format', () => {
+  it("names the exact session, in the viewer's locale format", () => {
     const shown = closeDate(FRIDAY_CLOSE) as string;
     expect(shown).toContain('2026');
     expect(shown).toMatch(/\b0?7\b/); // the day
@@ -66,7 +66,7 @@ describe('fetchedAtLabel', () => {
     expect(shown).toMatch(/\d{1,2}:\d{2}:\d{2}/);
   });
 
-  it('is an instant, so it does move with the viewer\'s zone', () => {
+  it("is an instant, so it does move with the viewer's zone", () => {
     // Unlike a session date, "when did my machine last get data" is a real
     // moment and belongs in local time.
     //

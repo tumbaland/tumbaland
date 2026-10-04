@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemePicker } from './ThemePicker';
@@ -43,7 +43,10 @@ describe('ThemePicker', () => {
   });
 
   it('says so when a change fails', async () => {
-    renderPicker(classic, vi.fn(async () => Promise.reject(new Error('down'))));
+    renderPicker(
+      classic,
+      vi.fn(async () => Promise.reject(new Error('down')))
+    );
 
     await userEvent.click(screen.getByRole('radio', { name: 'Sunset' }));
 

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { expect, it } from 'vite-plus/test';
 import { GreetingHeader, firstNameOf, timeOfDayGreeting } from './GreetingHeader';
 
 it('picks the greeting from the hour of day', () => {

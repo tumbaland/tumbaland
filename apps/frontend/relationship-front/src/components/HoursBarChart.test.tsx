@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
@@ -22,8 +22,30 @@ const mockedGetBreakdown = getMonthlyActivityBreakdown as unknown as ReturnType<
 const mockedGetActivityTypes = getActivityTypes as unknown as ReturnType<typeof vi.fn>;
 
 const activityTypes = [
-  { _id: 't1', id: 't1', name: 'Reading', slug: 'reading', color: '#111', isActive: true, sortOrder: 0, createdAt: '', updatedAt: '', userId: 'u1' },
-  { _id: 't2', id: 't2', name: 'Gaming', slug: 'gaming', color: '#222', isActive: true, sortOrder: 1, createdAt: '', updatedAt: '', userId: 'u1' }
+  {
+    _id: 't1',
+    id: 't1',
+    name: 'Reading',
+    slug: 'reading',
+    color: '#111',
+    isActive: true,
+    sortOrder: 0,
+    createdAt: '',
+    updatedAt: '',
+    userId: 'u1'
+  },
+  {
+    _id: 't2',
+    id: 't2',
+    name: 'Gaming',
+    slug: 'gaming',
+    color: '#222',
+    isActive: true,
+    sortOrder: 1,
+    createdAt: '',
+    updatedAt: '',
+    userId: 'u1'
+  }
 ];
 
 beforeEach(() => {
@@ -51,7 +73,13 @@ it('shows an empty state when there is no data', async () => {
 
 it('renders per-type legend chips and computed summary stats, excluding hidden types', async () => {
   mockedGetBreakdown.mockResolvedValue([
-    { month: '1', year: 2024, totalHours: 0, totalActivities: 0, activities: { reading: { count: 3, hours: 3 }, gaming: { count: 2, hours: 2 } } },
+    {
+      month: '1',
+      year: 2024,
+      totalHours: 0,
+      totalActivities: 0,
+      activities: { reading: { count: 3, hours: 3 }, gaming: { count: 2, hours: 2 } }
+    },
     { month: '2', year: 2024, totalHours: 0, totalActivities: 0, activities: { reading: { count: 1, hours: 1 } } }
   ]);
 

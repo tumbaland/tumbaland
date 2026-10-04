@@ -14,9 +14,9 @@
     "build": "tsc -p tsconfig.build.json",
     "release": "commit-and-tag-version && npm run build && npm publish --access public && node ../../scripts/sync-lib-versions.mjs",
     "release:beta": "commit-and-tag-version --prerelease beta && npm run build && npm publish --access public --tag beta",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "lint": "eslint .",
+    "test": "vp test run",
+    "test:coverage": "vp test run --coverage",
+    "lint": "vp lint .",
     "typecheck": "tsc --noEmit"
   },
   "commit-and-tag-version": {
@@ -35,9 +35,11 @@
     "@testing-library/user-event": "^14.6.7",
     "@types/node": "^26.5.1",
     "@vitejs/plugin-react": "^6.1.1",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "5.0.1",
     "commit-and-tag-version": "^13.2.1",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vite-plus": "1.0.0",
+    "vitest": "5.0.1"
   },
   "exports": {
     ".": {

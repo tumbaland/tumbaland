@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import type { ComponentProps } from 'react';
 import type CheckInDialog from '../components/net-worth/CheckInDialog';
 import type AssetClassManagerDialog from '../components/net-worth/AssetClassManagerDialog';
@@ -31,7 +31,12 @@ vi.mock('../components/net-worth/CheckInDialog', () => ({
 }));
 
 vi.mock('../components/net-worth/AssetClassManagerDialog', () => ({
-  default: ({ open, onClose }: ComponentProps<typeof AssetClassManagerDialog>) => (open ? <div>class manager<button onClick={onClose}>close classes</button></div> : null)
+  default: ({ open, onClose }: ComponentProps<typeof AssetClassManagerDialog>) =>
+    open ? (
+      <div>
+        class manager<button onClick={onClose}>close classes</button>
+      </div>
+    ) : null
 }));
 
 import { useSnapshots, useSaveSnapshot, useDeleteSnapshot } from '../hooks/useSnapshots';

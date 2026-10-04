@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vite-plus/test';
 import { createPlansService } from './plansService';
 
 const ORIGINAL_FETCH = global.fetch;

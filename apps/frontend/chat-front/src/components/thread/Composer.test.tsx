@@ -1,17 +1,11 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vite-plus/test';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 // The composer's emoji button opens the full picker, whose real package
 // registers a custom element and opens an IndexedDB.
 vi.mock('./FullEmojiPicker', () => ({
   loadEmojiPicker: () => Promise.resolve(),
-  FullEmojiPicker: ({
-    anchorEl,
-    onPick
-  }: {
-    anchorEl: HTMLElement | null;
-    onPick: (emoji: string) => void;
-  }) =>
+  FullEmojiPicker: ({ anchorEl, onPick }: { anchorEl: HTMLElement | null; onPick: (emoji: string) => void }) =>
     anchorEl ? (
       <button type="button" aria-label="❤️" onClick={() => onPick('❤️')}>
         pick
@@ -317,7 +311,9 @@ describe('editing', () => {
   it('fills the box with the message and saves the change', async () => {
     const onSaveEdit = vi.fn();
     const onSend = vi.fn();
-    render(<Composer onSend={onSend} onTyping={() => {}} editing={editing} onSaveEdit={onSaveEdit} onCancelEdit={() => {}} />);
+    render(
+      <Composer onSend={onSend} onTyping={() => {}} editing={editing} onSaveEdit={onSaveEdit} onCancelEdit={() => {}} />
+    );
 
     const box = screen.getByLabelText('Message');
     expect(box).toHaveValue('teh plan');
@@ -334,7 +330,15 @@ describe('editing', () => {
   it('treats saving an unchanged message as a cancel, so it is not marked edited', async () => {
     const onSaveEdit = vi.fn();
     const onCancelEdit = vi.fn();
-    render(<Composer onSend={() => {}} onTyping={() => {}} editing={editing} onSaveEdit={onSaveEdit} onCancelEdit={onCancelEdit} />);
+    render(
+      <Composer
+        onSend={() => {}}
+        onTyping={() => {}}
+        editing={editing}
+        onSaveEdit={onSaveEdit}
+        onCancelEdit={onCancelEdit}
+      />
+    );
 
     await userEvent.click(screen.getByLabelText('Save edit'));
 
@@ -352,7 +356,9 @@ describe('editing', () => {
   });
 
   it('will not empty a text message', async () => {
-    render(<Composer onSend={() => {}} onTyping={() => {}} editing={editing} onSaveEdit={() => {}} onCancelEdit={() => {}} />);
+    render(
+      <Composer onSend={() => {}} onTyping={() => {}} editing={editing} onSaveEdit={() => {}} onCancelEdit={() => {}} />
+    );
 
     await userEvent.clear(screen.getByLabelText('Message'));
 
@@ -437,7 +443,13 @@ describe('saving to Album', () => {
 
   it('shows nothing about albums without photos on the tray', () => {
     render(
-      <Composer onSend={() => {}} onTyping={() => {}} photoAlbum={album('unset')} onChooseAlbum={() => {}} onAlbumOff={() => {}} />
+      <Composer
+        onSend={() => {}}
+        onTyping={() => {}}
+        photoAlbum={album('unset')}
+        onChooseAlbum={() => {}}
+        onAlbumOff={() => {}}
+      />
     );
     expect(screen.queryByText('Where should chat photos go?')).not.toBeInTheDocument();
   });

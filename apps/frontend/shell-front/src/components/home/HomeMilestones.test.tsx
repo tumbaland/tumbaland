@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { HomeMilestones, agoLabel, inLabel } from './HomeMilestones';
 import type { Milestone, Milestones } from '../../services/homeApi';
 
@@ -64,13 +64,23 @@ describe('HomeMilestones', () => {
 
   it('hedges a date that is projected from the current pace', () => {
     render(
-      <HomeMilestones milestones={feed({ upcoming: [upcoming({ projected: true, daysAway: 21 })] })} onOpen={() => {}} />
+      <HomeMilestones
+        milestones={feed({ upcoming: [upcoming({ projected: true, daysAway: 21 })] })}
+        onOpen={() => {}}
+      />
     );
     expect(screen.getByText('In about 3 weeks')).toBeInTheDocument();
   });
 
   it('says how many are left on a count milestone, with a bar and the projected date', () => {
-    const dinners = upcoming({ key: 'u2', label: '50 dinners', target: 50, remaining: 8, projected: true, daysAway: 21 });
+    const dinners = upcoming({
+      key: 'u2',
+      label: '50 dinners',
+      target: 50,
+      remaining: 8,
+      projected: true,
+      daysAway: 21
+    });
     render(<HomeMilestones milestones={feed({ upcoming: [dinners] })} onOpen={() => {}} />);
 
     expect(screen.getByText('8 to go')).toBeInTheDocument();

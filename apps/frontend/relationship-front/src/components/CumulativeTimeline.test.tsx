@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
@@ -22,7 +22,18 @@ const mockedGetTimeline = getCumulativeTimelineData as unknown as ReturnType<typ
 const mockedGetActivityTypes = getActivityTypes as unknown as ReturnType<typeof vi.fn>;
 
 const activityTypes = [
-  { _id: 't1', id: 't1', name: 'Reading', slug: 'reading', color: '#111', isActive: true, sortOrder: 0, createdAt: '', updatedAt: '', userId: 'u1' }
+  {
+    _id: 't1',
+    id: 't1',
+    name: 'Reading',
+    slug: 'reading',
+    color: '#111',
+    isActive: true,
+    sortOrder: 0,
+    createdAt: '',
+    updatedAt: '',
+    userId: 'u1'
+  }
 ];
 
 beforeEach(() => {
@@ -50,8 +61,22 @@ it('shows an empty state when there is no data', async () => {
 
 it('renders per-type chips and cumulative summary stats', async () => {
   mockedGetTimeline.mockResolvedValue([
-    { date: '2024-01-01', dailyActivities: 2, cumulativeActivities: 2, dailyHours: 2, cumulativeHours: 2, activityBreakdown: { reading: { dailyCount: 2, cumulativeCount: 2 } } },
-    { date: '2024-01-02', dailyActivities: 1, cumulativeActivities: 3, dailyHours: 1, cumulativeHours: 3, activityBreakdown: { reading: { dailyCount: 1, cumulativeCount: 3 } } }
+    {
+      date: '2024-01-01',
+      dailyActivities: 2,
+      cumulativeActivities: 2,
+      dailyHours: 2,
+      cumulativeHours: 2,
+      activityBreakdown: { reading: { dailyCount: 2, cumulativeCount: 2 } }
+    },
+    {
+      date: '2024-01-02',
+      dailyActivities: 1,
+      cumulativeActivities: 3,
+      dailyHours: 1,
+      cumulativeHours: 3,
+      activityBreakdown: { reading: { dailyCount: 1, cumulativeCount: 3 } }
+    }
   ]);
 
   render(<CumulativeTimeline title="My Chart" />);
@@ -71,7 +96,14 @@ it('renders per-type chips and cumulative summary stats', async () => {
 
 it('toggles a line chip on and off without crashing', async () => {
   mockedGetTimeline.mockResolvedValue([
-    { date: '2024-01-01', dailyActivities: 1, cumulativeActivities: 1, dailyHours: 1, cumulativeHours: 1, activityBreakdown: {} }
+    {
+      date: '2024-01-01',
+      dailyActivities: 1,
+      cumulativeActivities: 1,
+      dailyHours: 1,
+      cumulativeHours: 1,
+      activityBreakdown: {}
+    }
   ]);
 
   render(<CumulativeTimeline />);
@@ -89,7 +121,14 @@ it('toggles a line chip on and off without crashing', async () => {
 
 it('changes the selected year, refetching data', async () => {
   mockedGetTimeline.mockResolvedValue([
-    { date: '2024-01-01', dailyActivities: 1, cumulativeActivities: 1, dailyHours: 1, cumulativeHours: 1, activityBreakdown: {} }
+    {
+      date: '2024-01-01',
+      dailyActivities: 1,
+      cumulativeActivities: 1,
+      dailyHours: 1,
+      cumulativeHours: 1,
+      activityBreakdown: {}
+    }
   ]);
   render(<CumulativeTimeline year={2024} />);
   await waitFor(() => expect(screen.getByRole('combobox')).toHaveTextContent('2024'));

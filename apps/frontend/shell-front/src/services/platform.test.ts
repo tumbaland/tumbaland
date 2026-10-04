@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vite-plus/test';
 import { canOfferPurchases, getAppPlatform, isNativeApp } from './platform';
 
 const nativeApp = (platform: string) => ({

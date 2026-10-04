@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { ApiError } from '@tumbaland/frontend-core';
 import { CallEngine, MIC_BLOCKED, type CallApi, type CallState } from './callEngine';
 import type { CallSignalData, CallView, ChatEvent } from '../types';
@@ -78,11 +78,20 @@ const callView = (overrides: Partial<CallView> = {}): CallView => ({
 
 const answeredView = callView({ status: 'active', answeredBy: 'u-irja', answeredDeviceId: 'irja-phone' });
 
-const event = (type: ChatEvent['type'], payload: unknown): ChatEvent => ({ type, conversationId: 'c1', at: 1, payload });
+const event = (type: ChatEvent['type'], payload: unknown): ChatEvent => ({
+  type,
+  conversationId: 'c1',
+  at: 1,
+  payload
+});
 
 function makeApi(): CallApi & { [K in keyof CallApi]: ReturnType<typeof vi.fn> } {
   return {
-    iceServers: vi.fn(async () => ({ iceServers: [{ urls: 'turn:relay', username: 'u', credential: 'c' }], relay: true, expiresAt: null })),
+    iceServers: vi.fn(async () => ({
+      iceServers: [{ urls: 'turn:relay', username: 'u', credential: 'c' }],
+      relay: true,
+      expiresAt: null
+    })),
     currentCall: vi.fn(async () => null),
     startCall: vi.fn(async () => callView()),
     acceptCall: vi.fn(async () => answeredView),
@@ -145,7 +154,9 @@ describe('placing a call', () => {
     engine.handleEvent(event('call.accepted', answeredView));
     await settle();
     const signal = (data: CallSignalData) =>
-      engine.handleEvent(event('call.signal', { callId: 'call-1', fromDeviceId: 'irja-phone', toDeviceId: 'tom-phone', data }));
+      engine.handleEvent(
+        event('call.signal', { callId: 'call-1', fromDeviceId: 'irja-phone', toDeviceId: 'tom-phone', data })
+      );
 
     signal({ candidate: { candidate: 'a' } });
     signal({ description: { type: 'answer', sdp: 'answer-1' } });
@@ -341,7 +352,9 @@ describe('being called', () => {
     irja.handleEvent(event('call.ringing', callView()));
     await irja.accept();
 
-    irja.handleEvent(event('call.ringing', callView({ id: 'call-2', caller: { userId: 'u-x', name: 'X', picture: null } })));
+    irja.handleEvent(
+      event('call.ringing', callView({ id: 'call-2', caller: { userId: 'u-x', name: 'X', picture: null } }))
+    );
 
     expect(irja.snapshot.call?.id).toBe('call-1');
   });

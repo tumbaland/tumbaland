@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 const mockedGetGlobalConfig = vi.fn();
 vi.mock('../config/ConfigProvider', () => ({
@@ -18,13 +18,19 @@ function mock401() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockedGetGlobalConfig.mockReturnValue({ AUTH_SERVICE_URL: 'https://auth.example', AUTH_FRONT_URL: 'https://login.example' });
+  mockedGetGlobalConfig.mockReturnValue({
+    AUTH_SERVICE_URL: 'https://auth.example',
+    AUTH_FRONT_URL: 'https://login.example'
+  });
 });
 
 it('redirects to the auth front on a 401 response when AUTH_FRONT_URL is configured', async () => {
   mock401();
   const originalLocation = window.location;
-  Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, href: 'https://app.example/account' } });
+  Object.defineProperty(window, 'location', {
+    writable: true,
+    value: { ...originalLocation, href: 'https://app.example/account' }
+  });
 
   await expect(accountApi.get('/auth/profile')).rejects.toThrow();
 
@@ -38,7 +44,10 @@ it('does not redirect on a 401 when AUTH_FRONT_URL is not configured', async () 
   mockedGetGlobalConfig.mockReturnValue({ AUTH_SERVICE_URL: 'https://auth.example' });
   mock401();
   const originalLocation = window.location;
-  Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, href: 'https://app.example/account' } });
+  Object.defineProperty(window, 'location', {
+    writable: true,
+    value: { ...originalLocation, href: 'https://app.example/account' }
+  });
 
   await expect(accountApi.get('/auth/profile')).rejects.toThrow();
 

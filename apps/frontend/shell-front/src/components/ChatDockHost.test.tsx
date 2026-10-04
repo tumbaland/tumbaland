@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('./ChatPanel', () => ({
   ChatPanel: ({ onClose, fill }: { onClose: () => void; fill?: boolean }) => (

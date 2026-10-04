@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { renderHook, act } from '@testing-library/react';
 import { FAILURES_BEFORE_POLLING, POLL_INTERVAL_MS, useChatStream } from './useChatStream';
 

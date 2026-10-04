@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import AlbumsHeader from './AlbumsHeader';
 
 it('shows the current search term and calls onSearchChange as it changes', async () => {

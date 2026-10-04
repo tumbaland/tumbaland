@@ -61,7 +61,7 @@ export function useEntitlements(fetcher: () => Promise<Entitlements>): UseEntitl
     };
     // `fetcher` is intentionally not a dependency: callers commonly pass an
     // inline arrow, and depending on it would refetch on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadToken]);
 
   return { entitlements, loading, error, reload };

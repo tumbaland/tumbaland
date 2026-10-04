@@ -1,5 +1,5 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('@tumbaland/frontend-core', async () => {
   const actual = await vi.importActual<typeof import('@tumbaland/frontend-core')>('@tumbaland/frontend-core');

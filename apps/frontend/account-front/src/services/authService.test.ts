@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 const mockedGetGlobalConfig = vi.fn();
 vi.mock('../config/ConfigProvider', () => ({
@@ -9,13 +9,19 @@ import { authService } from './authService';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockedGetGlobalConfig.mockReturnValue({ AUTH_SERVICE_URL: 'https://auth.example', AUTH_FRONT_URL: 'https://login.example' });
+  mockedGetGlobalConfig.mockReturnValue({
+    AUTH_SERVICE_URL: 'https://auth.example',
+    AUTH_FRONT_URL: 'https://login.example'
+  });
   authService.clearAuthCache();
 });
 
 it('redirects to the configured auth front url', () => {
   const originalLocation = window.location;
-  Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, href: 'https://app.example/account' } });
+  Object.defineProperty(window, 'location', {
+    writable: true,
+    value: { ...originalLocation, href: 'https://app.example/account' }
+  });
 
   authService.redirectToLogin();
 
@@ -35,6 +41,9 @@ it('checks auth against the configured auth service url', async () => {
 
   const result = await authService.isAuthenticated();
 
-  expect(global.fetch).toHaveBeenCalledWith('https://auth.example/auth/verify', expect.objectContaining({ credentials: 'include' }));
+  expect(global.fetch).toHaveBeenCalledWith(
+    'https://auth.example/auth/verify',
+    expect.objectContaining({ credentials: 'include' })
+  );
   expect(result).toBe(true);
 });

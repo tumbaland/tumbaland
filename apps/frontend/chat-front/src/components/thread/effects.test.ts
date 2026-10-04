@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { effectOf } from './effects';
 
 const message = (body: string, overrides: Partial<Parameters<typeof effectOf>[0]> = {}) => ({

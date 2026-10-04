@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../services/cashflowService', () => ({
   getTransactions: vi.fn(),
@@ -49,7 +49,11 @@ const invalidatedKeys = (spy: { mock: { calls: unknown[][] } }) =>
 beforeEach(() => vi.clearAllMocks());
 
 it('fetches transactions with the given query', async () => {
-  mocked.getTransactions.mockResolvedValue({ items: [{ _id: 'x1' }], totals: { count: 1, income: 0, expense: 0, net: 0 }, hasMore: false });
+  mocked.getTransactions.mockResolvedValue({
+    items: [{ _id: 'x1' }],
+    totals: { count: 1, income: 0, expense: 0, net: 0 },
+    hasMore: false
+  });
   const { Wrapper } = wrapper();
 
   const { result } = renderHook(() => useTransactions({ groupId: 'g1' }), { wrapper: Wrapper });
@@ -88,7 +92,6 @@ it('deletes a transaction and invalidates the summary', async () => {
 
   expect(invalidatedKeys(invalidate)).toEqual(expect.arrayContaining(['cashflowSummary']));
 });
-
 
 it('fetches the analytics report', async () => {
   mocked.getAnalytics.mockResolvedValue({ years: [] });
@@ -150,7 +153,10 @@ it('refreshes the figures after a bulk recategorise', async () => {
 });
 
 it('saves the exported file and reports its name', async () => {
-  mocked.exportTransactions.mockResolvedValue({ blob: new Blob(['id;category']), filename: 'transactions_uncategorised.csv' });
+  mocked.exportTransactions.mockResolvedValue({
+    blob: new Blob(['id;category']),
+    filename: 'transactions_uncategorised.csv'
+  });
   const { Wrapper } = wrapper();
 
   const { result } = renderHook(() => useExportTransactions(), { wrapper: Wrapper });
@@ -175,7 +181,14 @@ it('does not save anything when the export fails', async () => {
 
 describe('useRecurring', () => {
   it('fetches the recurring report for the current scope', async () => {
-    const report = { from: '2024-09-01', to: '2026-09-03', monthlyTotal: 12.17, yearlyTotal: 145.98, lapsedCount: 0, payments: [] };
+    const report = {
+      from: '2024-09-01',
+      to: '2026-09-03',
+      monthlyTotal: 12.17,
+      yearlyTotal: 145.98,
+      lapsedCount: 0,
+      payments: []
+    };
     (cashflowService.getRecurring as ReturnType<typeof vi.fn>).mockResolvedValue(report);
 
     const { result } = renderHook(() => useRecurring('g1'), { wrapper: wrapper().Wrapper });

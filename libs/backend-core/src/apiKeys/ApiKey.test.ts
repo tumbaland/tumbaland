@@ -18,19 +18,13 @@ describe('required fields', () => {
     expect(new ApiKey(complete).validateSync()).toBeUndefined();
   });
 
-  it.each([
-    'userId',
-    'userEmail',
-    'name',
-    'keyId',
-    'hash',
-    'sealedCiphertext',
-    'sealedIv',
-    'sealedTag'
-  ])('refuses a document with no %s', (field) => {
-    const doc = new ApiKey({ ...complete, [field]: undefined });
-    expect(doc.validateSync()?.errors[field]).toBeDefined();
-  });
+  it.each(['userId', 'userEmail', 'name', 'keyId', 'hash', 'sealedCiphertext', 'sealedIv', 'sealedTag'])(
+    'refuses a document with no %s',
+    (field) => {
+      const doc = new ApiKey({ ...complete, [field]: undefined });
+      expect(doc.validateSync()?.errors[field]).toBeDefined();
+    }
+  );
 
   it('will not store a key without the material needed to verify it', () => {
     // A record missing its digest could never authenticate anything, and one
@@ -111,7 +105,7 @@ describe('model registration', () => {
   it('reuses the compiled model instead of redefining it', () => {
     // backend-core is imported by every service, and some import it more than
     // once through different paths; recompiling would throw OverwriteModelError.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // oxlint-disable-next-line @typescript-eslint/no-require-imports
     const again = require('./ApiKey').ApiKey;
     expect(again).toBe(ApiKey);
   });
@@ -125,9 +119,7 @@ describe('what a key’s audit trail may carry', () => {
    * the encryption exists to prevent.
    */
   it('redacts every field on the schema that holds a secret', () => {
-    const secretish = Object.keys(ApiKey.schema.paths).filter((path) =>
-      /hash|sealed|secret/i.test(path)
-    );
+    const secretish = Object.keys(ApiKey.schema.paths).filter((path) => /hash|sealed|secret/i.test(path));
 
     // Compared against the schema rather than a hand-written list, so a secret
     // field added later fails here instead of quietly reaching the trail.

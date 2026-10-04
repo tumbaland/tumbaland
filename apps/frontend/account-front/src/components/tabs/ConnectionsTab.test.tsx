@@ -1,11 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../../services/apiKeyService', async () => {
-  const actual = await vi.importActual<typeof import('../../services/apiKeyService')>(
-    '../../services/apiKeyService'
-  );
+  const actual = await vi.importActual<typeof import('../../services/apiKeyService')>('../../services/apiKeyService');
   return { ...actual, connectionService: { list: vi.fn(), revoke: vi.fn() } };
 });
 

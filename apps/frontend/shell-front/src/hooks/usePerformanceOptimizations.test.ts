@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { usePerformanceOptimizations } from './usePerformanceOptimizations';
 
 const setUserAgent = (ua: string) => {

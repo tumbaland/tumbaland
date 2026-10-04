@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { linkify } from './linkify';
 
 describe('linkify', () => {
@@ -22,10 +22,11 @@ describe('linkify', () => {
 
   it('leaves the full stop and comma that end a sentence out of the link', () => {
     expect(linkify('Go to https://example.com.')[1]).toMatchObject({ href: 'https://example.com' });
-    expect(linkify('https://a.com, https://b.com!').filter((p) => p.kind === 'link').map((p) => p.text)).toEqual([
-      'https://a.com',
-      'https://b.com'
-    ]);
+    expect(
+      linkify('https://a.com, https://b.com!')
+        .filter((p) => p.kind === 'link')
+        .map((p) => p.text)
+    ).toEqual(['https://a.com', 'https://b.com']);
   });
 
   it('keeps a bracket the link opened, and drops one the sentence did', () => {
@@ -36,7 +37,9 @@ describe('linkify', () => {
   });
 
   it('does not guess at bare domains or file names', () => {
-    expect(linkify('open report.pdf or example.com')).toEqual([{ kind: 'text', text: 'open report.pdf or example.com' }]);
+    expect(linkify('open report.pdf or example.com')).toEqual([
+      { kind: 'text', text: 'open report.pdf or example.com' }
+    ]);
   });
 
   it('does not link other schemes', () => {

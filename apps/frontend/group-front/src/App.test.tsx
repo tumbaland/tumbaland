@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import App from './App';
 import { authService } from './services/authService';
 
@@ -22,7 +22,12 @@ describe('App', () => {
     vi.mocked(global.fetch).mockImplementation(async (input) => {
       const href = typeof input === 'string' ? input : input.toString();
       if (href.includes('/auth/verify')) {
-        return { ok: true, status: 200, json: async () => ({ success: true, authenticated: false, user: null }), text: async () => '' } as Response;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true, authenticated: false, user: null }),
+          text: async () => ''
+        } as Response;
       }
       return { ok: true, status: 200, json: async () => ({ success: true }), text: async () => '' } as Response;
     });

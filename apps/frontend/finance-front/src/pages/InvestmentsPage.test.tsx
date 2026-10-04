@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('@tumbaland/frontend-core', () => ({
   useTenantFilter: () => 'g1'
@@ -27,7 +27,9 @@ vi.mock('../components/investments/HoldingsTab', () => ({
 }));
 vi.mock('../components/investments/TickersTab', () => ({
   default: ({ tickerLimit, meteredTickers }: { tickerLimit?: number; meteredTickers?: number }) => (
-    <div>tickers tab {meteredTickers ?? '-'}/{tickerLimit ?? '-'}</div>
+    <div>
+      tickers tab {meteredTickers ?? '-'}/{tickerLimit ?? '-'}
+    </div>
   )
 }));
 
@@ -48,7 +50,7 @@ beforeEach(() => {
   });
 });
 
-it('shows a spinner while the active tab\'s data is loading', () => {
+it("shows a spinner while the active tab's data is loading", () => {
   mockedUseHoldings.mockReturnValue({ data: [], isLoading: true });
   render(<InvestmentsPage />);
   expect(screen.getByRole('progressbar')).toBeInTheDocument();
@@ -95,7 +97,7 @@ it('defaults holdings/tickers to empty arrays while their queries have no data y
   expect(screen.getByText('Tracked tickers (0)')).toBeInTheDocument();
 });
 
-it('passes the plan\'s ticker allowance and live usage to the tickers tab', async () => {
+it("passes the plan's ticker allowance and live usage to the tickers tab", async () => {
   render(<InvestmentsPage />);
   await userEvent.click(screen.getByText('Tracked tickers (2)'));
   expect(screen.getByText(/tickers tab 2\/3/)).toBeInTheDocument();

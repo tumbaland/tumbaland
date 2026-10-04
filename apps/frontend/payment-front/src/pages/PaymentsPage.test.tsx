@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../components/tabs/PlansTab', () => ({ default: () => <div>plans tab content</div> }));
 vi.mock('../components/tabs/SubscriptionsTab', () => ({ default: () => <div>subscriptions tab content</div> }));

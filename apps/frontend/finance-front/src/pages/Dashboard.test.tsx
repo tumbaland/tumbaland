@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('@tumbaland/frontend-core', () => ({
   useTenantFilter: () => undefined
@@ -58,7 +58,16 @@ it('renders KPIs, charts, and the holdings summary when data is present (singula
     error: null,
     data: {
       netWorthHistory: [{ date: '2024-01-01', total: 1000, byClass: { Stocks: 1000 } }],
-      kpis: { netWorth: 1000, asOf: null, monthChange: 0, monthChangePct: 0, yearChange: 0, yearChangePct: 0, totalGain: 0, totalGainPct: 0 },
+      kpis: {
+        netWorth: 1000,
+        asOf: null,
+        monthChange: 0,
+        monthChangePct: 0,
+        yearChange: 0,
+        yearChangePct: 0,
+        totalGain: 0,
+        totalGainPct: 0
+      },
       allocation: [],
       assetColors: {},
       holdings: { count: 1, totalValue: 1000, totalCost: 900, gain: 100, gainPct: 11 }
@@ -76,7 +85,16 @@ it('pluralizes the holdings count and colors a loss red', () => {
     error: null,
     data: {
       netWorthHistory: [{ date: '2024-01-01', total: 1000, byClass: {} }],
-      kpis: { netWorth: 1000, asOf: null, monthChange: 0, monthChangePct: 0, yearChange: 0, yearChangePct: 0, totalGain: 0, totalGainPct: 0 },
+      kpis: {
+        netWorth: 1000,
+        asOf: null,
+        monthChange: 0,
+        monthChangePct: 0,
+        yearChange: 0,
+        yearChangePct: 0,
+        totalGain: 0,
+        totalGainPct: 0
+      },
       allocation: [],
       assetColors: {},
       holdings: { count: 3, totalValue: 900, totalCost: 1000, gain: -100, gainPct: -10 }
@@ -93,7 +111,16 @@ it('omits the holdings card when holdings is null', () => {
     error: null,
     data: {
       netWorthHistory: [{ date: '2024-01-01', total: 1000, byClass: {} }],
-      kpis: { netWorth: 1000, asOf: null, monthChange: 0, monthChangePct: 0, yearChange: 0, yearChangePct: 0, totalGain: 0, totalGainPct: 0 },
+      kpis: {
+        netWorth: 1000,
+        asOf: null,
+        monthChange: 0,
+        monthChangePct: 0,
+        yearChange: 0,
+        yearChangePct: 0,
+        totalGain: 0,
+        totalGainPct: 0
+      },
       allocation: [],
       assetColors: {},
       holdings: null

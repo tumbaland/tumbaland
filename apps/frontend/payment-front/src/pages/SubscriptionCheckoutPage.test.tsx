@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../services/paymentApi', () => ({
   paymentApi: {
@@ -32,8 +32,14 @@ function renderAt(path: string) {
 function stubLocation() {
   const originalLocation = window.location;
   const assign = vi.fn();
-  Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, assign, href: originalLocation.href } });
-  return { assign, restore: () => Object.defineProperty(window, 'location', { writable: true, value: originalLocation }) };
+  Object.defineProperty(window, 'location', {
+    writable: true,
+    value: { ...originalLocation, assign, href: originalLocation.href }
+  });
+  return {
+    assign,
+    restore: () => Object.defineProperty(window, 'location', { writable: true, value: originalLocation })
+  };
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -87,7 +93,11 @@ it('renders the paid plan order summary with a terms checkbox gating the Proceed
 
 it('activates a free plan and navigates to the returned url', async () => {
   mockedListPlans.mockResolvedValue([freePlan]);
-  mockedCreateCheckoutSession.mockResolvedValue({ free: true, url: '/subscription', subscription: { status: 'active' } });
+  mockedCreateCheckoutSession.mockResolvedValue({
+    free: true,
+    url: '/subscription',
+    subscription: { status: 'active' }
+  });
   const { assign, restore } = stubLocation();
   renderAt('/subscription/checkout?plan=free');
 
@@ -102,7 +112,11 @@ it('goes straight to the subscription page when the plan was switched in place',
   // An existing customer changing plan has nothing to check out: the subscription
   // they already have was moved onto the new price, with the difference prorated.
   mockedListPlans.mockResolvedValue([proPlan]);
-  mockedCreateCheckoutSession.mockResolvedValue({ changed: true, url: '/subscription', subscription: { status: 'active' } });
+  mockedCreateCheckoutSession.mockResolvedValue({
+    changed: true,
+    url: '/subscription',
+    subscription: { status: 'active' }
+  });
   const { assign, restore } = stubLocation();
   renderAt('/subscription/checkout?plan=pro');
 
@@ -191,7 +205,11 @@ it('shows the canceled panel when returning from Stripe with status=cancel', asy
 });
 
 it('redirects once polling finds an active subscription', async () => {
-  mockedGetCheckoutSessionStatus.mockResolvedValue({ status: 'processing', payment_status: 'unpaid', subscription: { status: 'active' } });
+  mockedGetCheckoutSessionStatus.mockResolvedValue({
+    status: 'processing',
+    payment_status: 'unpaid',
+    subscription: { status: 'active' }
+  });
   const { assign, restore } = stubLocation();
   renderAt('/subscription/checkout?status=success&session_id=sess_1');
 
@@ -228,7 +246,11 @@ it('shows a network-issue error after several failed polling attempts', async ()
 
 it('gives up after ~30 polling attempts with no resolution', async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
-  mockedGetCheckoutSessionStatus.mockResolvedValue({ status: 'processing', payment_status: 'unpaid', subscription: null });
+  mockedGetCheckoutSessionStatus.mockResolvedValue({
+    status: 'processing',
+    payment_status: 'unpaid',
+    subscription: null
+  });
   renderAt('/subscription/checkout?status=success&session_id=sess_1');
 
   // Cumulative backoff easily exceeds what's needed for 30 attempts regardless of tier.

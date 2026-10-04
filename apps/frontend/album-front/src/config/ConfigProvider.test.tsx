@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 const { createConfigProviderMock } = vi.hoisted(() => ({
   createConfigProviderMock: vi.fn().mockReturnValue({
@@ -26,6 +26,9 @@ it('builds the config provider with the album-front service name and dev/mode fl
 });
 
 it('maps every VITE_* env var into the dev config', async () => {
+  // The module is cached after the first test, and its factory call is cleared
+  // between tests, so load it again to have a call to read.
+  vi.resetModules();
   await import('./ConfigProvider');
 
   const { getDevConfig } = createConfigProviderMock.mock.calls[0][0];

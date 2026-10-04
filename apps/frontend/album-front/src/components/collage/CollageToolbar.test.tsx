@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, vi } from 'vitest';
+import { afterEach, beforeEach, describe, vi } from 'vite-plus/test';
 import CollageToolbar from './CollageToolbar';
 
 function baseProps() {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 import { initialThreadState, lastStoredMessage, threadReducer, type ThreadState } from './threadReducer';
 import type { Message, ThreadMessage } from '../types';
 
@@ -86,14 +86,17 @@ describe('loading a page', () => {
 
 describe('older pages', () => {
   it('prepends them in render order', () => {
-    const state = threadReducer(stateWith([message({ id: 'm3', clientId: 'c3', createdAt: '2026-09-21T12:00:00.000Z' })]), {
-      type: 'olderLoaded',
-      messages: [
-        message({ id: 'm2', clientId: 'c2', createdAt: '2026-09-21T11:00:00.000Z' }),
-        message({ id: 'm1', clientId: 'c1', createdAt: '2026-09-21T10:00:00.000Z' })
-      ],
-      nextCursor: null
-    });
+    const state = threadReducer(
+      stateWith([message({ id: 'm3', clientId: 'c3', createdAt: '2026-09-21T12:00:00.000Z' })]),
+      {
+        type: 'olderLoaded',
+        messages: [
+          message({ id: 'm2', clientId: 'c2', createdAt: '2026-09-21T11:00:00.000Z' }),
+          message({ id: 'm1', clientId: 'c1', createdAt: '2026-09-21T10:00:00.000Z' })
+        ],
+        nextCursor: null
+      }
+    );
 
     expect(state.messages.map((m) => m.id)).toEqual(['m1', 'm2', 'm3']);
     expect(state.loadingOlder).toBe(false);
@@ -192,10 +195,13 @@ describe('incoming events', () => {
   it('sorts a replayed message back into place rather than appending it', () => {
     // After a reconnect the server replays what was missed, which can arrive
     // after messages that happened later.
-    const state = threadReducer(stateWith([message({ id: 'm3', clientId: 'c3', createdAt: '2026-09-21T12:00:00.000Z' })]), {
-      type: 'received',
-      message: message({ id: 'm2', clientId: 'c2', createdAt: '2026-09-21T11:00:00.000Z' })
-    });
+    const state = threadReducer(
+      stateWith([message({ id: 'm3', clientId: 'c3', createdAt: '2026-09-21T12:00:00.000Z' })]),
+      {
+        type: 'received',
+        message: message({ id: 'm2', clientId: 'c2', createdAt: '2026-09-21T11:00:00.000Z' })
+      }
+    );
 
     expect(state.messages.map((m) => m.id)).toEqual(['m2', 'm3']);
   });

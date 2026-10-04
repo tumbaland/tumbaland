@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import GroupsHeader from './GroupsHeader';
 
 it('calls onCreateClick when the New group button is clicked', async () => {

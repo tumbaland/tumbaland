@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import AlbumsEmptyState from './AlbumsEmptyState';
 
 it('shows the no-albums-yet message and a create button when there is no search term', async () => {

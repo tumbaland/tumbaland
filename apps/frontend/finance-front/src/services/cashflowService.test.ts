@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import {
   getTransactions,
   getCategories,
@@ -252,7 +252,14 @@ describe('declaring the file type on import', () => {
 });
 
 describe('recurring payments', () => {
-  const report = { from: '2024-09-01', to: '2026-09-03', monthlyTotal: 0, yearlyTotal: 0, lapsedCount: 0, payments: [] };
+  const report = {
+    from: '2024-09-01',
+    to: '2026-09-03',
+    monthlyTotal: 0,
+    yearlyTotal: 0,
+    lapsedCount: 0,
+    payments: []
+  };
 
   it('fetches the personal scope with no window override', async () => {
     mockFetchOnce({ success: true, data: report });

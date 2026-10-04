@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useNavigate } from 'react-router';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import type { ContextType } from 'react';
 
 vi.mock('../services/authService', () => ({

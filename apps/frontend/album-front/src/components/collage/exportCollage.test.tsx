@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { collageMoves, downloadBlob, exportCollageToPng, exportCollageToVideo, frameIndexAt } from './exportCollage';
 import { CollageDoc } from './collageDoc';
 import { ResolvePhoto } from './CollageStage';

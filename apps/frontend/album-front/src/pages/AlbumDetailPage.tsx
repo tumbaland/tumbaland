@@ -132,7 +132,7 @@ const AlbumDetailPage: React.FC = () => {
       { replace: true }
     );
     // handleViewPhoto is recreated every render; the photo list is what matters.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [viewId, allPhotos, photosLoading, wholeAlbumListed, setSearchParams]);
 
   /**

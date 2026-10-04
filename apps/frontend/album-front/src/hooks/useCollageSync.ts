@@ -252,7 +252,7 @@ export function useCollageSync({
       busy.current = null;
     }
     // drain works over refs only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [collageId, session, schedule]);
 
   /**
@@ -284,7 +284,7 @@ export function useCollageSync({
     if (hasUnsent()) schedule(AUTOSAVE_DELAY_MS);
     // bringIn and drain are plain functions over refs; listing them would
     // only rebuild this on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [schedule]);
 
   useEffect(() => {
@@ -301,7 +301,7 @@ export function useCollageSync({
     }
     if (!absorb(event)) void catchUpRef.current();
     // absorb works over refs only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -347,7 +347,7 @@ export function useCollageSync({
       schedule(failures.current > 0 ? RETRY_DELAYS_MS[0]! : justLetGo ? 0 : AUTOSAVE_DELAY_MS);
     }
     // `revision` only seeds the first doc.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, paused, schedule]);
 
   // Leaving the editor sends whatever is still waiting, and has the list pick

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 const mockedNavigate = vi.fn();
 vi.mock('react-router', async (importOriginal) => {
@@ -21,7 +21,14 @@ const mockedGetMySubscription = paymentApi.getMySubscription as unknown as Retur
 
 const plans = [
   { _id: 'p1', code: 'free', name: 'Free', priceMonthlyCents: 0 },
-  { _id: 'p2', code: 'pro', name: 'Pro', priceMonthlyCents: 1999, description: 'For professionals', features: ['50 GB storage', 'Priority support'] },
+  {
+    _id: 'p2',
+    code: 'pro',
+    name: 'Pro',
+    priceMonthlyCents: 1999,
+    description: 'For professionals',
+    features: ['50 GB storage', 'Priority support']
+  },
   { _id: 'p3', code: 'elite', name: 'Elite', priceMonthlyCents: 4999, features: ['500 GB storage'] }
 ];
 
@@ -125,7 +132,14 @@ it('navigates when switching to the free plan', async () => {
 describe('a granted (non-public) plan', () => {
   // The API returns a non-public plan only to the account that holds it, so its
   // presence on this page means it is the caller's own plan.
-  const staffPlan = { _id: 'p4', code: 'staff', name: 'Staff', priceMonthlyCents: 0, isPublic: false, features: ['Everything, without limits'] };
+  const staffPlan = {
+    _id: 'p4',
+    code: 'staff',
+    name: 'Staff',
+    priceMonthlyCents: 0,
+    isPublic: false,
+    features: ['Everything, without limits']
+  };
 
   it('is shown to the member it belongs to, marked as granted and complimentary', async () => {
     mockedListPlans.mockResolvedValue([...plans, staffPlan]);
@@ -145,7 +159,7 @@ describe('a granted (non-public) plan', () => {
 
     const covered = await screen.findAllByRole('button', { name: /covered by staff/i });
     expect(covered).toHaveLength(plans.length);
-    covered.forEach(button => expect(button).toBeDisabled());
+    covered.forEach((button) => expect(button).toBeDisabled());
     expect(screen.queryByRole('button', { name: 'Change Plan' })).not.toBeInTheDocument();
   });
 

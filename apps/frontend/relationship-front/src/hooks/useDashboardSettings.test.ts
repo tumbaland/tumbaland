@@ -1,5 +1,5 @@
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../services/dashboardSettings', () => ({
   getDashboardSettings: vi.fn(),
@@ -77,7 +77,11 @@ it('re-throws and logs when save fails', async () => {
 
 it('does not apply a stale response after the hook unmounts', async () => {
   let resolveSettings: (v: unknown) => void;
-  mockedGetSettings.mockReturnValue(new Promise((resolve) => { resolveSettings = resolve; }));
+  mockedGetSettings.mockReturnValue(
+    new Promise((resolve) => {
+      resolveSettings = resolve;
+    })
+  );
   mockedGetActivityTypes.mockResolvedValue({ data: [], pagination: {} as never });
 
   const { unmount } = renderHook(() => useDashboardSettings());

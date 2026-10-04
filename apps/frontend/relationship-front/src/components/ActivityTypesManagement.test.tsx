@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../services/activityTypes', () => ({
   getActivityTypes: vi.fn(),
@@ -28,8 +28,31 @@ const mockedDelete = deleteActivityType as unknown as ReturnType<typeof vi.fn>;
 const mockedGetUserGroups = getUserGroups as unknown as ReturnType<typeof vi.fn>;
 
 const types = [
-  { _id: 't1', id: 't1', name: 'Reading', slug: 'reading', color: '#111111', valueType: 'string', isActive: true, sortOrder: 0, createdAt: '', updatedAt: '', userId: 'u1' },
-  { _id: 't2', id: 't2', name: 'Running', slug: 'running', valueType: 'number', isActive: true, sortOrder: 1, createdAt: '', updatedAt: '', userId: 'u1' }
+  {
+    _id: 't1',
+    id: 't1',
+    name: 'Reading',
+    slug: 'reading',
+    color: '#111111',
+    valueType: 'string',
+    isActive: true,
+    sortOrder: 0,
+    createdAt: '',
+    updatedAt: '',
+    userId: 'u1'
+  },
+  {
+    _id: 't2',
+    id: 't2',
+    name: 'Running',
+    slug: 'running',
+    valueType: 'number',
+    isActive: true,
+    sortOrder: 1,
+    createdAt: '',
+    updatedAt: '',
+    userId: 'u1'
+  }
 ];
 
 beforeEach(() => {
@@ -146,19 +169,16 @@ describe('on mobile', () => {
   // relied on horizontal scroll — below the sm breakpoint it switches to a
   // stacked card per activity type instead.
   beforeEach(() => {
-    vi.stubGlobal(
-      'matchMedia',
-      (query: string) => ({
-        matches: true,
-        media: query,
-        onchange: null,
-        addListener: () => {},
-        removeListener: () => {},
-        addEventListener: () => {},
-        removeEventListener: () => {},
-        dispatchEvent: () => false
-      })
-    );
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false
+    }));
   });
 
   afterEach(() => {

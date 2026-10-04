@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
@@ -53,7 +53,12 @@ it('renders the grid and computed summary stats', async () => {
 
 it('excludes hidden activity types from the effective counts', async () => {
   mockedGetHeatmap.mockResolvedValue([
-    { date: '2024-01-01', totalActivities: 3, totalHours: 3, activities: { reading: { count: 2, hours: 2 }, gaming: { count: 1, hours: 1 } } }
+    {
+      date: '2024-01-01',
+      totalActivities: 3,
+      totalHours: 3,
+      activities: { reading: { count: 2, hours: 2 }, gaming: { count: 1, hours: 1 } }
+    }
   ]);
 
   render(<WeeklyHeatmap year={2024} hiddenSlugs={new Set(['gaming'])} />);
@@ -69,9 +74,7 @@ it('renders with no data', async () => {
 });
 
 it('changes the selected year, refetching data', async () => {
-  mockedGetHeatmap.mockResolvedValue([
-    { date: '2024-01-01', totalActivities: 1, totalHours: 1, activities: {} }
-  ]);
+  mockedGetHeatmap.mockResolvedValue([{ date: '2024-01-01', totalActivities: 1, totalHours: 1, activities: {} }]);
   render(<WeeklyHeatmap year={2024} />);
   await waitFor(() => expect(screen.getByRole('combobox')).toHaveTextContent('2024'));
 

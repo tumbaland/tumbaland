@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../services/holdingService', () => ({
   getHoldings: vi.fn(),
@@ -14,9 +14,12 @@ import { useHoldings, useCreateHolding, useUpdateHolding, useDeleteHolding } fro
 
 function wrapper() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return { Wrapper: ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  ), queryClient };
+  return {
+    Wrapper: ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    ),
+    queryClient
+  };
 }
 
 beforeEach(() => vi.clearAllMocks());

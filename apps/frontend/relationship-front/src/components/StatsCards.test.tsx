@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
@@ -42,7 +42,9 @@ it('renders base cards plus a card per highlighted type, with a formatted first-
       totalActivities: 10,
       firstEntryDate: '2024-01-15',
       daysSinceFirstEntry: 100,
-      types: [{ typeId: 't1', slug: 'reading', name: 'Reading', color: '#111', count: 5, totalHours: 10, uniqueDays: 4 }]
+      types: [
+        { typeId: 't1', slug: 'reading', name: 'Reading', color: '#111', count: 5, totalHours: 10, uniqueDays: 4 }
+      ]
     },
     loading: false,
     error: null

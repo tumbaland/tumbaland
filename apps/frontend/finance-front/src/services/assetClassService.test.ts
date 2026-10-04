@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { getAssetClasses, createAssetClass, updateAssetClass, deleteAssetClass } from './assetClassService';
 
 function mockFetchOnce(body: unknown, init: { ok?: boolean; status?: number } = {}) {

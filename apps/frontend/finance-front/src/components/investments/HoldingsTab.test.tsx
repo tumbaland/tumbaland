@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import type { ComponentProps } from 'react';
 import type TickerSearch from './TickerSearch';
 
@@ -16,7 +16,20 @@ vi.mock('../../hooks/useHoldings', () => ({
 
 vi.mock('./TickerSearch', () => ({
   default: ({ onSelect }: ComponentProps<typeof TickerSearch>) => (
-    <button onClick={() => onSelect({ symbol: 'MSFT', name: 'Microsoft', type: 'Equity', region: 'United States', currency: 'USD', matchScore: '1.0000' })}>pick MSFT</button>
+    <button
+      onClick={() =>
+        onSelect({
+          symbol: 'MSFT',
+          name: 'Microsoft',
+          type: 'Equity',
+          region: 'United States',
+          currency: 'USD',
+          matchScore: '1.0000'
+        })
+      }
+    >
+      pick MSFT
+    </button>
   )
 }));
 
@@ -156,7 +169,10 @@ it('edits an existing holding, pre-filling the form and omitting the ticker sear
 
   await userEvent.click(screen.getByRole('button', { name: 'Update' }));
 
-  expect(mockedUpdateMutateAsync).toHaveBeenCalledWith({ id: 'h1', data: { ticker: 'AAPL', quantity: 10, avgBuyPrice: 100 } });
+  expect(mockedUpdateMutateAsync).toHaveBeenCalledWith({
+    id: 'h1',
+    data: { ticker: 'AAPL', quantity: 10, avgBuyPrice: 100 }
+  });
   expect(notify).toHaveBeenCalledWith('Holding updated', 'success');
 });
 
@@ -277,7 +293,15 @@ it('warns about and excludes holdings with no exchange rate', () => {
   render(
     <HoldingsTab
       holdings={[
-        { _id: 'h1', ticker: 'AAPL', quantity: 1, avgBuyPrice: 10, currency: 'EUR', baseCurrency: 'EUR', costBasis: 10 },
+        {
+          _id: 'h1',
+          ticker: 'AAPL',
+          quantity: 1,
+          avgBuyPrice: 10,
+          currency: 'EUR',
+          baseCurrency: 'EUR',
+          costBasis: 10
+        },
         {
           _id: 'h4',
           ticker: 'TSE',

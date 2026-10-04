@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 vi.mock('../../services/trackedTickerService', () => ({
   searchTickers: vi.fn()
@@ -22,7 +22,9 @@ it('does not search for a query shorter than 2 characters', async () => {
 });
 
 it('searches on button click and renders results', async () => {
-  mockedSearch.mockResolvedValue([{ symbol: 'AAPL', name: 'Apple Inc', type: 'Equity', region: 'US', currency: 'USD', matchScore: '1.0' }]);
+  mockedSearch.mockResolvedValue([
+    { symbol: 'AAPL', name: 'Apple Inc', type: 'Equity', region: 'US', currency: 'USD', matchScore: '1.0' }
+  ]);
   render(<TickerSearch onSelect={vi.fn()} />);
 
   await userEvent.type(screen.getByPlaceholderText(/search symbol or name/i), 'apple');
@@ -52,7 +54,14 @@ it('shows an error message when the search fails', async () => {
 });
 
 it('calls onSelect and clears the query/results when a result is chosen', async () => {
-  const result = { symbol: 'AAPL', name: 'Apple Inc', type: 'Equity', region: 'US', currency: 'USD', matchScore: '1.0' };
+  const result = {
+    symbol: 'AAPL',
+    name: 'Apple Inc',
+    type: 'Equity',
+    region: 'US',
+    currency: 'USD',
+    matchScore: '1.0'
+  };
   mockedSearch.mockResolvedValue([result]);
   const onSelect = vi.fn();
   render(<TickerSearch onSelect={onSelect} />);

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vite-plus/test';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
@@ -26,7 +26,9 @@ function Harness({
   const choose = async (choice: PhotoAlbumChoice) => {
     const album = 'albumId' in choice ? albums.find((a) => a.id === choice.albumId) : undefined;
     setPhotoAlbum(
-      choice.mode === 'off' ? { mode: 'off', albumId: null, albumName: null } : { mode: 'album', albumId: album!.id, albumName: album!.name }
+      choice.mode === 'off'
+        ? { mode: 'off', albumId: null, albumName: null }
+        : { mode: 'album', albumId: album!.id, albumName: album!.name }
     );
   };
   return (
@@ -66,7 +68,10 @@ describe('AlbumCollageDialog', () => {
   });
 
   it('keeps the same key when trying again after a failure', async () => {
-    const onStart = vi.fn().mockRejectedValueOnce(new Error('HTTP error! status: 502')).mockResolvedValueOnce(undefined);
+    const onStart = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('HTTP error! status: 502'))
+      .mockResolvedValueOnce(undefined);
     renderDialog(rome, onStart);
 
     await userEvent.click(screen.getByRole('button', { name: 'Invite to make a collage' }));
@@ -78,7 +83,9 @@ describe('AlbumCollageDialog', () => {
   });
 
   it('shows the server’s own words for a request it turned down', async () => {
-    const refusal = Object.assign(new Error('This chat’s album no longer exists. Choose another one first.'), { status: 400 });
+    const refusal = Object.assign(new Error('This chat’s album no longer exists. Choose another one first.'), {
+      status: 400
+    });
     renderDialog(rome, vi.fn().mockRejectedValue(refusal));
 
     await userEvent.click(screen.getByRole('button', { name: 'Invite to make a collage' }));

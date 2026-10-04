@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, vi } from 'vitest';
+import { describe, vi } from 'vite-plus/test';
 
 const mockedNavigate = vi.fn();
 vi.mock('react-router', async (importOriginal) => {
@@ -458,7 +458,9 @@ describe('opening a photo from a link', () => {
   const photos = [makePhoto({ _id: 'p1', title: 'Harbour' }), makePhoto({ _id: 'p2', title: 'Pier' })];
 
   it('opens the photo named by ?view large, over its album', async () => {
-    mockedUsePhotos.mockReturnValue(basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 2, pages: 1 } }));
+    mockedUsePhotos.mockReturnValue(
+      basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 2, pages: 1 } })
+    );
 
     renderPage('/albums/album-1?view=p2');
 
@@ -467,7 +469,9 @@ describe('opening a photo from a link', () => {
   });
 
   it('opens nothing for a photo that is not in the album, and leaves the album usable', async () => {
-    mockedUsePhotos.mockReturnValue(basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 2, pages: 1 } }));
+    mockedUsePhotos.mockReturnValue(
+      basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 2, pages: 1 } })
+    );
 
     renderPage('/albums/album-1?view=gone');
 

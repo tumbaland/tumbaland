@@ -34,7 +34,7 @@ jobs:
   # lint rules), so it runs standalone and stays cheap regardless of how
   # many workspaces a change touches - this is what used to fan out into
   # a full lint-typecheck matrix run for every workspace whenever
-  # eslint.config.mjs changed.
+  # the lint config changed.
   lint:
     runs-on: ubuntu-latest
     steps:

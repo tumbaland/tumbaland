@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import App from './App';
 import { ConfigProvider } from './config/ConfigProvider';
 import { authService } from './services/authService';
@@ -13,7 +13,12 @@ function mockFetch({ authenticated }: { authenticated: boolean }) {
   vi.mocked(global.fetch).mockImplementation(async (input) => {
     const href = typeof input === 'string' ? input : input.toString();
     if (href.includes('/api/todo/random')) {
-      return { ok: true, status: 200, json: async () => ({ todo: 'Write more tests' }), text: async () => '' } as Response;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ todo: 'Write more tests' }),
+        text: async () => ''
+      } as Response;
     }
     if (href.includes('/auth/verify')) {
       return {

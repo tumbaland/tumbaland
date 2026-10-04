@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import GroupMembersList, { formatDateTime, formatDay, nameFromEmail } from './GroupMembersList';
 import { Group } from '../../types';
 
@@ -82,9 +82,7 @@ it('shows Add member for an owner/admin and hides it for a plain member', () => 
   const { rerender } = renderList({ currentUserRole: 'owner' });
   expect(screen.getByRole('button', { name: /add member/i })).toBeInTheDocument();
 
-  rerender(
-    <GroupMembersList group={group} currentUserRole="member" onAddMember={vi.fn()} onMenuOpen={vi.fn()} />
-  );
+  rerender(<GroupMembersList group={group} currentUserRole="member" onAddMember={vi.fn()} onMenuOpen={vi.fn()} />);
   expect(screen.queryByRole('button', { name: /add member/i })).not.toBeInTheDocument();
 });
 

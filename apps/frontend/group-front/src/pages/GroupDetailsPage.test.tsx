@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 const mockedNavigate = vi.fn();
 vi.mock('react-router', async (importOriginal) => {
@@ -124,7 +124,7 @@ it('removes a member via the member menu', async () => {
   expect(mockedRemoveMember).toHaveBeenCalledWith('g1', 'other@example.com');
 });
 
-it('changes a member\'s role via the member menu', async () => {
+it("changes a member's role via the member menu", async () => {
   mockedUpdateMemberRole.mockResolvedValue(group);
   render(<GroupDetailsPage />);
   await screen.findByText('Family');

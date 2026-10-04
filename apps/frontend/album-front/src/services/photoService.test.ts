@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import { photoService } from './photoService';
 import { makePhoto } from '../test/fixtures';
 

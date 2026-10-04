@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 import type { ComponentProps } from 'react';
 import type AssetClassModal from '../AssetClassModal';
 
@@ -41,12 +41,7 @@ it('shows an empty state when there are no asset classes', () => {
 
 it('lists asset classes and disables delete for classes in use', () => {
   render(
-    <AssetClassManagerDialog
-      open
-      onClose={vi.fn()}
-      assetClasses={assetClasses}
-      isClassInUse={(id) => id === 'a1'}
-    />
+    <AssetClassManagerDialog open onClose={vi.fn()} assetClasses={assetClasses} isClassInUse={(id) => id === 'a1'} />
   );
 
   expect(screen.getByText('Stocks')).toBeInTheDocument();

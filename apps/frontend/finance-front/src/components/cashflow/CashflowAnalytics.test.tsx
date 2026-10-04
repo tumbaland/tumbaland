@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { vi } from 'vite-plus/test';
 
 // The charts render an SVG that jsdom cannot measure; these stubs keep the
 // assertions on the numbers and labels rather than on chart internals.
@@ -60,22 +60,49 @@ import CashflowAnalytics from './CashflowAnalytics';
 import { Analytics } from '../../services/cashflowService';
 
 const year = (y: number, income: number, expense: number, over: Record<string, unknown> = {}) => ({
-  year: y, income, expense, consumption: expense, invested: 0, divested: 0,
+  year: y,
+  income,
+  expense,
+  consumption: expense,
+  invested: 0,
+  divested: 0,
   savings: income - expense,
   savingsRate: income > 0 ? ((income - expense) / income) * 100 : null,
-  months: 12, from: `${y}-01`, to: `${y}-12`, partial: false,
-  incomeChange: null, incomeChangePct: null, expenseChange: null, expenseChangePct: null,
+  months: 12,
+  from: `${y}-01`,
+  to: `${y}-12`,
+  partial: false,
+  incomeChange: null,
+  incomeChangePct: null,
+  expenseChange: null,
+  expenseChangePct: null,
   ...over
 });
 
 const trailing = {
   current: {
-    income: 50000, expense: 15000, consumption: 15000, invested: 0, divested: 0,
-    savings: 35000, savingsRate: 70, months: 12, from: '2025-01', to: '2025-12'
+    income: 50000,
+    expense: 15000,
+    consumption: 15000,
+    invested: 0,
+    divested: 0,
+    savings: 35000,
+    savingsRate: 70,
+    months: 12,
+    from: '2025-01',
+    to: '2025-12'
   },
   previous: {
-    income: 40000, expense: 20000, consumption: 20000, invested: 0, divested: 0,
-    savings: 20000, savingsRate: 50, months: 12, from: '2024-01', to: '2024-12'
+    income: 40000,
+    expense: 20000,
+    consumption: 20000,
+    invested: 0,
+    divested: 0,
+    savings: 20000,
+    savingsRate: 50,
+    months: 12,
+    from: '2024-01',
+    to: '2024-12'
   }
 };
 
@@ -90,8 +117,26 @@ const analytics: Analytics = {
     { period: '2025-02', income: 4000, expense: 1400, consumption: 1400, invested: 0, savings: 2600 }
   ],
   categoryTrends: [
-    { category: 'Groceries', byYear: { 2024: 1000, 2025: 1500 }, total: 2500, latest: 1500, previous: 1000, change: 500, changePct: 50, perMonth: 125 },
-    { category: 'Travel', byYear: { 2024: 800, 2025: 200 }, total: 1000, latest: 200, previous: 800, change: -600, changePct: -75, perMonth: 17 }
+    {
+      category: 'Groceries',
+      byYear: { 2024: 1000, 2025: 1500 },
+      total: 2500,
+      latest: 1500,
+      previous: 1000,
+      change: 500,
+      changePct: 50,
+      perMonth: 125
+    },
+    {
+      category: 'Travel',
+      byYear: { 2024: 800, 2025: 200 },
+      total: 1000,
+      latest: 200,
+      previous: 800,
+      change: -600,
+      changePct: -75,
+      perMonth: 17
+    }
   ],
   incomeSources: [],
   investmentCategories: ['Investments', 'Savings'],
@@ -99,9 +144,7 @@ const analytics: Analytics = {
 };
 
 it('renders nothing when there is no series', () => {
-  const { container } = render(
-    <CashflowAnalytics analytics={{ ...analytics, years: [], months: [] }} />
-  );
+  const { container } = render(<CashflowAnalytics analytics={{ ...analytics, years: [], months: [] }} />);
   expect(container).toBeEmptyDOMElement();
 });
 
@@ -165,17 +208,13 @@ it('compares the newest period against typical, not against the one before', () 
   // Against the previous month, a part-imported month reads as a collapse
   render(<CashflowAnalytics analytics={analytics} />);
 
-  expect(
-    screen.getByText(/Last full month, Feb 2025: 1400 € — 100 € above typical/)
-  ).toBeInTheDocument();
+  expect(screen.getByText(/Last full month, Feb 2025: 1400 € — 100 € above typical/)).toBeInTheDocument();
 });
 
 it('draws the shape of the window under the number', () => {
   render(<CashflowAnalytics analytics={analytics} />);
 
-  expect(
-    screen.getByLabelText('Spending over the last 2 months, ending at 1400 €')
-  ).toBeInTheDocument();
+  expect(screen.getByLabelText('Spending over the last 2 months, ending at 1400 €')).toBeInTheDocument();
 });
 
 it('marks a part year in the year table as not comparable', () => {
@@ -389,4 +428,3 @@ describe('the month in progress', () => {
     expect(screen.getByTestId('line-chart')).toHaveTextContent('Spending:1400,1600,121');
   });
 });
-
