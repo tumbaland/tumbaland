@@ -1,4 +1,20 @@
 # Tumbalog
+## [0.0.522](https://github.com/tumbaland/tumbaland/compare/app-v0.0.521...app-v0.0.522) (2026-10-04)
+
+### Features
+
+* remove exact npm version ([c40be75](https://github.com/tumbaland/tumbaland/commit/c40be756ea2a6d6375ca1d868895b7dff5573ba9))
+* upgrade to vite plus ([850aafa](https://github.com/tumbaland/tumbaland/commit/850aafa9dd343a1634feb69e00bd73263578d752))
+
+### Bug Fixes
+
+* failing test ([4207d68](https://github.com/tumbaland/tumbaland/commit/4207d680e9ff1fc92ff177e5362bb9c0f4301583))
+
+### Chores
+
+* **release:** @tumbaland/backend-core 1.48.0 ([644b4de](https://github.com/tumbaland/tumbaland/commit/644b4de2f8d11bad1b37352e474fb7edb646088c))
+* **release:** @tumbaland/frontend-core 1.21.0 ([b565271](https://github.com/tumbaland/tumbaland/commit/b5652713d553d79230f81d1220db8aa29338f929))
+
 ## [0.0.521](https://github.com/tumbaland/tumbaland/compare/app-v0.0.520...app-v0.0.521) (2026-10-03)
 
 ### Features
