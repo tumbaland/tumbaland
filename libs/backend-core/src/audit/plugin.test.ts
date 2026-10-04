@@ -22,6 +22,7 @@ import { withAuditContext } from './context';
 import type { Actor } from './actor';
 
 let mongo: MongoMemoryServer;
+let auditCreate: jest.SpiedFunction<typeof AuditEvent.create>;
 
 interface INote {
   title: string;
@@ -61,8 +62,12 @@ const asPerson = <T>(fn: () => Promise<T>): Promise<T> =>
     async () => await fn()
   );
 
-/** Recording is fire-and-forget, so a test has to let the write land. */
-const settle = () => new Promise((resolve) => setTimeout(resolve, 60));
+/** Await the real background writes, including intentional recording failures. */
+const settle = async () => {
+  await Promise.allSettled(
+    auditCreate.mock.results.filter((result) => result.type === 'return').map((result) => result.value)
+  );
+};
 
 const events = () => AuditEvent.find().sort({ _id: 1 }).lean();
 
@@ -78,6 +83,14 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await Promise.all([Note.deleteMany({}), AuditEvent.deleteMany({})]);
+  auditCreate = jest.spyOn(AuditEvent, 'create');
+});
+
+afterEach(async () => {
+  // Drain writes before the next test clears the collection, so an event from
+  // this request cannot land in the next test's otherwise empty audit trail.
+  await settle();
+  auditCreate.mockRestore();
 });
 
 describe('attribution on the record', () => {
@@ -105,6 +118,7 @@ describe('attribution on the record', () => {
     await settle();
 
     expect(note.createdBy).toBeUndefined();
+    expect(auditCreate).not.toHaveBeenCalled();
     expect(await events()).toHaveLength(0);
   });
 });
@@ -245,7 +259,7 @@ describe('the trail', () => {
 
 describe('recording never breaks the thing it records', () => {
   it('still saves the document when the trail cannot be written', async () => {
-    const create = jest.spyOn(AuditEvent, 'create').mockRejectedValue(new Error('audit db down'));
+    auditCreate.mockRejectedValue(new Error('audit db down'));
 
     const note = await asClaude(() => new Note({ title: 'Dinner' }).save());
     await settle();
@@ -253,6 +267,5 @@ describe('recording never breaks the thing it records', () => {
     // Losing a row of history is a cost worth paying; losing the entry someone
     // was logging is not.
     expect(await Note.findById(note._id)).not.toBeNull();
-    create.mockRestore();
   });
 });
