@@ -40,8 +40,12 @@ not meant to ship yet.
 
 ### Holding a change back
 
-- **Draft PR.** GitHub will not merge a draft by any route, and marking it ready
-  runs CI again, and the merge with it. This is the pause for one change.
+- **Draft PR.** GitHub will not merge a draft by any route. This is the pause for
+  one change. CI runs on a draft's pushes, so it is tested while it waits, and
+  marking it ready does not run the suites again: it reuses that run for the
+  same commit and goes straight to the merge. (A PR opened ready, or one whose
+  last run failed, still runs them.) Do not toggle draft and ready to "retest":
+  every push is a full run, and the toggle itself starts a job.
 - **Infrastructure and breaking changes are not merged by the job**: a PR touching
   `apps/infra`, or with `type!:` in the title or a `BREAKING CHANGE` footer. They
   are left for the owner, because they may need something done on the Pi first.
