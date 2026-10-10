@@ -9,12 +9,14 @@ name: CI
 # that a PR is one row per event in the Actions list and not one per workflow:
 # the title check and auto-merge used to be files of their own.
 #
-# `edited` is in the list so that fixing a title re-runs the title check. It
-# also re-runs the rest, which is the price of one row: a run that skipped the
-# suites on a title edit would report `ci-passed` green over a failing commit.
+# Editing a title or a description is deliberately not an event here. It would
+# start a whole run for a typo, and the suites cannot be skipped on it: a run
+# that skipped them would report `ci-passed` green over a failing commit. A
+# title fixed after the check failed is picked up by re-running that job, which
+# reads the title as it is now (see pr-title).
 on:
   pull_request:
-    types: [opened, reopened, synchronize, edited, ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review]
   workflow_dispatch:
 
 concurrency:
@@ -311,15 +313,22 @@ jobs:
   pr-title:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
     steps:
       - name: Title is a conventional commit
         env:
-          # Through the environment, never interpolated into the script: a
-          # title is text anyone with a branch can write.
-          TITLE: ${{ github.event.pull_request.title }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          # Read now, not from the event: a re-run replays the event as it was
+          # when the run started, which would keep failing on a title that has
+          # since been fixed. Held in a variable, never interpolated into the
+          # script: a title is text anyone with a branch can write.
+          TITLE=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq .title)
           if ! printf '%s' "$TITLE" | grep -qE '^(feat|fix|docs|style|refactor|test|chore|perf)(\([^)]+\))?!?: .+'; then
-            echo "::error::PR title must be a conventional commit, e.g. 'fix(finance-service): correct snapshot rounding'. Types: feat, fix, docs, style, refactor, test, chore, perf. Fix the title; this re-runs."
+            echo "::error::PR title must be a conventional commit, e.g. 'fix(finance-service): correct snapshot rounding'. Types: feat, fix, docs, style, refactor, test, chore, perf. Fix the title, then re-run this job."
             exit 1
           fi
 
