@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
 
+/** The release this build was cut from. Set by `define` in vite.config.mts. */
+declare const __APP_VERSION__: string;
+
 interface ImportMetaEnv {
   readonly VITE_GOOGLE_CLIENT_ID: string
   readonly VITE_ALBUM_API_URL: string

@@ -1,11 +1,22 @@
 name: CI
 
-# Pull requests only. A merge to main used to run this whole matrix a second
-# time over code that had just passed it, and next to a changelog job that cut
-# a version for every merge. Releasing is a decision now (see release.yml),
-# and it verifies what it is about to publish itself.
+# Pull requests only, and the only place the suites run. main takes nothing but
+# merges of a pull request whose `ci-passed` check is green (the ruleset in
+# .github/rulesets/main.json), so release.yml builds and deploys what lands
+# there without testing it a second time.
+#
+# Everything that happens to a pull request is a job in this one workflow, so
+# that a PR is one row per event in the Actions list and not one per workflow:
+# the title check and auto-merge used to be files of their own.
+#
+# Editing a title or a description is deliberately not an event here. It would
+# start a whole run for a typo, and the suites cannot be skipped on it: a run
+# that skipped them would report `ci-passed` green over a failing commit. A
+# title fixed after the check failed is picked up by re-running that job, which
+# reads the title as it is now (see pr-title).
 on:
   pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
   workflow_dispatch:
 
 concurrency:
@@ -191,8 +202,8 @@ jobs:
         run: npm run build -w @tumbaland/backend-core -w @tumbaland/frontend-core
 
       # Split into a backend and a frontend artifact so each verify job pulls
-      # only the libs its workspace actually consumes, instead of every job
-      # downloading all three lib dists regardless of what it builds.
+      # only the lib its workspace actually consumes, instead of every job
+      # downloading both lib dists regardless of what it builds.
       - name: Upload built backend lib
         uses: actions/upload-artifact@v4
         with:
@@ -200,12 +211,11 @@ jobs:
           path: libs/backend-core/dist
           retention-days: 1
 
-      - name: Upload built frontend libs
+      - name: Upload built frontend lib
         uses: actions/upload-artifact@v4
         with:
           name: libs-dist-frontend
-          path: |
-            libs/frontend-core/dist
+          path: libs/frontend-core/dist
           retention-days: 1
 
   # Typecheck + test + build for each touched workspace, combined into one
@@ -233,8 +243,8 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       # Backend services and backend-core consume only backend-core/dist;
-      # frontend apps and the frontend libs consume only components/dist and
-      # frontend-core/dist. Each job downloads just its side.
+      # frontend apps and frontend-core consume only frontend-core/dist. Each
+      # job downloads just its side.
       - name: Download backend lib
         if: startsWith(matrix.workspace, 'apps/backend/') || matrix.workspace == 'libs/backend-core'
         uses: actions/download-artifact@v4
@@ -242,12 +252,16 @@ jobs:
           name: libs-dist-backend
           path: libs/backend-core/dist
 
-      - name: Download frontend libs
+      # The artifact holds the contents of one directory, so it has to go back
+      # into that directory. It was `path: libs` while the upload held two
+      # libs, which kept their `libs/<name>/dist` prefix; with one left the
+      # prefix is gone and every frontend typecheck failed on a missing module.
+      - name: Download frontend lib
         if: startsWith(matrix.workspace, 'apps/frontend/') || matrix.workspace == 'libs/frontend-core'
         uses: actions/download-artifact@v4
         with:
           name: libs-dist-frontend
-          path: libs
+          path: libs/frontend-core/dist
 
       - name: Typecheck
         run: npm run typecheck --workspace=${{ matrix.workspace }}
@@ -291,3 +305,114 @@ jobs:
 
       - name: Run frontend smoke e2e tests
         run: npm run test:e2e
+
+  # The title of a pull request is the commit that lands on main: it is squash
+  # merged, and the subject is what the version bump and CHANGELOG.md are built
+  # from. A title that is not a conventional commit makes a changelog line
+  # nobody can read, so it is checked before the merge instead of fixed after.
+  pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Title is a conventional commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Read now, not from the event: a re-run replays the event as it was
+          # when the run started, which would keep failing on a title that has
+          # since been fixed. Held in a variable, never interpolated into the
+          # script: a title is text anyone with a branch can write.
+          TITLE=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq .title)
+          if ! printf '%s' "$TITLE" | grep -qE '^(feat|fix|docs|style|refactor|test|chore|perf)(\([^)]+\))?!?: .+'; then
+            echo "::error::PR title must be a conventional commit, e.g. 'fix(finance-service): correct snapshot rounding'. Types: feat, fix, docs, style, refactor, test, chore, perf. Fix the title, then re-run this job."
+            exit 1
+          fi
+
+  # Turns on auto-merge for a pull request as soon as it is opened, so it merges
+  # by itself the moment `ci-passed` is green. Merging is what starts a release
+  # (release.yml), so this is the whole path from "opened a PR" to "deployed"
+  # with nothing in between to click.
+  #
+  # Needs a token that is not the workflow's own. A merge made with
+  # GITHUB_TOKEN starts no other workflows, which would merge the PR and then
+  # never release it. A fine-grained personal access token (or a GitHub App
+  # token) in the secret AUTO_MERGE_TOKEN, with Pull requests and Contents set
+  # to read and write on this repository. Without it this does nothing and says
+  # so: turn auto-merge on from the pull request by hand instead.
+  #
+  # What it leaves for a person to merge, on purpose:
+  #
+  #   - a draft (marking it ready turns this on),
+  #   - anything that touches apps/infra, which a release never deploys, so the
+  #     order of "infrastructure first, then the apps" is yours to decide,
+  #   - a breaking change (`feat!:` or a BREAKING CHANGE footer), for the same
+  #     reason: it may need something done on the Pi before or after.
+  #
+  # To pause one that is already open, convert it to a draft: GitHub will not
+  # merge a draft by any route, and marking it ready turns this on again.
+  auto-merge:
+    # People who can already push here. Anyone else, and a fork, gets nothing
+    # (a fork has no secrets to use anyway). Only when the PR is opened or
+    # becomes ready: a push or a title edit has nothing new to enable.
+    if: >-
+      github.event_name == 'pull_request' &&
+      contains(fromJSON('["opened","reopened","ready_for_review"]'), github.event.action) &&
+      !github.event.pull_request.draft &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Enable auto-merge, squash
+        env:
+          GH_TOKEN: ${{ secrets.AUTO_MERGE_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::notice::AUTO_MERGE_TOKEN is not set, so auto-merge was not turned on. Do it from the pull request, or add the secret."
+            exit 0
+          fi
+
+          if printf '%s' "$PR_TITLE" | grep -qE '^[a-z]+(\([^)]*\))?!:' || printf '%s' "$PR_BODY" | grep -qE '^BREAKING[ -]CHANGE:'; then
+            echo "::notice::Breaking change: left for a person to merge."
+            exit 0
+          fi
+
+          INFRA=$(gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[].filename' | grep -c '^apps/infra/' || true)
+          if [ "$INFRA" -gt 0 ]; then
+            echo "::notice::Touches apps/infra ($INFRA file(s)): left for a person to merge, after the infrastructure is deployed."
+            exit 0
+          fi
+
+          # The subject is given rather than left to the repository's default
+          # for a squash: it is what the version and changelog are built from.
+          gh pr merge --auto --squash --subject "$PR_TITLE (#$PR_NUMBER)" "$PR_URL"
+
+  # The one check the ruleset requires, so that adding a job or a workspace
+  # never means editing the ruleset. The title check is part of it.
+  #
+  # `always()` is the point: a job whose needs failed is skipped, and a skipped
+  # required check counts as passed. Run regardless, and fail on anything that
+  # failed or was cancelled. A needed job that was skipped on purpose (no
+  # workspace changed, so no matrix) is fine.
+  ci-passed:
+    if: always()
+    needs: [validate-matrix, lib-versions, lint, changes, build-libs, verify, e2e, pr-title]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every job passed or was skipped on purpose
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          if echo "$RESULTS" | jq -e 'any(. == "failure" or . == "cancelled")' >/dev/null; then
+            echo "::error::A CI job failed or was cancelled."
+            exit 1
+          fi

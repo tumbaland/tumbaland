@@ -1,25 +1,32 @@
-# One run for a whole release:
+# One run for a whole release, started by a merge to main:
 #
 #   1. work out which libraries and which services actually changed
-#   2. verify what changed — lint, typecheck, and its tests
-#   3. publish each library with publishable changes, and skip the rest
-#   4. cut the version: bump, changelog, tag
-#   5. build and push an ARM image for each service changed since the last
+#   2. publish each library with publishable changes, and skip the rest
+#   3. cut the version: bump, changelog, tag
+#   4. build and push an ARM image for each service changed since the last
 #      successfully deployed release
-#   6. deploy those services to the Pi, one at a time
-#   7. mark the release as deployed
+#   5. deploy those services to the Pi, one at a time
+#   6. mark the release as deployed
 #
-# Nothing here runs on a push. Merging to main used to cut a version and a tag
-# by itself, which made the version a count of merges; releasing is a decision,
-# so it is a dispatch.
+# Nothing here tests anything. main is only reachable through a pull request
+# that passed ci.yml (see .github/rulesets/main.json), so this runs on code
+# that was already verified, and running the suites a second time would only
+# make a deploy slower. The one exception is publish-libs.yml, which still
+# checks its own library: an npm publish cannot be taken back.
+#
+# Merging is the decision to release. A merge that changes nothing a service
+# or library ships (tests, e2e suites and Markdown, per scripts/release-plan.mjs)
+# plans an empty release and stops after the first job.
+#
+# The version is therefore a count of releases, not a statement about the
+# software. What people are told about a change lives in the release notes,
+# which are dated rather than versioned for that reason.
 #
 # Each stage is still its own workflow where it was one already, and can be run
 # by hand. Calling them as reusable workflows chains them — a tag pushed from a
 # workflow starts no other workflow, which is why they never followed each
-# other on their own.
-#
-# What counts as a change is decided by scripts/release-plan.mjs: tests, e2e
-# suites and Markdown do not.
+# other on their own. That is also why the release commits below do not start
+# this workflow again.
 #
 # Unlike Visin there is no carry-forward of unchanged images: every compose
 # file pins `:latest`, so an image nobody rebuilt is already the one the server
@@ -27,9 +34,13 @@
 
 name: Release
 
-run-name: Release ${{ inputs.release-as || '(version from commits)' }}
+run-name: Release ${{ inputs.release-as || github.event.head_commit.message || '(version from commits)' }}
 
 on:
+  # Reached only by merging a pull request: the ruleset forbids a direct push.
+  push:
+    branches: [main]
+  # A deploy that failed, or a version someone chose. Same run, same stages.
   workflow_dispatch:
     inputs:
       release-as:
@@ -54,19 +65,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Everything up to the first publish reads one commit: the one this run was
-  # dispatched from. `plan` used to take the branch tip instead, so a push
-  # landing mid-run could leave the plan describing code the verify matrix never
-  # tested. From `changelog` onwards the jobs do take the branch tip, because by
-  # then the library publishes have committed to it.
+  # `plan` reads the commit this run was started from. From `changelog`
+  # onwards the jobs take the branch tip, because by then the library publishes
+  # have committed to it.
   plan:
+    # The release commits this workflow pushes are pushed with the workflow's
+    # own token, which starts nothing. A token that does would loop here without
+    # this, so it is checked rather than assumed.
+    if: ${{ !startsWith(github.event.head_commit.message, 'chore(release)') }}
     runs-on: ubuntu-latest
     outputs:
       libraries: ${{ steps.plan.outputs.libraries }}
       services: ${{ steps.plan.outputs.services }}
-      workspaces: ${{ steps.plan.outputs.workspaces }}
       release: ${{ steps.plan.outputs.release }}
     steps:
+      # A dispatch can name any branch. Nothing here tests, so a release from
+      # a branch would publish and deploy code no pull request ever verified.
+      # Failed rather than skipped, so the run says why nothing happened.
+      - name: Releases are cut from main only
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Release runs from main only (this run is on ${{ github.ref_name }}). Merge the pull request first."
+          exit 1
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -101,20 +122,8 @@ jobs:
             RELEASE=true
           fi
 
-          # One list of workspace paths for the verify matrix, in the same
-          # shape ci.yml's matrix uses, so both read the same in the UI.
-          WORKSPACES=$(
-            {
-              echo "$LIBRARIES" | jq -r '.[] | "libs/" + .'
-              for svc in $(echo "$SERVICES" | jq -r '.[]'); do
-                if [ -d "apps/backend/$svc" ]; then echo "apps/backend/$svc"; else echo "apps/frontend/$svc"; fi
-              done
-            } | jq -R . | jq -cs .
-          )
-
           echo "libraries=$LIBRARIES"   >> "$GITHUB_OUTPUT"
           echo "services=$SERVICES"     >> "$GITHUB_OUTPUT"
-          echo "workspaces=$WORKSPACES" >> "$GITHUB_OUTPUT"
           echo "release=$RELEASE"       >> "$GITHUB_OUTPUT"
           {
             echo "### Release plan"
@@ -129,129 +138,8 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # Neither of these needs a built lib, so they start with the plan and run
-  # beside the build and the test matrix. Separate jobs, because "lint failed"
-  # and "a workspace is pinned to a stale lib" are different problems and a
-  # combined tick says neither.
-  lint:
-    needs: plan
-    if: needs.plan.outputs.release == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js 26
-        uses: actions/setup-node@v4
-        with:
-          node-version: '26'
-          cache: 'npm'
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
-      - name: Lint
-        run: npm run lint
-
-  # Deployed images install the libs from npm, so a consumer left on an older
-  # pinned version silently compiles against stale typings inside Docker's
-  # cached install layer.
-  lib-versions:
-    needs: plan
-    if: needs.plan.outputs.release == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js 26
-        uses: actions/setup-node@v4
-        with:
-          node-version: '26'
-      - name: Check workspaces pin the current lib versions
-        run: node scripts/sync-lib-versions.mjs --check
-
-  # One job per lib, both at once — they do not depend on each other.
-  #
-  # Both build every release regardless of what changed: a frontend app in the
-  # verify matrix needs frontend-core's dist to typecheck against even when the
-  # lib itself was untouched, and building it is cheaper than working out
-  # whether this particular matrix needs it.
-  build-libs:
-    needs: plan
-    if: needs.plan.outputs.release == 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        lib: [backend-core, frontend-core]
-    name: build-libs (${{ matrix.lib }})
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js 26
-        uses: actions/setup-node@v4
-        with:
-          node-version: '26'
-          cache: 'npm'
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
-      - name: Build
-        run: npm run build --workspace=@tumbaland/${{ matrix.lib }}
-      - name: Upload dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-lib-${{ matrix.lib }}
-          path: libs/${{ matrix.lib }}/dist
-          retention-days: 1
-
-  # One job per changed workspace, all at once.
-  #
-  # This was a single job looping over `npm test` per workspace, which meant one
-  # green or red tick for the whole release and a log to scroll through to find
-  # out which suite broke. A matrix gives each workspace its own row in the
-  # Actions UI, and `fail-fast: false` lets the rest finish so one failure does
-  # not hide the others.
-  #
-  # The full matrix still runs on every pull request; this repeats it only for
-  # what the plan says changed.
-  verify:
-    needs: [plan, build-libs]
-    if: needs.plan.outputs.release == 'true' && needs.plan.outputs.workspaces != '[]'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        workspace: ${{ fromJSON(needs.plan.outputs.workspaces) }}
-    name: verify (${{ matrix.workspace }})
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js 26
-        uses: actions/setup-node@v4
-        with:
-          node-version: '26'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
-
-      # Each workspace pulls only the lib it consumes, not both.
-      - name: Download backend lib
-        if: startsWith(matrix.workspace, 'apps/backend/') || matrix.workspace == 'libs/backend-core'
-        uses: actions/download-artifact@v4
-        with:
-          name: release-lib-backend-core
-          path: libs/backend-core/dist
-
-      - name: Download frontend lib
-        if: startsWith(matrix.workspace, 'apps/frontend/') || matrix.workspace == 'libs/frontend-core'
-        uses: actions/download-artifact@v4
-        with:
-          name: release-lib-frontend-core
-          path: libs/frontend-core/dist
-
-      - name: Typecheck
-        run: npm run typecheck --workspace=${{ matrix.workspace }}
-
-      - name: Test
-        run: npm run test --workspace=${{ matrix.workspace }} --if-present
-
   libraries:
-    needs: [plan, lint, lib-versions, verify]
+    needs: plan
     if: needs.plan.outputs.libraries != '[]'
     strategy:
       # Each publish commits re-pinned consumers to the branch; one at a time,
@@ -267,13 +155,11 @@ jobs:
     secrets: inherit
 
   changelog:
-    needs: [plan, lint, lib-versions, verify, libraries]
+    needs: [plan, libraries]
     # Runs after the libraries were published, or when there were none to
     # publish — never after a library publish failed.
     if: >-
       always() && needs.plan.outputs.release == 'true' &&
-      needs.lint.result == 'success' && needs['lib-versions'].result == 'success' &&
-      needs.verify.result == 'success' &&
       (needs.libraries.result == 'success' || needs.libraries.result == 'skipped')
     uses: ./.github/workflows/changelog.yml
     with:
@@ -290,10 +176,13 @@ jobs:
     outputs:
       services: ${{ steps.plan.outputs.services }}
     steps:
+      # From the tag this release cut, not the branch tip. A merge that lands
+      # while this run is in flight, or a re-run days later, would otherwise be
+      # built into an image tagged with a version it is not part of.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.ref_name }}
+          ref: app-v${{ needs.changelog.outputs.version }}
 
       - uses: actions/setup-node@v4
         with:
@@ -330,7 +219,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          ref: app-v${{ needs.changelog.outputs.version }}
 
       - name: Resolve paths
         id: vars
@@ -356,6 +245,9 @@ jobs:
           context: ./${{ steps.vars.outputs.dir }}
           file: ./${{ steps.vars.outputs.dir }}/Dockerfile
           push: true
+          # Only the shell shows a version, and a build-arg no Dockerfile
+          # declares is a warning in every other image's log.
+          build-args: ${{ matrix.service == 'shell-front' && format('APP_VERSION={0}', needs.changelog.outputs.version) || '' }}
           # `tumbaland-` prefix: the Docker Hub account is shared with visin,
           # which publishes its own group-service, auth-service, file-service,
           # auth-front and account-front.
@@ -386,7 +278,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.ref_name }}
+          ref: app-v${{ needs.changelog.outputs.version }}
 
       - name: Generate .env file
         run: bash .github/scripts/write-deploy-env.sh

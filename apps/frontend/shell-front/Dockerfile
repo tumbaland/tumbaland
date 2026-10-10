@@ -5,6 +5,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm i --no-audit --no-fund
 COPY . .
+# The release this image belongs to, shown under "What's new". The build
+# context is this directory, so the root package.json is out of reach.
+ARG APP_VERSION
+ENV APP_VERSION=$APP_VERSION
 RUN npm run build
 
 # ---- Production Stage ----

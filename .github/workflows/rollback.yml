@@ -1,0 +1,195 @@
+# Puts services back on the images they had at an earlier release, without
+# building anything and without cutting a version.
+#
+# For when fixing forward takes longer than the damage can wait: the images of
+# every earlier release are still on Docker Hub (the newest 10 per service),
+# so going back is a pull and a restart.
+#
+# It is the fast half of a rollback. The commit that broke things is still on
+# main, and the next change to that service would build it into a new image
+# and ship it again. Revert it with a pull request straight after.
+#
+# What it does not touch: the database, which keeps whatever the newer code
+# wrote; `app-deployed-v` tags, since a rollback is not a release; and the
+# env file and compose files on the Pi, which stay as the last deploy left
+# them. So it needs no secrets beyond Docker Hub, to look up tags.
+
+name: Rollback
+
+run-name: Rollback ${{ inputs.services }} to ${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'The release to go back to, as it appears in CHANGELOG.md (e.g. 0.0.521).'
+        required: true
+        type: string
+      services:
+        description: '"changed" (default): only what differs between that release and the newest one. Or a comma separated list (e.g. chat-service,chat-front), or "all".'
+        required: true
+        default: changed
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  # Works out what to run, and refuses anything it cannot be sure of before the
+  # Pi is touched. Runs on a hosted runner: nothing here needs the server.
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      plan: ${{ steps.resolve.outputs.plan }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+
+      - name: Resolve the image to run for each service
+        id: resolve
+        env:
+          VERSION: ${{ inputs.version }}
+          REQUESTED: ${{ inputs.services }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Version must look like 0.0.521, got '$VERSION'."
+            exit 1
+          fi
+          if ! git rev-parse -q --verify "refs/tags/app-v$VERSION" >/dev/null; then
+            echo "::error::There is no release app-v$VERSION."
+            exit 1
+          fi
+
+          # Every service that can be deployed: an app directory with a Dockerfile.
+          KNOWN=$(for f in apps/backend/*/Dockerfile apps/frontend/*/Dockerfile; do basename "$(dirname "$f")"; done)
+
+          if [ "$REQUESTED" = "changed" ]; then
+            # Everything that differs between that release and the newest one
+            # built, deployed or not: a release that failed part way has put
+            # some of its services on the server already. Services that did
+            # not change are left alone, so they are not even restarted.
+            NEWEST=$(git tag --list 'app-v[0-9]*' --sort=-v:refname | sed -n '1p')
+            SERVICES=$(node scripts/release-plan.mjs services "app-v$VERSION" "$NEWEST" | jq -r '.changed[]')
+            EXPLICIT=false
+            if [ -z "$SERVICES" ]; then
+              echo "::error::Nothing differs between $VERSION and $NEWEST, so there is nothing to roll back."
+              exit 1
+            fi
+          elif [ "$REQUESTED" = "all" ]; then
+            SERVICES=$KNOWN
+            EXPLICIT=false
+          else
+            SERVICES=$(printf '%s' "$REQUESTED" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d')
+            EXPLICIT=true
+            # Names go into shell later, so only known ones get that far.
+            for s in $SERVICES; do
+              if ! printf '%s\n' "$KNOWN" | grep -qx "$s"; then
+                echo "::error::'$s' is not a service. Known: $(echo $KNOWN)"
+                exit 1
+              fi
+            done
+          fi
+
+          TAGS=$(node scripts/resolve-image-tags.mjs "$DOCKERHUB_USERNAME" "$VERSION" $SERVICES)
+
+          if [ "$EXPLICIT" = "true" ]; then
+            MISSING=$(echo "$TAGS" | jq -r 'to_entries[] | select(.value == null) | .key')
+            if [ -n "$MISSING" ]; then
+              echo "::error::No image at or before $VERSION for: $(echo $MISSING). It did not exist then, or retention already removed it."
+              exit 1
+            fi
+          fi
+
+          # `changed` and `all` leave out what did not exist at that release;
+          # those keep running what they run.
+          PLAN=$(echo "$TAGS" | jq -c 'to_entries | map(select(.value != null) | {service: .key, tag: .value})')
+          if [ "$PLAN" = "[]" ]; then
+            echo "::error::Nothing to roll back to for $VERSION."
+            exit 1
+          fi
+
+          echo "plan=$PLAN" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Rolling back to \`$VERSION\`"
+            echo ""
+            echo "| Service | Image |"
+            echo "| --- | --- |"
+            echo "$PLAN" | jq -r '.[] | "| \(.service) | `\(.tag)` |"'
+            echo ""
+            echo "A service shows an older tag than $VERSION when it was last rebuilt before then."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: resolve
+    # Runs on the Pi itself: the runner dials out to GitHub, so this needs no
+    # inbound port at home.
+    runs-on: [self-hosted, tumbaland-pi]
+    # The same lock as the release and the manual deploys, so a rollback never
+    # runs in the middle of one.
+    concurrency:
+      group: tumbaland-deployment
+      cancel-in-progress: false
+    steps:
+      - name: Put each service back on its image
+        env:
+          PLAN: ${{ needs.resolve.outputs.plan }}
+          DEPLOY_ROOT_VAR: ${{ vars.DEPLOY_ROOT }}
+          GAP_SECONDS: '10'
+        run: |
+          set -euo pipefail
+          DEPLOY_ROOT="${DEPLOY_ROOT_VAR:-$HOME/tumbaland}"
+          cd "$DEPLOY_ROOT"
+          export COMPOSE_HTTP_TIMEOUT=300
+          [ -f .env.app ] || { echo "::error::$DEPLOY_ROOT/.env.app is missing: nothing has been deployed from here yet."; exit 1; }
+
+          # A for loop, not `jq | while read`: docker compose inside a piped
+          # loop is free to swallow the rest of the list from stdin. Compact
+          # JSON has no spaces, so the entries split cleanly.
+          for entry in $(echo "$PLAN" | jq -c '.[]'); do
+            svc=$(echo "$entry" | jq -r .service)
+            tag=$(echo "$entry" | jq -r .tag)
+            case "$svc" in
+              *-front) TIER=frontend ;;
+              *)       TIER=backend ;;
+            esac
+            CF="apps/$TIER/$svc/compose.yml"
+            [ -f "$CF" ] || { echo "::error::$CF is not on the server."; exit 1; }
+
+            echo "=== $svc -> $tag ==="
+            IMAGE_TAG="$tag" docker compose --env-file .env.app -f "$CF" pull
+            IMAGE_TAG="$tag" docker compose --env-file .env.app -f "$CF" up -d
+
+            state=""
+            for i in $(seq 1 30); do
+              state=$(IMAGE_TAG="$tag" docker compose --env-file .env.app -f "$CF" ps --format '{{.State}}' 2>/dev/null | head -n1)
+              [ "$state" = "running" ] && break
+              sleep 2
+            done
+            echo "$svc state: ${state:-unknown}"
+            if [ "$state" != "running" ]; then
+              echo "::error::$svc did not reach running state on $tag"
+              exit 1
+            fi
+            sleep "$GAP_SECONDS"
+          done
+
+      - name: Summary
+        env:
+          PLAN: ${{ needs.resolve.outputs.plan }}
+        run: |
+          {
+            echo "### Rolled back to \`${{ inputs.version }}\`"
+            echo ""
+            echo "$PLAN" | jq -r '.[] | "- \(.service): \(.tag)"'
+            echo ""
+            echo "**Revert the change on main next.** Until then the next change to one of these services builds the broken code into a new release and deploys it over this."
+          } >> "$GITHUB_STEP_SUMMARY"

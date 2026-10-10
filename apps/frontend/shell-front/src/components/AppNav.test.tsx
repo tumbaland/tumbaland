@@ -8,6 +8,7 @@ vi.mock('../services/authService', () => ({
 }));
 
 import { AppNav } from './AppNav';
+import { RECENT_NOTES } from '../config/releaseNotes';
 import { User } from '../types';
 
 const user: User = { id: 'u1', email: 'user@example.com', name: 'Jane Doe' };
@@ -109,4 +110,34 @@ it('adds Money to the rail and the phone tab bar once turned on', () => {
   renderNav('/', { mobile: true, showMoney: true });
   const labels = screen.getAllByRole('link').map((link) => link.getAttribute('aria-label') ?? link.textContent);
   expect(labels).toEqual(['Home', 'Journal', 'Chat', 'Album', 'Money']);
+});
+
+describe("what's new", () => {
+  const seen = () => JSON.parse(localStorage.getItem('tumbaland.whatsNew.seen')!) as string[];
+  beforeEach(() => localStorage.clear());
+
+  it('shows no dot on a device that has not seen any notes yet, and records the current ones', () => {
+    renderNav('/');
+    expect(screen.getByRole('button', { name: 'Account' })).toBeInTheDocument();
+    expect(seen()).toEqual(RECENT_NOTES.map((note) => note.id));
+  });
+
+  it('flags the Account entry when there are notes not yet looked at', () => {
+    localStorage.setItem('tumbaland.whatsNew.seen', '[]');
+    renderNav('/');
+    expect(screen.getByRole('button', { name: 'Account, has changes you have not seen' })).toBeInTheDocument();
+  });
+
+  it('opens the notes from the menu, and the flag goes', async () => {
+    localStorage.setItem('tumbaland.whatsNew.seen', '[]');
+    renderNav('/');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Account, has changes you have not seen' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /^What's new/ }));
+
+    expect(screen.getByRole('dialog', { name: "What's new" })).toBeInTheDocument();
+    // The dialog hides the page behind it from the accessibility tree.
+    expect(screen.getByRole('button', { name: 'Account', hidden: true })).toBeInTheDocument();
+    expect(seen()).toEqual(RECENT_NOTES.map((note) => note.id));
+  });
 });
