@@ -8,7 +8,9 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { CHAT_APP, USER_APPS, getMainApps, isRouteActive } from '../config/apps';
 import { accentOnDark, brand, chrome, DARK, ink, surface } from '@tumbaland/frontend-core';
 import { User } from '../types';
+import { useWhatsNew } from '../hooks/useWhatsNew';
 import { AccountMenu } from './AccountMenu';
+import { WhatsNewDialog } from './WhatsNewDialog';
 
 interface AppNavProps {
   currentRoute: string;
@@ -33,6 +35,8 @@ interface AppNavProps {
 export function AppNav({ currentRoute, user, mobile, unreadChat = 0, showMoney = false }: AppNavProps) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const menuOpen = Boolean(menuAnchor);
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+  const { unseen, markSeen } = useWhatsNew();
   const onAccountPage = USER_APPS.some((app) => isRouteActive(app.route, currentRoute));
 
   // On a phone Chat sits in the middle of the tab bar, under the thumb, rather
@@ -74,9 +78,14 @@ export function AppNav({ currentRoute, user, mobile, unreadChat = 0, showMoney =
 
       <NavItem
         label="Account"
+        ariaLabel={unseen ? 'Account, has changes you have not seen' : undefined}
         color={brand.purple}
         icon={
-          user?.picture ? <Avatar src={user.picture} alt="" sx={{ width: 26, height: 26 }} /> : <AccountCircleIcon />
+          // A dot, not a count: it says that something changed, which is all
+          // it knows. Chat's red number is for messages and stays distinct.
+          <Badge variant="dot" color="primary" overlap="circular" invisible={!unseen}>
+            {user?.picture ? <Avatar src={user.picture} alt="" sx={{ width: 26, height: 26 }} /> : <AccountCircleIcon />}
+          </Badge>
         }
         active={menuOpen || onAccountPage}
         mobile={mobile}
@@ -90,7 +99,14 @@ export function AppNav({ currentRoute, user, mobile, unreadChat = 0, showMoney =
         currentRoute={currentRoute}
         mobile={mobile}
         onClose={() => setMenuAnchor(null)}
+        onOpenWhatsNew={() => {
+          markSeen();
+          setWhatsNewOpen(true);
+        }}
+        whatsNewUnseen={unseen}
       />
+
+      <WhatsNewDialog open={whatsNewOpen} onClose={() => setWhatsNewOpen(false)} />
     </Box>
   );
 }
@@ -173,7 +189,14 @@ function NavItem({ label, ariaLabel, icon, color, active, mobile, to, onClick, e
   }
 
   return (
-    <ButtonBase onClick={onClick} aria-haspopup="menu" aria-expanded={expanded} disableRipple sx={sx}>
+    <ButtonBase
+      onClick={onClick}
+      aria-label={ariaLabel}
+      aria-haspopup="menu"
+      aria-expanded={expanded}
+      disableRipple
+      sx={sx}
+    >
       {body}
     </ButtonBase>
   );

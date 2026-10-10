@@ -13,6 +13,7 @@ vi.mock('../services/authService', () => ({
 
 import { authService } from '../services/authService';
 import { forgetDeviceOnServer } from '../services/pushNotifications';
+import { APP_VERSION } from '../config/releaseNotes';
 import { AccountMenu } from './AccountMenu';
 import { User } from '../types';
 
@@ -22,18 +23,32 @@ function CurrentPath() {
   return <div data-testid="path">{useLocation().pathname}</div>;
 }
 
-function renderMenu({ route = '/finance', mobile = false, open = true } = {}) {
+function renderMenu({
+  route = '/finance',
+  mobile = false,
+  open = true,
+  whatsNewUnseen = false
+}: { route?: string; mobile?: boolean; open?: boolean; whatsNewUnseen?: boolean } = {}) {
   const onClose = vi.fn();
+  const onOpenWhatsNew = vi.fn();
   const anchorEl = open ? document.body.appendChild(document.createElement('button')) : null;
   render(
     <MemoryRouter initialEntries={[route]}>
       <Routes>
         <Route path="*" element={<CurrentPath />} />
       </Routes>
-      <AccountMenu user={user} anchorEl={anchorEl} currentRoute={route} mobile={mobile} onClose={onClose} />
+      <AccountMenu
+        user={user}
+        anchorEl={anchorEl}
+        currentRoute={route}
+        mobile={mobile}
+        onClose={onClose}
+        onOpenWhatsNew={onOpenWhatsNew}
+        whatsNewUnseen={whatsNewUnseen}
+      />
     </MemoryRouter>
   );
-  return { onClose };
+  return { onClose, onOpenWhatsNew };
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -53,7 +68,7 @@ it('shows who is signed in, the account pages, appearance and sign out, and noth
     .getAllByRole('menuitem')
     .filter((item) => item.getAttribute('aria-disabled') !== 'true')
     .map((item) => item.textContent);
-  expect(actions).toEqual(['Profile', 'Groups', 'Billing', 'AutoLightDark', 'Sign out']);
+  expect(actions).toEqual(['Profile', 'Groups', 'Billing', 'AutoLightDark', 'Sign out', `What's new${APP_VERSION}`]);
 });
 
 it('lists no Billing inside a native app, where store billing rules apply', () => {
@@ -65,10 +80,26 @@ it('lists no Billing inside a native app, where store billing rules apply', () =
       .getAllByRole('menuitem')
       .filter((item) => item.getAttribute('aria-disabled') !== 'true')
       .map((item) => item.textContent);
-    expect(actions).toEqual(['Profile', 'Groups', 'AutoLightDark', 'Sign out']);
+    expect(actions).toEqual(['Profile', 'Groups', 'AutoLightDark', 'Sign out', `What's new${APP_VERSION}`]);
   } finally {
     delete window.Capacitor;
   }
+});
+
+it("closes, then opens what's new, from the version row", async () => {
+  const { onClose, onOpenWhatsNew } = renderMenu();
+
+  await userEvent.click(screen.getByRole('menuitem', { name: `What's new, version ${APP_VERSION}` }));
+
+  expect(onClose).toHaveBeenCalledTimes(1);
+  expect(onOpenWhatsNew).toHaveBeenCalledTimes(1);
+});
+
+it('says in the row when there are changes not yet looked at', () => {
+  renderMenu({ whatsNewUnseen: true });
+  expect(
+    screen.getByRole('menuitem', { name: `What's new, version ${APP_VERSION}, has changes you have not seen` })
+  ).toBeInTheDocument();
 });
 
 it('marks the account page the user is on', () => {

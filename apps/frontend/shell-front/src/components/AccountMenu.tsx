@@ -11,6 +11,7 @@ import MenuList from '@mui/material/MenuList';
 import Typography from '@mui/material/Typography';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { getUserApps, isRouteActive } from '../config/apps';
+import { APP_VERSION } from '../config/releaseNotes';
 import { authService } from '../services/authService';
 import { forgetDeviceOnServer } from '../services/pushNotifications';
 import { ink, surface } from '@tumbaland/frontend-core';
@@ -26,9 +27,21 @@ interface AccountMenuProps {
   /** A bottom sheet on phones, a popover beside the rail everywhere else. */
   mobile: boolean;
   onClose: () => void;
+  /** Opens the release notes. The menu closes first, so the two never stack. */
+  onOpenWhatsNew: () => void;
+  /** Whether there are notes the person has not looked at yet. */
+  whatsNewUnseen?: boolean;
 }
 
-export function AccountMenu({ user, anchorEl, currentRoute, mobile, onClose }: AccountMenuProps) {
+export function AccountMenu({
+  user,
+  anchorEl,
+  currentRoute,
+  mobile,
+  onClose,
+  onOpenWhatsNew,
+  whatsNewUnseen = false
+}: AccountMenuProps) {
   const navigate = useNavigate();
   const open = Boolean(anchorEl);
 
@@ -94,6 +107,30 @@ export function AccountMenu({ user, anchorEl, currentRoute, mobile, onClose }: A
         <LogoutIcon fontSize="small" />
       </ListItemIcon>
       <ListItemText>Sign out</ListItemText>
+    </MenuItem>,
+    // The quietest row in the menu: it is there to be found by someone who
+    // looks, and the dot on the Account entry is what asks them to.
+    <Divider key="about-divider" />,
+    <MenuItem
+      key="whats-new"
+      aria-label={`What's new, version ${APP_VERSION}${whatsNewUnseen ? ', has changes you have not seen' : ''}`}
+      onClick={() => {
+        onClose();
+        onOpenWhatsNew();
+      }}
+      sx={{ borderRadius: 2, mx: 0.5, minHeight: 40, gap: 1 }}
+    >
+      {whatsNewUnseen && (
+        <Box
+          aria-hidden
+          component="span"
+          sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'primary.main', flexShrink: 0 }}
+        />
+      )}
+      <Typography sx={{ flex: 1, fontSize: 13.5, color: ink.muted, fontWeight: whatsNewUnseen ? 700 : 400 }}>
+        What's new
+      </Typography>
+      <Typography sx={{ fontSize: 12.5, color: ink.muted }}>{APP_VERSION}</Typography>
     </MenuItem>
   ];
 

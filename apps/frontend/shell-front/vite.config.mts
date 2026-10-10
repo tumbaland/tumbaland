@@ -2,7 +2,25 @@ import { defineConfig, lazyPlugins } from 'vite-plus';
 import react from '@vitejs/plugin-react';
 import { federation } from '@module-federation/vite';
 import { TUMBALAND_FEDERATION_SHARED } from '@tumbaland/frontend-core/federation';
+import { readFileSync } from 'fs';
 import { resolve } from 'path';
+
+/**
+ * The version shown under "What's new".
+ *
+ * The image is built from this app's own directory, so the root package.json
+ * is not there: the release passes the version in as APP_VERSION. Locally and
+ * under the test runner the root file is read instead, and a build with
+ * neither says "dev" rather than guessing.
+ */
+function appVersion(): string {
+  if (process.env.APP_VERSION) return process.env.APP_VERSION;
+  try {
+    return JSON.parse(readFileSync(resolve(__dirname, '../../../package.json'), 'utf8')).version;
+  } catch {
+    return 'dev';
+  }
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -16,6 +34,9 @@ export default defineConfig(({ mode }) => ({
       ? []
       : [federation({ name: 'shell', remotes: {}, shared: TUMBALAND_FEDERATION_SHARED, dts: false })])
   ]),
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion())
+  },
   server: {
     port: 3000
   },
