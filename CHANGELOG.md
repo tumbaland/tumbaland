@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.523](https://github.com/tumbaland/tumbaland/compare/app-v0.0.522...app-v0.0.523) (2026-10-10)
+
+### Features
+
+* show what's new, release on merge and a PR-only flow ([#67](https://github.com/tumbaland/tumbaland/issues/67)) ([9753a22](https://github.com/tumbaland/tumbaland/commit/9753a22fa088ce1ffa8629829adfb2f7226c3ece))
+
 ## [0.0.522](https://github.com/tumbaland/tumbaland/compare/app-v0.0.521...app-v0.0.522) (2026-10-04)
 
 ### Features
