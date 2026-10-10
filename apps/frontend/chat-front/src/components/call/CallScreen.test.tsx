@@ -1,6 +1,22 @@
-import { describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+
+vi.mock('../../services/audioDevices', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../services/audioDevices')>()),
+  listAudioDevices: vi.fn(async () => ({
+    microphones: [
+      { id: 'default', label: 'Default - Headset', groupId: 'headset' },
+      { id: 'webcam', label: 'Webcam', groupId: 'cam' }
+    ],
+    speakers: [
+      { id: 'default', label: 'Default - Headset', groupId: 'headset' },
+      { id: 'monitor', label: 'Monitor speakers', groupId: 'monitor' }
+    ]
+  })),
+  canChooseSpeaker: vi.fn(() => true)
+}));
+
 import { CallScreen, formatElapsed, statusText } from './CallScreen';
 import { IDLE, type CallState } from '../../services/callEngine';
 
@@ -135,5 +151,76 @@ describe('dragging the bar', () => {
     fireEvent.click(openButton);
 
     expect(on.onExpand).toHaveBeenCalled();
+  });
+});
+
+describe('call audio', () => {
+  const sinks: string[] = [];
+
+  beforeEach(() => {
+    localStorage.clear();
+    sinks.length = 0;
+    Object.defineProperty(HTMLMediaElement.prototype, 'setSinkId', {
+      configurable: true,
+      writable: true,
+      value: vi.fn(async (id: string) => {
+        sinks.push(id);
+      })
+    });
+  });
+
+  afterEach(() => {
+    delete (HTMLMediaElement.prototype as unknown as { setSinkId?: unknown }).setSinkId;
+  });
+
+  it('has no audio settings unless the host can move the call to another microphone', () => {
+    render(<CallScreen state={state({ phase: 'active', connectedAt: Date.now() })} {...handlers()} />);
+    expect(screen.queryByRole('button', { name: 'Call audio settings' })).not.toBeInTheDocument();
+  });
+
+  it('is offered on a ringing call too, so the right device is set before answering', () => {
+    render(<CallScreen state={state({ phase: 'incoming' })} {...handlers()} onSelectMicrophone={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Call audio settings' })).toBeInTheDocument();
+  });
+
+  it('remembers a microphone and moves the call to it', async () => {
+    const onSelectMicrophone = vi.fn();
+    render(
+      <CallScreen
+        state={state({ phase: 'active', connectedAt: Date.now(), micDeviceId: 'default' })}
+        {...handlers()}
+        onSelectMicrophone={onSelectMicrophone}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Call audio settings' }));
+    await userEvent.selectOptions(await screen.findByLabelText('Microphone'), 'webcam');
+
+    expect(onSelectMicrophone).toHaveBeenCalledWith('webcam');
+    expect(localStorage.getItem('tumbaland.call.microphone')).toBe('webcam');
+  });
+
+  it('plays the call through the chosen speakers, and remembers them', async () => {
+    render(
+      <CallScreen
+        state={state({ phase: 'active', connectedAt: Date.now() })}
+        {...handlers()}
+        onSelectMicrophone={vi.fn()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Call audio settings' }));
+    await userEvent.selectOptions(await screen.findByLabelText('Speaker or headphones'), 'monitor');
+
+    expect(sinks).toContain('monitor');
+    expect(localStorage.getItem('tumbaland.call.speaker')).toBe('monitor');
+  });
+
+  it('uses the speakers chosen on an earlier call as soon as the call starts', () => {
+    localStorage.setItem('tumbaland.call.speaker', 'monitor');
+
+    render(<CallScreen state={state({ phase: 'connecting' })} {...handlers()} />);
+
+    expect(sinks).toContain('monitor');
   });
 });

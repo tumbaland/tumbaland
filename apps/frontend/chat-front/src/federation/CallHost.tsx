@@ -6,6 +6,7 @@ import { useChatStream } from '../hooks/useChatStream';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { CallEngine, IDLE, type CallState } from '../services/callEngine';
 import { onCallRequest } from '../services/callBus';
+import { preferredMicrophone } from '../services/audioDevices';
 import { chatApi, newClientId } from '../services/chatApi';
 import { playTone } from '../services/ringtone';
 
@@ -92,7 +93,13 @@ export function CallLayer() {
 
   useEffect(() => {
     if (!user?.id) return;
-    const engine = new CallEngine({ api: chatApi, deviceId: DEVICE_ID, userId: user.id, onChange: setState });
+    const engine = new CallEngine({
+      api: chatApi,
+      deviceId: DEVICE_ID,
+      userId: user.id,
+      onChange: setState,
+      preferredMicrophone
+    });
     engineRef.current = engine;
     void engine.resume();
 
@@ -153,6 +160,7 @@ export function CallLayer() {
       onDecline={() => engine()?.decline()}
       onHangUp={() => engine()?.hangUp()}
       onToggleMute={() => engine()?.toggleMute()}
+      onSelectMicrophone={(deviceId) => void engine()?.switchMicrophone(deviceId)}
       onDismiss={() => engine()?.dismiss()}
       minimized={minimized}
       onMinimize={() => setMinimized(true)}
