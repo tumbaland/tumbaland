@@ -35,6 +35,8 @@ export interface CallState {
   /** The other person, for the screen. Known before the server answers, from the thread. */
   peer: CallPerson | null;
   muted: boolean;
+  /** The microphone the call is using, as the browser names it. Null before one is open. */
+  micDeviceId: string | null;
   /** Connected before, lost it, trying again. */
   reconnecting: boolean;
   /** When the audio first connected; the timer counts from here. */
@@ -49,6 +51,7 @@ export const IDLE: CallState = {
   call: null,
   peer: null,
   muted: false,
+  micDeviceId: null,
   reconnecting: false,
   connectedAt: null,
   message: null,
@@ -72,24 +75,36 @@ export interface CallEngineOptions {
   userId: string;
   onChange: (state: CallState) => void;
   createPeer?: (config: RTCConfiguration) => RTCPeerConnection;
-  getMicrophone?: () => Promise<MediaStream>;
+  getMicrophone?: (deviceId: string | null) => Promise<MediaStream>;
   /** How long the "Call ended" screen stays. */
   lingerMs?: number;
   /** How long a call may take to connect before it is given up on. */
   connectTimeoutMs?: number;
   /** How long a dropped connection may try to recover. */
   recoverTimeoutMs?: number;
+  /** The microphone this device was told to use, asked for each time one is opened. */
+  preferredMicrophone?: () => string | null;
 }
 
 const FALLBACK_ICE: RTCIceServer[] = [{ urls: 'stun:stun.cloudflare.com:3478' }];
 
 export const MIC_BLOCKED = 'Microphone is blocked. Allow it for Tumbaland in your settings, then try again.';
 
-const defaultMicrophone = () =>
+const defaultMicrophone = (deviceId: string | null) =>
   navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    audio: {
+      // `ideal`, not `exact`: a headset unplugged since it was chosen falls
+      // back to the default instead of failing the call.
+      ...(deviceId ? { deviceId: { ideal: deviceId } } : null),
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    },
     video: false
   });
+
+/** The device an open stream is actually on, which is not always the one asked for. */
+const deviceIdOf = (stream: MediaStream): string | null => stream.getAudioTracks()[0]?.getSettings().deviceId ?? null;
 
 /** The server's reason, where it gave one ("Irja is on another call"), else the fallback. */
 function reasonOf(error: unknown, fallback: string): string {
@@ -111,7 +126,7 @@ export class CallEngine {
   private attempt = 0;
 
   private readonly createPeer: (config: RTCConfiguration) => RTCPeerConnection;
-  private readonly getMicrophone: () => Promise<MediaStream>;
+  private readonly getMicrophone: (deviceId: string | null) => Promise<MediaStream>;
 
   constructor(private readonly options: CallEngineOptions) {
     this.createPeer = options.createPeer ?? ((config) => new RTCPeerConnection(config));
@@ -154,7 +169,7 @@ export class CallEngine {
 
     let mic: MediaStream;
     try {
-      mic = await this.getMicrophone();
+      mic = await this.getMicrophone(this.options.preferredMicrophone?.() ?? null);
     } catch {
       if (current()) this.finish(MIC_BLOCKED);
       return;
@@ -164,7 +179,7 @@ export class CallEngine {
       for (const track of mic.getTracks()) track.stop();
       return;
     }
-    this.mic = mic;
+    this.holdMicrophone(mic);
 
     try {
       const call = await this.options.api.startCall(conversationId, this.options.deviceId);
@@ -187,7 +202,7 @@ export class CallEngine {
 
     let mic: MediaStream;
     try {
-      mic = await this.getMicrophone();
+      mic = await this.getMicrophone(this.options.preferredMicrophone?.() ?? null);
     } catch {
       if (!this.stillOn(call.id)) return;
       void this.options.api.declineCall(call.id).catch(() => undefined);
@@ -200,7 +215,7 @@ export class CallEngine {
       for (const track of mic.getTracks()) track.stop();
       return;
     }
-    this.mic = mic;
+    this.holdMicrophone(mic);
 
     // The connection exists before the server hears "accepted", so the offer
     // the caller sends the moment it does always has somewhere to land.
@@ -229,6 +244,57 @@ export class CallEngine {
     const wasTalking = this.state.phase === 'connecting' || this.state.phase === 'active';
     if (call) void this.options.api.endCall(call.id).catch(() => undefined);
     this.finish(message ?? (wasTalking ? 'Call ended' : null));
+  }
+
+  /** Keeps `mic` as the microphone of this call, and tells the screen which device it is. */
+  private holdMicrophone(mic: MediaStream): void {
+    this.mic = mic;
+    this.set({ micDeviceId: deviceIdOf(mic) });
+  }
+
+  /**
+   * Moves the call to another microphone without a new offer: the sender
+   * swaps its track, which the far end hears as nothing more than a pause.
+   *
+   * Before the call has a microphone there is nothing to move; the choice is
+   * remembered by the caller and is what the next one is opened on. A device
+   * that will not open leaves the call on the one it has.
+   */
+  async switchMicrophone(deviceId: string | null): Promise<void> {
+    if (!this.busy || !this.mic) return;
+    const callId = this.state.call?.id;
+
+    let next: MediaStream;
+    try {
+      next = await this.getMicrophone(deviceId);
+    } catch (error) {
+      logger.warn('Could not switch microphone', { error: (error as Error).message });
+      return;
+    }
+
+    const track = next.getAudioTracks()[0];
+    const stale = !this.busy || !this.mic || (callId !== undefined && this.state.call?.id !== callId);
+    if (stale || !track) {
+      for (const t of next.getTracks()) t.stop();
+      return;
+    }
+
+    // A muted call stays muted on the new microphone.
+    track.enabled = !this.state.muted;
+    const sender = this.peer?.getSenders().find((s) => s.track?.kind === 'audio');
+    if (sender) {
+      try {
+        await sender.replaceTrack(track);
+      } catch (error) {
+        logger.warn('Could not hand the call to the new microphone', { error: (error as Error).message });
+        for (const t of next.getTracks()) t.stop();
+        return;
+      }
+    }
+
+    const previous = this.mic;
+    this.holdMicrophone(next);
+    for (const t of previous.getTracks()) t.stop();
   }
 
   toggleMute(): void {

@@ -8,10 +8,14 @@ import CallEndIcon from '@mui/icons-material/CallEnd';
 import MicIcon from '@mui/icons-material/Mic';
 import MicOffIcon from '@mui/icons-material/MicOff';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
+import HeadsetMicIcon from '@mui/icons-material/HeadsetMic';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import type { ReactNode } from 'react';
 import { MemberAvatar } from '../thread/MemberAvatar';
+import { logger } from '@tumbaland/frontend-core';
 import type { CallState } from '../../services/callEngine';
+import { preferredSpeaker, rememberMicrophone, rememberSpeaker } from '../../services/audioDevices';
+import { AudioSettings } from './AudioSettings';
 import { useDraggable } from './useDraggable';
 
 export interface CallScreenProps {
@@ -25,6 +29,12 @@ export interface CallScreenProps {
   minimized?: boolean;
   onMinimize?: () => void;
   onExpand?: () => void;
+  /**
+   * Moves the call to another microphone. Giving it is what puts the audio
+   * settings on the screen: the choice is remembered here, the call is moved
+   * by the caller.
+   */
+  onSelectMicrophone?: (deviceId: string | null) => void;
 }
 
 /** "3:07", or "1:02:07" past the hour. */
@@ -227,9 +237,14 @@ export function CallScreen({
   onDismiss,
   minimized = false,
   onMinimize,
-  onExpand
+  onExpand,
+  onSelectMicrophone
 }: CallScreenProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [audioOpen, setAudioOpen] = useState(false);
+  const [speakerId, setSpeakerId] = useState<string | null>(preferredSpeaker);
+  // The element only exists while there is a call.
+  const live = state.phase !== 'idle';
   const elapsed = useElapsed(state.phase === 'active' ? state.connectedAt : null);
 
   useEffect(() => {
@@ -238,6 +253,14 @@ export function CallScreen({
     element.srcObject = state.remoteStream;
     if (state.remoteStream) void element.play().catch(() => undefined);
   }, [state.remoteStream]);
+
+  // The output is an element property, so it is set once the element exists and
+  // again whenever a different one is chosen. Not every browser has it.
+  useEffect(() => {
+    const element = audioRef.current as (HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> }) | null;
+    if (!live || !element?.setSinkId) return;
+    element.setSinkId(speakerId ?? '').catch((error: Error) => logger.warn('Could not set the speaker', { error: error.message }));
+  }, [speakerId, live]);
 
   if (state.phase === 'idle') return null;
 
@@ -251,6 +274,22 @@ export function CallScreen({
   return (
     <>
       <audio ref={audioRef} autoPlay playsInline />
+      {onSelectMicrophone && (
+        <AudioSettings
+          open={audioOpen}
+          onClose={() => setAudioOpen(false)}
+          microphoneId={state.micDeviceId}
+          onSelectMicrophone={(deviceId) => {
+            rememberMicrophone(deviceId);
+            onSelectMicrophone(deviceId);
+          }}
+          speakerId={speakerId}
+          onSelectSpeaker={(deviceId) => {
+            rememberSpeaker(deviceId);
+            setSpeakerId(deviceId);
+          }}
+        />
+      )}
       {asBar ? (
         <CallBar state={state} elapsed={elapsed} onHangUp={onHangUp} onToggleMute={onToggleMute} onExpand={onExpand} />
       ) : (
@@ -274,6 +313,21 @@ export function CallScreen({
             color: '#fff'
           }}
         >
+          {onSelectMicrophone && state.phase !== 'ended' && (
+            <IconButton
+              aria-label="Call audio settings"
+              onClick={() => setAudioOpen(true)}
+              sx={{
+                position: 'absolute',
+                top: 'calc(env(safe-area-inset-top) + 12px)',
+                right: 12,
+                color: '#fff'
+              }}
+            >
+              <HeadsetMicIcon />
+            </IconButton>
+          )}
+
           {onMinimize && (talking || state.phase === 'outgoing') && (
             <IconButton
               aria-label="Minimize call"

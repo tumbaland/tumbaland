@@ -13,6 +13,7 @@ class FakePeer {
   signalingState: RTCSignalingState = 'stable';
   added: RTCIceCandidateInit[] = [];
   tracks: MediaStreamTrack[] = [];
+  senders: Array<{ track: MediaStreamTrack | null; replaceTrack: ReturnType<typeof vi.fn> }> = [];
   closed = false;
   offers: Array<RTCOfferOptions | undefined> = [];
   onicecandidate: ((event: { candidate: unknown }) => void) | null = null;
@@ -25,6 +26,16 @@ class FakePeer {
   }
   addTrack(track: MediaStreamTrack) {
     this.tracks.push(track);
+    const sender = {
+      track: track as MediaStreamTrack | null,
+      replaceTrack: vi.fn(async (next: MediaStreamTrack) => {
+        sender.track = next;
+      })
+    };
+    this.senders.push(sender);
+  }
+  getSenders() {
+    return this.senders;
   }
   async createOffer(options?: RTCOfferOptions) {
     this.offers.push(options);
@@ -51,9 +62,10 @@ class FakePeer {
   }
 }
 
-const track = () => ({ enabled: true, stop: vi.fn(), kind: 'audio' }) as unknown as MediaStreamTrack;
-const microphone = () => {
-  const tracks = [track()];
+const track = (deviceId = 'built-in') =>
+  ({ enabled: true, stop: vi.fn(), kind: 'audio', getSettings: () => ({ deviceId }) }) as unknown as MediaStreamTrack;
+const microphone = (deviceId = 'built-in') => {
+  const tracks = [track(deviceId)];
   return { getTracks: () => tracks, getAudioTracks: () => tracks } as unknown as MediaStream;
 };
 
@@ -107,7 +119,12 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 let api: ReturnType<typeof makeApi>;
 let states: CallState[];
 
-function engineFor(userId: string, deviceId: string, getMicrophone = async () => microphone()) {
+function engineFor(
+  userId: string,
+  deviceId: string,
+  getMicrophone: (deviceId: string | null) => Promise<MediaStream> = async () => microphone(),
+  preferredMicrophone?: () => string | null
+) {
   return new CallEngine({
     api,
     userId,
@@ -115,6 +132,7 @@ function engineFor(userId: string, deviceId: string, getMicrophone = async () =>
     onChange: (state) => states.push(state),
     createPeer: (config) => new FakePeer(config) as unknown as RTCPeerConnection,
     getMicrophone,
+    preferredMicrophone,
     lingerMs: 50
   });
 }
@@ -414,6 +432,98 @@ describe('during a call', () => {
     irja.dispose();
 
     expect(api.endCall).toHaveBeenCalledWith('call-1');
+  });
+});
+
+describe('choosing the microphone', () => {
+  const answered = async (getMicrophone: (id: string | null) => Promise<MediaStream>, preferred?: () => string | null) => {
+    const irja = engineFor('u-irja', 'irja-phone', getMicrophone, preferred);
+    irja.handleEvent(event('call.ringing', callView()));
+    await irja.accept();
+    return irja;
+  };
+
+  it('opens the one that was chosen, and says which device it got', async () => {
+    const getMicrophone = vi.fn(async (id: string | null) => microphone(id ?? 'built-in'));
+
+    const irja = await answered(getMicrophone, () => 'headset');
+
+    expect(getMicrophone).toHaveBeenCalledWith('headset');
+    expect(irja.snapshot.micDeviceId).toBe('headset');
+  });
+
+  it('asks for the system default when nothing was chosen', async () => {
+    const getMicrophone = vi.fn(async () => microphone());
+
+    await answered(getMicrophone);
+
+    expect(getMicrophone).toHaveBeenCalledWith(null);
+  });
+
+  it('moves a call to another microphone without a new offer', async () => {
+    const first = microphone('built-in');
+    const second = microphone('headset');
+    const getMicrophone = vi.fn(async (id: string | null) => (id === 'headset' ? second : first));
+    const irja = await answered(getMicrophone);
+    const offersBefore = FakePeer.created[0]!.offers.length;
+
+    await irja.switchMicrophone('headset');
+
+    const sender = FakePeer.created[0]!.senders[0]!;
+    expect(sender.replaceTrack).toHaveBeenCalledWith(second.getAudioTracks()[0]);
+    expect(first.getAudioTracks()[0]!.stop).toHaveBeenCalled();
+    expect(second.getAudioTracks()[0]!.stop).not.toHaveBeenCalled();
+    expect(irja.snapshot.micDeviceId).toBe('headset');
+    expect(FakePeer.created[0]!.offers).toHaveLength(offersBefore);
+  });
+
+  it('keeps a muted call muted on the new microphone', async () => {
+    const second = microphone('headset');
+    const getMicrophone = vi.fn(async (id: string | null) => (id === 'headset' ? second : microphone()));
+    const irja = await answered(getMicrophone);
+    irja.toggleMute();
+
+    await irja.switchMicrophone('headset');
+
+    expect(second.getAudioTracks()[0]!.enabled).toBe(false);
+    expect(irja.snapshot.muted).toBe(true);
+  });
+
+  it('stays on the current microphone when the new one will not open', async () => {
+    const first = microphone('built-in');
+    const getMicrophone = vi.fn(async (id: string | null) => {
+      if (id === 'headset') throw new Error('NotReadableError');
+      return first;
+    });
+    const irja = await answered(getMicrophone);
+
+    await irja.switchMicrophone('headset');
+
+    expect(first.getAudioTracks()[0]!.stop).not.toHaveBeenCalled();
+    expect(irja.snapshot.micDeviceId).toBe('built-in');
+  });
+
+  it('lets go of the new microphone if the swap is refused', async () => {
+    const first = microphone('built-in');
+    const second = microphone('headset');
+    const getMicrophone = vi.fn(async (id: string | null) => (id === 'headset' ? second : first));
+    const irja = await answered(getMicrophone);
+    FakePeer.created[0]!.senders[0]!.replaceTrack.mockRejectedValueOnce(new Error('InvalidStateError'));
+
+    await irja.switchMicrophone('headset');
+
+    expect(second.getAudioTracks()[0]!.stop).toHaveBeenCalled();
+    expect(first.getAudioTracks()[0]!.stop).not.toHaveBeenCalled();
+    expect(irja.snapshot.micDeviceId).toBe('built-in');
+  });
+
+  it('does nothing when there is no call', async () => {
+    const getMicrophone = vi.fn(async () => microphone());
+    const irja = engineFor('u-irja', 'irja-phone', getMicrophone);
+
+    await irja.switchMicrophone('headset');
+
+    expect(getMicrophone).not.toHaveBeenCalled();
   });
 });
 
