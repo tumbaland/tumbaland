@@ -1,9 +1,9 @@
 name: CI
 
-# Pull requests only. A merge to main used to run this whole matrix a second
-# time over code that had just passed it, and next to a changelog job that cut
-# a version for every merge. Releasing is a decision now (see release.yml),
-# and it verifies what it is about to publish itself.
+# Pull requests only, and the only place the suites run. main takes nothing but
+# merges of a pull request whose `ci-passed` check is green (the ruleset in
+# .github/rulesets/main.json), so release.yml builds and deploys what lands
+# there without testing it a second time.
 on:
   pull_request:
   workflow_dispatch:
@@ -291,3 +291,25 @@ jobs:
 
       - name: Run frontend smoke e2e tests
         run: npm run test:e2e
+
+  # The one check the ruleset requires, so that adding a job or a workspace
+  # never means editing the ruleset.
+  #
+  # `always()` is the point: a job whose needs failed is skipped, and a skipped
+  # required check counts as passed. Run regardless, and fail on anything that
+  # failed or was cancelled. A needed job that was skipped on purpose (no
+  # workspace changed, so no matrix) is fine.
+  ci-passed:
+    if: always()
+    needs: [validate-matrix, lib-versions, lint, changes, build-libs, verify, e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every job passed or was skipped on purpose
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          if echo "$RESULTS" | jq -e 'any(. == "failure" or . == "cancelled")' >/dev/null; then
+            echo "::error::A CI job failed or was cancelled."
+            exit 1
+          fi

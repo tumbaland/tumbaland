@@ -1,0 +1,30 @@
+# The title of a pull request is the commit that lands on main: it is squash
+# merged, and the subject is what the version bump and CHANGELOG.md are built
+# from. A title that is not a conventional commit makes a changelog line nobody
+# can read, so it is checked before the merge instead of fixed after it.
+#
+# Its own workflow rather than a job in ci.yml: editing a title is not a reason
+# to run the whole test matrix again, and `edited` is how a title gets fixed.
+
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Title is a conventional commit
+        env:
+          # Through the environment, never interpolated into the script: a
+          # title is text anyone with a branch can write.
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if ! printf '%s' "$TITLE" | grep -qE '^(feat|fix|docs|style|refactor|test|chore|perf)(\([^)]+\))?!?: .+'; then
+            echo "::error::PR title must be a conventional commit, e.g. 'fix(finance-service): correct snapshot rounding'. Types: feat, fix, docs, style, refactor, test, chore, perf."
+            exit 1
+          fi

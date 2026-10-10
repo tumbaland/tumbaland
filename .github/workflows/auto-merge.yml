@@ -1,0 +1,68 @@
+# Turns on auto-merge for a pull request as soon as it is opened, so it merges
+# by itself the moment `ci-passed` and `pr-title` are green. Merging is what
+# starts a release (release.yml), so this is the whole path from "opened a PR"
+# to "deployed" with nothing in between to click.
+#
+# Needs a token that is not the workflow's own. A merge made with GITHUB_TOKEN
+# starts no other workflows, which would merge the PR and then never release
+# it. A fine-grained personal access token (or a GitHub App token) in the
+# secret AUTO_MERGE_TOKEN, with Pull requests and Contents set to read and
+# write on this repository. Without it this does nothing and says so: turn
+# auto-merge on from the pull request by hand instead.
+#
+# What it leaves for a person to merge, on purpose:
+#
+#   - a draft (marking it ready turns this on),
+#   - anything that touches apps/infra, which a release never deploys, so the
+#     order of "infrastructure first, then the apps" is yours to decide,
+#   - a breaking change (`feat!:` or a BREAKING CHANGE footer), for the same
+#     reason: it may need something done on the Pi before or after.
+#
+# To pause one that is already open, convert it to a draft: GitHub will not
+# merge a draft by any route, and marking it ready turns this on again.
+
+name: Auto-merge
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions: {}
+
+jobs:
+  enable:
+    # People who can already push here. Anyone else, and a fork, gets nothing
+    # (a fork has no secrets to use anyway).
+    if: >-
+      !github.event.pull_request.draft &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable auto-merge, squash
+        env:
+          GH_TOKEN: ${{ secrets.AUTO_MERGE_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::notice::AUTO_MERGE_TOKEN is not set, so auto-merge was not turned on. Do it from the pull request, or add the secret."
+            exit 0
+          fi
+
+          if printf '%s' "$PR_TITLE" | grep -qE '^[a-z]+(\([^)]*\))?!:' || printf '%s' "$PR_BODY" | grep -qE '^BREAKING[ -]CHANGE:'; then
+            echo "::notice::Breaking change: left for a person to merge."
+            exit 0
+          fi
+
+          INFRA=$(gh api "repos/$REPO/pulls/$PR_NUMBER/files" --paginate --jq '.[].filename' | grep -c '^apps/infra/' || true)
+          if [ "$INFRA" -gt 0 ]; then
+            echo "::notice::Touches apps/infra ($INFRA file(s)): left for a person to merge, after the infrastructure is deployed."
+            exit 0
+          fi
+
+          # The subject is given rather than left to the repository's default
+          # for a squash: it is what the version and changelog are built from.
+          gh pr merge --auto --squash --subject "$PR_TITLE (#$PR_NUMBER)" "$PR_URL"

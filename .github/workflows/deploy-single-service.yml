@@ -65,6 +65,7 @@ jobs:
           echo "dockerfile=./$DEPLOYDIR/Dockerfile" >> $GITHUB_OUTPUT
           echo "deploy_path=$DEPLOYDIR/compose.yml" >> $GITHUB_OUTPUT
           echo "deploy_dir=$DEPLOYDIR" >> $GITHUB_OUTPUT
+          echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -81,6 +82,8 @@ jobs:
           context: ${{ steps.vars.outputs.context }}
           file: ${{ steps.vars.outputs.dockerfile }}
           push: true
+          # Only the shell shows a version; see release.yml.
+          build-args: ${{ github.event.inputs.service == 'shell-front' && format('APP_VERSION={0}', steps.vars.outputs.version) || '' }}
           # Immutable SHA tag (for rollback) plus the :latest tag the compose files pull.
           # The `tumbaland-` prefix is load-bearing: the Docker Hub account is shared
           # with visin, which has its own group-service, auth-service, file-service,

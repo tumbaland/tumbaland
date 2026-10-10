@@ -93,40 +93,56 @@ Still to do when the apps are built:
 
 ## Commits & Releases
 
-Use [Conventional Commits](https://www.conventionalcommits.org/) for every commit, everywhere in
-this repo: `type(scope): description`, e.g. `fix(finance-service): correct snapshot rounding`,
-`feat(album-front): add collage zoom`. Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`,
-`chore`, `perf`. This is what drives both versioning mechanisms below — write real, correctly-typed
-messages even for app-only changes.
+### Getting a change onto `main`
 
-### App changes (services, frontends) — nothing to do
+Nothing is pushed to `main`. Work on a branch and open a pull request:
 
-Every push to `main` runs `.github/workflows/changelog.yml`, which bumps the root
-`package.json`, appends to the root `CHANGELOG.md`, and tags `app-vX.Y.Z`. This is a monorepo-wide
-history marker only — it is **not** consumed by deploys (those tag Docker images `:latest` and
-`:{sha}`, see `deploy-single-service.yml`) and is never published anywhere. You don't run anything
-for this; just commit with the right type/scope and it happens on merge.
+1. `git switch -c fix/short-name`, commit, push, open a PR.
+2. CI (`ci.yml`) runs on the PR. The one check that has to be green is `ci-passed`;
+   `pr-title` has to be green too.
+3. Squash merge. That is the only merge method the ruleset allows.
 
-### Library releases (`libs/backend-core`, `libs/frontend-core`, `libs/components`) — manual, per package
+The **PR title becomes the commit on `main`**, and the version bump and `CHANGELOG.md` are built
+from it, so it has to be a [Conventional Commit](https://www.conventionalcommits.org/):
+`type(scope): description`, e.g. `fix(finance-service): correct snapshot rounding`. Types: `feat`,
+`fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`. `pr-title` rejects anything else.
+The commits inside the branch can be as messy as they like; they are squashed away.
 
-These three are real npm packages (`@tumbaland/*`) that every app depends on via `"*"` and that get
-installed from the registry, not just workspace-linked. Cut a release only when you've made a
-change worth publishing:
+The rules live in `.github/rulesets/main.json`. GitHub does not read that file by itself: import it
+under **Settings → Rules → Rulesets** when setting up the repository.
 
-1. Land your commits on `main` first, scoped to the lib that changed
-   (`fix(backend-core): ...`, `feat(components): ...`).
-2. `cd libs/<package>`
-3. `npm run release` — bumps that package's own `version` from the commits since its last tag,
-   writes/updates its `CHANGELOG.md`, creates a `chore(release): X.Y.Z` commit, tags it
-   (`backend-core-vX.Y.Z` / `frontend-core-vX.Y.Z` / `components-vX.Y.Z` — each package has its
-   own tag namespace so releases can never collide), builds, and publishes to npm.
-   Use `npm run release:beta` for a prerelease (`-beta.0`, tagged `beta` on npm).
-4. `git push origin main --follow-tags`
-5. Apps pin `"@tumbaland/x": "*"`, so nothing else needs bumping — `npm install` at the repo root
-   picks up the new published version.
+### What a merge does
 
-**Always release through `npm run release` — never hand-edit a lib's `package.json` version and
-run `npm publish` directly.** That shortcut is how `backend-core` and `components` ended up
-published on npm with no matching `CHANGELOG.md` or git tag at all: the registry, the changelog,
-and git history all drifted out of sync with each other. Going through the script keeps all three
-in lockstep.
+A merge to `main` starts `release.yml`. It does not test anything, because the PR already did:
+
+1. Works out which libraries and which services changed (`scripts/release-plan.mjs`). A merge that
+   only touches tests, e2e suites or Markdown plans an empty release and stops.
+2. Publishes each library with publishable changes to npm (`publish-libs.yml`) and re-pins its
+   consumers. This stage checks the library once more on its own, because a publish cannot be
+   undone.
+3. Bumps the root version, writes `CHANGELOG.md` and tags `app-vX.Y.Z`.
+4. Builds an ARM image for each changed service and deploys them to the Pi one at a time, then
+   tags `app-deployed-vX.Y.Z`.
+
+So every deploy has its own version and the number counts releases. It says nothing about how big
+a change was. What people are told lives in the release notes
+(one small file per change in `apps/frontend/shell-front/src/release-notes/`, added in the same PR),
+written for them, not in `CHANGELOG.md`, which is the developer log.
+
+A release that failed after tagging is picked up by the next one, which builds everything changed
+since the last `app-deployed-v` tag. To retry a failed deploy without a new merge, open the failed
+run in the Actions tab and choose **Re-run failed jobs**: it deploys the same version again from
+the images already built. Running **Release** by hand instead works too, but it cuts a new version
+even when nothing changed. See `.github/DEPLOYMENT.md` for rollback and the manual deploys.
+
+### Libraries (`libs/backend-core`, `libs/frontend-core`)
+
+Both are real npm packages (`@tumbaland/*`), installed from the registry by every image, so there
+is nothing to run by hand: change the library in a PR, and its merge publishes it. The version is
+derived from the conventional commits that touched the library since it last changed (breaking is
+major, `feat` is minor, anything else patch).
+
+Never edit a library's `package.json` version or run `npm publish` yourself. That is how the
+registry, the changelog and git history drifted apart before; publishing through the workflow keeps
+all three in step.
+
