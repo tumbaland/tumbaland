@@ -98,14 +98,14 @@ Still to do when the apps are built:
 Nothing is pushed to `main`. Work on a branch and open a pull request:
 
 1. `git switch -c fix/short-name`, commit, push, open a PR.
-2. CI (`ci.yml`) runs on the PR. The one check that has to be green is `ci-passed`;
-   `pr-title` has to be green too.
+2. CI (`ci.yml`) runs on the PR. The one check that has to be green is `ci-passed`, which
+   includes the title check.
 3. Squash merge. That is the only merge method the ruleset allows.
 
 The **PR title becomes the commit on `main`**, and the version bump and `CHANGELOG.md` are built
 from it, so it has to be a [Conventional Commit](https://www.conventionalcommits.org/):
 `type(scope): description`, e.g. `fix(finance-service): correct snapshot rounding`. Types: `feat`,
-`fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`. `pr-title` rejects anything else.
+`fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`. The title check rejects anything else.
 The commits inside the branch can be as messy as they like; they are squashed away.
 
 The rules live in `.github/rulesets/main.json`. GitHub does not read that file by itself: import it

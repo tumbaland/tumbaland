@@ -21,7 +21,7 @@ ways to pause, from narrowest to widest:
 | To hold                                  | Do this                                                                                                   |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | One pull request                         | Make it a draft, or convert an open one to a draft. GitHub will not merge a draft by any route, auto-merge included. Mark it ready to go on. |
-| Infra or breaking changes, automatically | Nothing. `auto-merge.yml` does not turn auto-merge on for a PR that touches `apps/infra` or is a `type!:` change. You merge it. |
+| Infra or breaking changes, automatically | Nothing. The `auto-merge` job in `ci.yml` does not turn auto-merge on for a PR that touches `apps/infra` or is a `type!:` change. You merge it. |
 | Everything that is already merged        | Actions → **Release** → ⋯ → **Disable workflow**. Merges still land, nothing deploys.                    |
 
 **An infrastructure change that the apps depend on:**
@@ -132,7 +132,7 @@ alone, or for an emergency, and not as the usual path.
 ### The ruleset
 
 `.github/rulesets/main.json` is what makes `main` take only pull requests. It
-requires the `ci-passed` and `pr-title` checks, allows squash merges only, and
+requires the `ci-passed` check (the title check is part of it), allows squash merges only, and
 blocks deleting or force-pushing the branch. Import it once under
 **Settings → Rules → Rulesets → New ruleset → Import a ruleset**.
 

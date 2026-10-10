@@ -21,13 +21,13 @@ a pull request:
 
 **The PR title becomes the commit on `main`**, and the version bump and
 `CHANGELOG.md` are built from it: `type(scope): description`, with `feat`, `fix`,
-`docs`, `style`, `refactor`, `test`, `chore` or `perf`. A `pr-title` check rejects
+`docs`, `style`, `refactor`, `test`, `chore` or `perf`. The CI title check rejects
 anything else. Write it as what the change does, not what you did.
 
 ### What happens next, without anyone clicking
 
-- `auto-merge.yml` turns on squash auto-merge when the PR is opened.
-- It merges when `ci-passed` and `pr-title` are green.
+- The `auto-merge` job in `ci.yml` turns on squash auto-merge when the PR is opened.
+- It merges when `ci-passed` is green. That check includes the title.
 - A merge to `main` starts `release.yml`: it publishes changed libraries, cuts the
   version, builds the changed services and deploys them to the Pi.
 
@@ -90,3 +90,5 @@ commits are. Never edit a library's `package.json` version or run `npm publish`.
 - `README.md`: layout, ports, local setup, and the same flow in more detail.
 - `.github/DEPLOYMENT.md`: the Pi, deploys, pausing, retry and rollback.
 - `.github/rulesets/main.json`: what is required to merge.
+- `.github/workflows/ci.yml`: everything that runs on a PR is a job in this one
+  workflow, on purpose, so a PR is one row per event in the Actions list.
