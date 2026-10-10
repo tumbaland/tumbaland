@@ -1,4 +1,14 @@
 # Tumbalog
+## [0.0.527](https://github.com/tumbaland/tumbaland/compare/app-v0.0.526...app-v0.0.527) (2026-10-10)
+
+### Bug Fixes
+
+* build every image from the root lockfile ([#72](https://github.com/tumbaland/tumbaland/issues/72)) ([62f53f0](https://github.com/tumbaland/tumbaland/commit/62f53f0847965bda2689081857147fc16829d83c))
+
+### Chores
+
+* **release:** @tumbaland/frontend-core 1.21.1 ([5698257](https://github.com/tumbaland/tumbaland/commit/5698257f2a53e878bb6b0878eb706425dfdfbe57))
+
 ## [0.0.526](https://github.com/tumbaland/tumbaland/compare/app-v0.0.525...app-v0.0.526) (2026-10-10)
 
 ### Bug Fixes
