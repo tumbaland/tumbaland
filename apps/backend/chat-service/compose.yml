@@ -1,8 +1,12 @@
 services:
   chat-service:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The repository root: images install from the root lockfile.
+      context: ../../..
+      dockerfile: docker/Dockerfile.back
+      args:
+        APP: chat-service
+        PORT: 4004
     image: toomastahves/tumbaland-chat-service:${IMAGE_TAG:-latest}
     restart: unless-stopped
     # Longer than the others: SIGTERM ends every open SSE stream first, then

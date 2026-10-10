@@ -149,15 +149,24 @@ registry, the changelog and git history drifted apart before; publishing through
 all three in step.
 
 
-### Shared dependencies (`react`, `@mui/material`, ...)
+### Images
 
-The shell loads each module into its own page and hands them one copy of React, MUI, the router,
-Emotion and React Query (`TUMBALAND_FEDERATION_SHARED` in `libs/frontend-core/src/federation.ts`).
-The shell and every module are separate images built on different days, and an image installs
-without the lockfile. So those packages are pinned to one exact version in every front, and MUI's
-own packages are held back with `overrides`. Otherwise a rebuilt shell picks up a newer MUI than
-the modules were built with, and modules stop loading while every test passes.
+Every service ships as an image built from the repository root, with one of two shared
+Dockerfiles: `docker/Dockerfile.front` and `docker/Dockerfile.back`. Both install with `npm ci`
+from the root `package-lock.json`, the same file local development and CI use, and build the
+library (`libs/*`) from the same commit. So what runs in production is what was tested, and the
+shell and its modules cannot end up on different versions of React or MUI.
 
-CI fails a pull request that lets them drift (`npm run sync:shared:check`). To upgrade one:
-`npm update <package>`, `npm run sync:shared`, `npm install`, and commit the lot. It touches every
-front, so the release rebuilds them all together.
+- What differs per service (a backend's port, the shell's version) is data in
+  `docker/services.json`. `node scripts/image-build.mjs <service> --cli` prints the `docker build`
+  command for one.
+- A pull request builds the image of every app it touches (ARM, like the Pi) without pushing, so
+  a change that only breaks inside an image fails the pull request and not the deploy.
+- A release rebuilds a service when its files, its library, its Dockerfile or the packages it
+  installs from the lockfile changed (`scripts/release-plan.mjs`), so a dependency bump nobody
+  uses does not redeploy everything.
+- To upgrade a dependency, change it at the root and commit `package-lock.json`: `npm update
+  <package>`, then run the tests. There is nothing to sync per app.
+- Do not list a platform-specific binary (`@rollup/rollup-linux-x64-gnu`, `@esbuild/linux-x64`) as a
+  dependency. The lockfile already carries every variant, and a binary for one platform makes
+  `npm ci` fail on the others, which is how the images first failed to build from the lockfile.

@@ -1,0 +1,17 @@
+# Build context for docker/Dockerfile.* is the repository root. Keep secrets and
+# bulk out of it: only what a Dockerfile COPYs is used, but this is also what
+# gets scanned and sent.
+.git
+.github
+.claude
+**/node_modules
+**/dist
+**/coverage
+**/.vitest
+**/.env
+**/.env.*
+playwright-report
+test-results
+import
+e2e
+apps/infra

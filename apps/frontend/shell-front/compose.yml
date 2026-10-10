@@ -1,8 +1,12 @@
 services:
   shell-front:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The repository root: images install from the root lockfile.
+      context: ../../..
+      dockerfile: docker/Dockerfile.front
+      args:
+        APP: shell-front
+        NGINX_IMAGE: nginx:1.26-alpine
     image: toomastahves/tumbaland-shell-front:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:

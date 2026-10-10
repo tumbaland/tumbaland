@@ -61,11 +61,14 @@ jobs:
             *)       TIER=backend ;;
           esac
           DEPLOYDIR="apps/$TIER/$SERVICE"
-          echo "context=./$DEPLOYDIR" >> $GITHUB_OUTPUT
-          echo "dockerfile=./$DEPLOYDIR/Dockerfile" >> $GITHUB_OUTPUT
           echo "deploy_path=$DEPLOYDIR/compose.yml" >> $GITHUB_OUTPUT
           echo "deploy_dir=$DEPLOYDIR" >> $GITHUB_OUTPUT
           echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      # Dockerfile, context and build arguments; see release.yml.
+      - name: Resolve the build
+        id: build
+        run: node scripts/image-build.mjs "${{ github.event.inputs.service }}" --version "${{ steps.vars.outputs.version }}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -79,11 +82,10 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ${{ steps.vars.outputs.context }}
-          file: ${{ steps.vars.outputs.dockerfile }}
+          context: ${{ steps.build.outputs.context }}
+          file: ${{ steps.build.outputs.file }}
           push: true
-          # Only the shell shows a version; see release.yml.
-          build-args: ${{ github.event.inputs.service == 'shell-front' && format('APP_VERSION={0}', steps.vars.outputs.version) || '' }}
+          build-args: ${{ steps.build.outputs.build-args }}
           # Immutable SHA tag (for rollback) plus the :latest tag the compose files pull.
           # The `tumbaland-` prefix is load-bearing: the Docker Hub account is shared
           # with visin, which has its own group-service, auth-service, file-service,

@@ -24,8 +24,6 @@
     "format": "vp fmt .",
     "sync:libs": "node scripts/sync-lib-versions.mjs",
     "sync:libs:check": "node scripts/sync-lib-versions.mjs --check",
-    "sync:shared": "node scripts/sync-shared-versions.mjs",
-    "sync:shared:check": "node scripts/sync-shared-versions.mjs --check",
     "lint:fix": "vp lint . --fix",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
