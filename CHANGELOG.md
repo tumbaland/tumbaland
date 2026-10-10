@@ -1,4 +1,11 @@
 # Tumbalog
+## [0.0.526](https://github.com/tumbaland/tumbaland/compare/app-v0.0.525...app-v0.0.526) (2026-10-10)
+
+### Bug Fixes
+
+* **ci:** merge only after ci-passed is green, and drop the flaky e2e job ([#70](https://github.com/tumbaland/tumbaland/issues/70)) ([b57fec9](https://github.com/tumbaland/tumbaland/commit/b57fec9e9fd742fee4738d0bd9740b5a41755255))
+* **shell-front:** put Sign out last in the account menu ([#71](https://github.com/tumbaland/tumbaland/issues/71)) ([70ef144](https://github.com/tumbaland/tumbaland/commit/70ef144e9ad90f49c06e355775b6c7cbee5201fd))
+
 ## [0.0.525](https://github.com/tumbaland/tumbaland/compare/app-v0.0.524...app-v0.0.525) (2026-10-10)
 
 ### Bug Fixes
