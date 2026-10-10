@@ -148,3 +148,16 @@ Never edit a library's `package.json` version or run `npm publish` yourself. Tha
 registry, the changelog and git history drifted apart before; publishing through the workflow keeps
 all three in step.
 
+
+### Shared dependencies (`react`, `@mui/material`, ...)
+
+The shell loads each module into its own page and hands them one copy of React, MUI, the router,
+Emotion and React Query (`TUMBALAND_FEDERATION_SHARED` in `libs/frontend-core/src/federation.ts`).
+The shell and every module are separate images built on different days, and an image installs
+without the lockfile. So those packages are pinned to one exact version in every front, and MUI's
+own packages are held back with `overrides`. Otherwise a rebuilt shell picks up a newer MUI than
+the modules were built with, and modules stop loading while every test passes.
+
+CI fails a pull request that lets them drift (`npm run sync:shared:check`). To upgrade one:
+`npm update <package>`, `npm run sync:shared`, `npm install`, and commit the lot. It touches every
+front, so the release rebuilds them all together.

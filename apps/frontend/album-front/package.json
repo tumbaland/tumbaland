@@ -13,17 +13,17 @@
     "test:coverage": "vp test run --coverage"
   },
   "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "^9.4.0",
-    "@mui/material": "^9.4.0",
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1",
+    "@mui/icons-material": "9.4.0",
+    "@mui/material": "9.4.0",
     "@mui/x-charts": "^9.13.0",
-    "@tanstack/react-query": "^5.102.8",
+    "@tanstack/react-query": "5.104.1",
     "@tumbaland/frontend-core": "1.21.0",
     "exifr": "7.1.3",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "react-router": "^8.3.1"
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router": "8.4.0"
   },
   "devDependencies": {
     "@module-federation/vite": "^1.21.6",
@@ -42,6 +42,12 @@
   },
   "overrides": {
     "vite": "$vite",
-    "vitest": "$vitest"
+    "vitest": "$vitest",
+    "@mui/core-downloads-tracker": "9.4.0",
+    "@mui/private-theming": "9.4.0",
+    "@mui/styled-engine": "9.4.0",
+    "@mui/system": "9.4.0",
+    "@mui/types": "9.4.0",
+    "@mui/utils": "9.4.0"
   }
 }
