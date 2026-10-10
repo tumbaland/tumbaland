@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.525](https://github.com/tumbaland/tumbaland/compare/app-v0.0.524...app-v0.0.525) (2026-10-10)
+
+### Bug Fixes
+
+* **chat-front:** close the audio panel with the call, and let the last microphone choice win ([#69](https://github.com/tumbaland/tumbaland/issues/69)) ([b088716](https://github.com/tumbaland/tumbaland/commit/b0887163b9b8ff4c0606c18a7ba2b6dfc434719a))
+
 ## [0.0.524](https://github.com/tumbaland/tumbaland/compare/app-v0.0.523...app-v0.0.524) (2026-10-10)
 
 ### Features
