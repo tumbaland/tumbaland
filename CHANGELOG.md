@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.524](https://github.com/tumbaland/tumbaland/compare/app-v0.0.523...app-v0.0.524) (2026-10-10)
+
+### Features
+
+* **chat-front:** choose the microphone and speakers for calls ([#68](https://github.com/tumbaland/tumbaland/issues/68)) ([78cb355](https://github.com/tumbaland/tumbaland/commit/78cb355400e0fd6ef6730fa43783e60a952ab0d4))
+
 ## [0.0.523](https://github.com/tumbaland/tumbaland/compare/app-v0.0.522...app-v0.0.523) (2026-10-10)
 
 ### Features
