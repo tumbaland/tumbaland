@@ -26,8 +26,12 @@ anything else. Write it as what the change does, not what you did.
 
 ### What happens next, without anyone clicking
 
-- The `auto-merge` job in `ci.yml` turns on squash auto-merge when the PR is opened.
-- It merges when `ci-passed` is green. That check includes the title.
+- The `merge` job in `ci.yml` waits for `ci-passed` and then squash merges the PR. That
+  check includes the title.
+- **That job is the only gate.** The repository is private on a plan with no branch
+  protection, so GitHub will not stop a merge by itself, from the button or from
+  `gh pr merge`. Never merge while CI is still running, and never use
+  `gh pr merge --auto` here: with nothing required it merges at once.
 - A merge to `main` starts `release.yml`: it publishes changed libraries, cuts the
   version, builds the changed services and deploys them to the Pi.
 
@@ -37,8 +41,8 @@ not meant to ship yet.
 ### Holding a change back
 
 - **Draft PR.** GitHub will not merge a draft by any route, and marking it ready
-  turns auto-merge on. This is the pause for one change.
-- **Infrastructure and breaking changes are not auto-merged**: a PR touching
+  runs CI again, and the merge with it. This is the pause for one change.
+- **Infrastructure and breaking changes are not merged by the job**: a PR touching
   `apps/infra`, or with `type!:` in the title or a `BREAKING CHANGE` footer. They
   are left for the owner, because they may need something done on the Pi first.
   Say so when you open one, and say what has to happen in what order.

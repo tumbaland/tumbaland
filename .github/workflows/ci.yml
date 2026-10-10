@@ -7,7 +7,7 @@ name: CI
 #
 # Everything that happens to a pull request is a job in this one workflow, so
 # that a PR is one row per event in the Actions list and not one per workflow:
-# the title check and auto-merge used to be files of their own.
+# the title check and the merge used to be files of their own.
 #
 # Editing a title or a description is deliberately not an event here. It would
 # start a whole run for a typo, and the suites cannot be skipped on it: a run
@@ -22,6 +22,13 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+# There is no end-to-end job. The smoke suite under e2e/ (`npm run test:e2e`) still
+# runs locally. In CI it took over three minutes to check that each app shows its
+# heading, and on the hosted runner it was cancelled at the moment the first browser
+# opened in three runs of seven, which with `ci-passed` gating the merge meant a
+# flaky red on a quarter of pull requests. Whether the deployed apps come up is a
+# question for the release, not for a test against nine dev servers on a 2-core box.
 
 jobs:
   validate-matrix:
@@ -70,7 +77,6 @@ jobs:
       pull-requests: read
     outputs:
       workspaces: ${{ steps.set-matrix.outputs.workspaces }}
-      e2e: ${{ steps.filter.outputs.e2e }}
     steps:
       - uses: actions/checkout@v4
 
@@ -169,12 +175,6 @@ jobs:
             libs/frontend-core:
               - *root-shared
               - 'libs/frontend-core/**'
-            e2e:
-              - *root-shared
-              - 'e2e/**'
-              - 'playwright.config.ts'
-              - 'apps/frontend/**'
-              - 'libs/frontend-core/**'
 
       - name: Build workspace matrix
         id: set-matrix
@@ -272,40 +272,6 @@ jobs:
       - name: Build
         run: npm run build --workspace=${{ matrix.workspace }} --if-present
 
-  e2e:
-    needs: changes
-    if: needs.changes.outputs.e2e == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js 26
-        uses: actions/setup-node@v4
-        with:
-          node-version: '26'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
-
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-
-      - name: Install Playwright browser
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-
-      - name: Install Playwright OS dependencies only
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-
-      - name: Run frontend smoke e2e tests
-        run: npm run test:e2e
-
   # The title of a pull request is the commit that lands on main: it is squash
   # merged, and the subject is what the version bump and CHANGELOG.md are built
   # from. A title that is not a conventional commit makes a changelog line
@@ -332,55 +298,72 @@ jobs:
             exit 1
           fi
 
-  # Turns on auto-merge for a pull request as soon as it is opened, so it merges
-  # by itself the moment `ci-passed` is green. Merging is what starts a release
-  # (release.yml), so this is the whole path from "opened a PR" to "deployed"
-  # with nothing in between to click.
+  # Merges a pull request, but only once `ci-passed` is green.
+  #
+  # This job is the gate. The repository is private on a plan with no branch
+  # protection, so GitHub itself will merge anything at any time and there is
+  # no setting that makes it wait for a check. `gh pr merge --auto` does not
+  # help: it only waits for requirements that exist, and with none it merges at
+  # once, which is how two pull requests reached main before their tests had
+  # finished. So the waiting is done here, with `needs: ci-passed`, and the merge
+  # is plain, not `--auto`.
   #
   # Needs a token that is not the workflow's own. A merge made with
   # GITHUB_TOKEN starts no other workflows, which would merge the PR and then
   # never release it. A fine-grained personal access token (or a GitHub App
   # token) in the secret AUTO_MERGE_TOKEN, with Pull requests and Contents set
   # to read and write on this repository. Without it this does nothing and says
-  # so: turn auto-merge on from the pull request by hand instead.
+  # so: merge from the pull request by hand once CI is green.
   #
   # What it leaves for a person to merge, on purpose:
   #
-  #   - a draft (marking it ready turns this on),
+  #   - a draft (marking it ready runs CI again, and this with it),
   #   - anything that touches apps/infra, which a release never deploys, so the
   #     order of "infrastructure first, then the apps" is yours to decide,
   #   - a breaking change (`feat!:` or a BREAKING CHANGE footer), for the same
   #     reason: it may need something done on the Pi before or after.
   #
-  # To pause one that is already open, convert it to a draft: GitHub will not
-  # merge a draft by any route, and marking it ready turns this on again.
-  auto-merge:
+  # To pause one that is already open, convert it to a draft.
+  #
+  # Runs at the end of every CI run of the pull request, so a push that was
+  # superseded is not merged: a newer push cancels this run, and the head the
+  # tests ran against is the only one `--match-head-commit` lets through.
+  merge:
+    needs: [ci-passed]
     # People who can already push here. Anyone else, and a fork, gets nothing
-    # (a fork has no secrets to use anyway). Only when the PR is opened or
-    # becomes ready: a push or a title edit has nothing new to enable.
+    # (a fork has no secrets to use anyway).
     if: >-
       github.event_name == 'pull_request' &&
-      contains(fromJSON('["opened","reopened","ready_for_review"]'), github.event.action) &&
+      needs.ci-passed.result == 'success' &&
       !github.event.pull_request.draft &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
     runs-on: ubuntu-latest
     permissions: {}
     steps:
-      - name: Enable auto-merge, squash
+      - name: Merge, squash
         env:
           GH_TOKEN: ${{ secrets.AUTO_MERGE_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           REPO: ${{ github.repository }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
-            echo "::notice::AUTO_MERGE_TOKEN is not set, so auto-merge was not turned on. Do it from the pull request, or add the secret."
+            echo "::notice::AUTO_MERGE_TOKEN is not set, so the pull request was not merged. Merge it by hand."
             exit 0
           fi
 
-          if printf '%s' "$PR_TITLE" | grep -qE '^[a-z]+(\([^)]*\))?!:' || printf '%s' "$PR_BODY" | grep -qE '^BREAKING[ -]CHANGE:'; then
+          # Read now, not from the event: the title can have been fixed since
+          # the run started, and the body is what a breaking change is named in.
+          PR=$(gh pr view "$PR_URL" --json title,body,state)
+          if [ "$(echo "$PR" | jq -r .state)" != "OPEN" ]; then
+            echo "::notice::Not open any more; nothing to merge."
+            exit 0
+          fi
+          TITLE=$(echo "$PR" | jq -r .title)
+          BODY=$(echo "$PR" | jq -r .body)
+
+          if printf '%s' "$TITLE" | grep -qE '^[a-z]+(\([^)]*\))?!:' || printf '%s' "$BODY" | grep -qE '^BREAKING[ -]CHANGE:'; then
             echo "::notice::Breaking change: left for a person to merge."
             exit 0
           fi
@@ -393,7 +376,7 @@ jobs:
 
           # The subject is given rather than left to the repository's default
           # for a squash: it is what the version and changelog are built from.
-          gh pr merge --auto --squash --subject "$PR_TITLE (#$PR_NUMBER)" "$PR_URL"
+          gh pr merge "$PR_URL" --squash --match-head-commit "$HEAD_SHA" --subject "$TITLE (#$PR_NUMBER)"
 
   # The one check the ruleset requires, so that adding a job or a workspace
   # never means editing the ruleset. The title check is part of it.
@@ -404,7 +387,7 @@ jobs:
   # workspace changed, so no matrix) is fine.
   ci-passed:
     if: always()
-    needs: [validate-matrix, lib-versions, lint, changes, build-libs, verify, e2e, pr-title]
+    needs: [validate-matrix, lib-versions, lint, changes, build-libs, verify, pr-title]
     runs-on: ubuntu-latest
     steps:
       - name: Every job passed or was skipped on purpose
