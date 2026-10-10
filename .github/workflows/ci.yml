@@ -23,6 +23,13 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# There is no end-to-end job. The smoke suite under e2e/ (`npm run test:e2e`) still
+# runs locally. In CI it took over three minutes to check that each app shows its
+# heading, and on the hosted runner it was cancelled at the moment the first browser
+# opened in three runs of seven, which with `ci-passed` gating the merge meant a
+# flaky red on a quarter of pull requests. Whether the deployed apps come up is a
+# question for the release, not for a test against nine dev servers on a 2-core box.
+
 jobs:
   validate-matrix:
     runs-on: ubuntu-latest
@@ -70,7 +77,6 @@ jobs:
       pull-requests: read
     outputs:
       workspaces: ${{ steps.set-matrix.outputs.workspaces }}
-      e2e: ${{ steps.filter.outputs.e2e }}
     steps:
       - uses: actions/checkout@v4
 
@@ -169,12 +175,6 @@ jobs:
             libs/frontend-core:
               - *root-shared
               - 'libs/frontend-core/**'
-            e2e:
-              - *root-shared
-              - 'e2e/**'
-              - 'playwright.config.ts'
-              - 'apps/frontend/**'
-              - 'libs/frontend-core/**'
 
       - name: Build workspace matrix
         id: set-matrix
@@ -271,40 +271,6 @@ jobs:
 
       - name: Build
         run: npm run build --workspace=${{ matrix.workspace }} --if-present
-
-  e2e:
-    needs: changes
-    if: needs.changes.outputs.e2e == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js 26
-        uses: actions/setup-node@v4
-        with:
-          node-version: '26'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
-
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-
-      - name: Install Playwright browser
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-
-      - name: Install Playwright OS dependencies only
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-
-      - name: Run frontend smoke e2e tests
-        run: npm run test:e2e
 
   # The title of a pull request is the commit that lands on main: it is squash
   # merged, and the subject is what the version bump and CHANGELOG.md are built
@@ -421,7 +387,7 @@ jobs:
   # workspace changed, so no matrix) is fine.
   ci-passed:
     if: always()
-    needs: [validate-matrix, lib-versions, lint, changes, build-libs, verify, e2e, pr-title]
+    needs: [validate-matrix, lib-versions, lint, changes, build-libs, verify, pr-title]
     runs-on: ubuntu-latest
     steps:
       - name: Every job passed or was skipped on purpose
