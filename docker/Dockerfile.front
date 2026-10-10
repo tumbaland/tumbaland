@@ -1,0 +1,46 @@
+# syntax=docker/dockerfile:1.20
+
+# One Dockerfile for every front. The build context is the repository root, so
+# the image installs from the same package-lock.json as local development and CI
+# instead of resolving versions on the day it happens to be built.
+#
+#   docker build -f docker/Dockerfile.front --build-arg APP=relationship-front .
+#
+# The shell and the modules are separate images that share React, MUI and the
+# rest at runtime, so they must come from one resolution. See README, "Images".
+ARG NGINX_IMAGE=nginx:alpine
+
+# ---- Dependencies ----
+# Only manifests and the lockfile, so this layer is reused until a dependency
+# changes and not on every source edit.
+FROM node:26-alpine AS deps
+WORKDIR /repo
+COPY --parents package.json package-lock.json apps/*/*/package.json libs/*/package.json ./
+ARG APP
+RUN npm ci --workspace=apps/frontend/${APP} --workspace=libs/frontend-core --no-audit --no-fund
+
+# ---- Build ----
+FROM deps AS build
+ARG APP
+COPY libs/frontend-core libs/frontend-core
+COPY apps/frontend/${APP} apps/frontend/${APP}
+# The release this image belongs to, shown under "What's new" (shell-front only).
+ARG APP_VERSION
+ENV APP_VERSION=${APP_VERSION}
+# Every front imports the built library, not its source.
+RUN npm run build --workspace=libs/frontend-core
+RUN npm run build --workspace=apps/frontend/${APP}
+
+# ---- Production ----
+FROM ${NGINX_IMAGE}
+ARG APP
+COPY --from=build /repo/apps/frontend/${APP}/dist /usr/share/nginx/html
+COPY apps/frontend/${APP}/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Writes config.json from the environment at start-up.
+COPY apps/frontend/${APP}/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+EXPOSE 80
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]

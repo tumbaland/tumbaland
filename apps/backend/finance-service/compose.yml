@@ -1,8 +1,12 @@
 services:
   finance-service:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The repository root: images install from the root lockfile.
+      context: ../../..
+      dockerfile: docker/Dockerfile.back
+      args:
+        APP: finance-service
+        PORT: 4003
     image: toomastahves/tumbaland-finance-service:${IMAGE_TAG:-latest}
     restart: unless-stopped
     stop_grace_period: 15s

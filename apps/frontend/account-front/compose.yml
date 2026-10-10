@@ -2,8 +2,11 @@ services:
   # Frontend apps
   account-front:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The repository root: images install from the root lockfile.
+      context: ../../..
+      dockerfile: docker/Dockerfile.front
+      args:
+        APP: account-front
     image: toomastahves/tumbaland-account-front:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:

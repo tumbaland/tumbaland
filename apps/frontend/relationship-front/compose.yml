@@ -1,8 +1,11 @@
 services:
   relationship-front:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The repository root: images install from the root lockfile.
+      context: ../../..
+      dockerfile: docker/Dockerfile.front
+      args:
+        APP: relationship-front
     image: toomastahves/tumbaland-relationship-front:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:

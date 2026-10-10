@@ -9,6 +9,12 @@ name: CI
 # that a PR is one row per event in the Actions list and not one per workflow:
 # the title check and the merge used to be files of their own.
 #
+# A pull request is tested while it is a draft: every push runs the suites. Marking
+# it ready does not run them again. `gate` looks for a finished run on the same
+# commit that really ran them and passed, and if there is one the suites are
+# skipped and only `merge` runs. Without one (the PR was opened ready, or its
+# last run failed), the suites run as usual. See scripts/ci-reuse.mjs.
+#
 # Editing a title or a description is deliberately not an event here. It would
 # start a whole run for a typo, and the suites cannot be skipped on it: a run
 # that skipped them would report `ci-passed` green over a failing commit. A
@@ -19,8 +25,10 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
   workflow_dispatch:
 
+# Ready-for-review has its own group: it may be waiting for the draft's run on
+# the same commit, and must not cancel it.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.ref }}-${{ github.event.action == 'ready_for_review' && 'ready' || 'code' }}
   cancel-in-progress: true
 
 # There is no end-to-end job. The smoke suite under e2e/ (`npm run test:e2e`) still
@@ -31,7 +39,36 @@ concurrency:
 # question for the release, not for a test against nine dev servers on a 2-core box.
 
 jobs:
+  # Decides whether the suites below run. Only "ready for review" can reuse a
+  # run; everything else runs them, as it always did.
+  gate:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      reuse: ${{ steps.gate.outputs.reuse }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - id: gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ACTION: ${{ github.event.action }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          if [ "$ACTION" != "ready_for_review" ] || [ -z "$HEAD_SHA" ]; then
+            echo "reuse=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          node scripts/ci-reuse.mjs --repo "$REPO" --sha "$HEAD_SHA" --run "$RUN_ID"
+
   validate-matrix:
+    needs: gate
+    if: needs.gate.outputs.reuse != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,11 +79,22 @@ jobs:
   # pinned version silently compiles against stale typings inside Docker's
   # cached npm-install layer. Catch that drift here, not in a failed deploy.
   lib-versions:
+    needs: gate
+    if: needs.gate.outputs.reuse != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Check workspaces pin the current lib versions
         run: node scripts/sync-lib-versions.mjs --check
+
+      # Every app builds from one of the two shared Dockerfiles with a few
+      # arguments from docker/services.json; a new app without them would build
+      # an image that cannot start.
+      - name: Check every app is described for its image
+        run: node scripts/image-build.mjs --check
+
+      - name: Test the release and image scripts
+        run: node --test scripts/*.test.mjs
 
   # Whole-repo lint in one pass. Doesn't need built libs (no type-aware
   # lint rules), so it runs standalone and stays cheap regardless of how
@@ -54,6 +102,8 @@ jobs:
   # a full lint-typecheck matrix run for every workspace whenever
   # the lint config changed.
   lint:
+    needs: gate
+    if: needs.gate.outputs.reuse != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,12 +121,15 @@ jobs:
         run: npm run lint
 
   changes:
+    needs: gate
+    if: needs.gate.outputs.reuse != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: read
     outputs:
       workspaces: ${{ steps.set-matrix.outputs.workspaces }}
+      apps: ${{ steps.set-matrix.outputs.apps }}
     steps:
       - uses: actions/checkout@v4
 
@@ -89,6 +142,9 @@ jobs:
               - 'package.json'
               - 'package-lock.json'
               - '.github/workflows/ci.yml'
+              - 'docker/**'
+              - '.dockerignore'
+              - 'scripts/image-build.mjs'
             backend-libs-changed: &backend-libs-changed
               - 'libs/backend-core/**'
             frontend-libs-changed: &frontend-libs-changed
@@ -178,7 +234,9 @@ jobs:
 
       - name: Build workspace matrix
         id: set-matrix
-        run: echo "workspaces=$(echo '${{ steps.filter.outputs.changes }}' | jq -c 'map(select(startswith("apps/") or startswith("libs/")))')" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "workspaces=$(echo '${{ steps.filter.outputs.changes }}' | jq -c 'map(select(startswith("apps/") or startswith("libs/")))')" >> "$GITHUB_OUTPUT"
+          echo "apps=$(echo '${{ steps.filter.outputs.changes }}' | jq -c 'map(select(startswith("apps/")) | split("/")[-1])')" >> "$GITHUB_OUTPUT"
 
   build-libs:
     needs: changes
@@ -272,6 +330,41 @@ jobs:
       - name: Build
         run: npm run build --workspace=${{ matrix.workspace }} --if-present
 
+  # Builds the image of every touched app exactly as the release will, minus the
+  # push. Until this existed, an image was first built after the merge, so a
+  # change that only breaks inside the image (a dependency the image installs
+  # differently, a binary for the wrong platform) was found by the deploy.
+  # The Pi is ARM and the release builds there natively, so this does too.
+  images:
+    needs: changes
+    if: needs.changes.outputs.apps != '[]'
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.apps) }}
+    name: image (${{ matrix.service }})
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve the build
+        id: build
+        run: node scripts/image-build.mjs "${{ matrix.service }}" --version "0.0.0-ci" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ steps.build.outputs.context }}
+          file: ${{ steps.build.outputs.file }}
+          push: false
+          build-args: ${{ steps.build.outputs.build-args }}
+          # Read the layers the release pushed, write nothing: a pull request
+          # should not evict what main built.
+          cache-from: type=gha,scope=${{ matrix.service }}
+
   # The title of a pull request is the commit that lands on main: it is squash
   # merged, and the subject is what the version bump and CHANGELOG.md are built
   # from. A title that is not a conventional commit makes a changelog line
@@ -317,7 +410,8 @@ jobs:
   #
   # What it leaves for a person to merge, on purpose:
   #
-  #   - a draft (marking it ready runs CI again, and this with it),
+  #   - a draft (marking it ready reuses the draft's passing run on the same
+  #     commit, and this runs with it),
   #   - anything that touches apps/infra, which a release never deploys, so the
   #     order of "infrastructure first, then the apps" is yours to decide,
   #   - a breaking change (`feat!:` or a BREAKING CHANGE footer), for the same
@@ -387,7 +481,7 @@ jobs:
   # workspace changed, so no matrix) is fine.
   ci-passed:
     if: always()
-    needs: [validate-matrix, lib-versions, lint, changes, build-libs, verify, pr-title]
+    needs: [gate, validate-matrix, lib-versions, lint, changes, build-libs, verify, images, pr-title]
     runs-on: ubuntu-latest
     steps:
       - name: Every job passed or was skipped on purpose

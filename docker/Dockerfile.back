@@ -1,0 +1,58 @@
+# syntax=docker/dockerfile:1.20
+
+# One Dockerfile for every backend service. The build context is the repository
+# root, so the image installs from the same package-lock.json as local
+# development and CI.
+#
+#   docker build -f docker/Dockerfile.back \
+#     --build-arg APP=album-service --build-arg PORT=4002 .
+#
+# PORT is only the default the health check probes when the container is not
+# given one. `node scripts/image-build.mjs <service>` prints the right
+# arguments for a service.
+
+# ---- Build ----
+FROM node:26-alpine AS build
+WORKDIR /repo
+COPY --parents package.json package-lock.json apps/*/*/package.json libs/*/package.json ./
+ARG APP
+RUN npm ci --workspace=apps/backend/${APP} --workspace=libs/backend-core --no-audit --no-fund
+COPY libs/backend-core libs/backend-core
+COPY apps/backend/${APP} apps/backend/${APP}
+RUN npm run build --workspace=libs/backend-core
+RUN npm run build --workspace=apps/backend/${APP}
+# Not every service ships API docs; the production stage copies the directory
+# either way.
+RUN mkdir -p apps/backend/${APP}/docs
+
+# ---- Production dependencies ----
+# Same lockfile, without dev tooling. The workspace library is linked, so its
+# built output travels with the service (see the production stage).
+FROM node:26-alpine AS prod-deps
+WORKDIR /repo
+COPY --parents package.json package-lock.json apps/*/*/package.json libs/*/package.json ./
+ARG APP
+RUN npm ci --omit=dev --workspace=apps/backend/${APP} --workspace=libs/backend-core --no-audit --no-fund
+
+# ---- Production ----
+FROM node:26-alpine AS production
+ARG APP
+ARG PORT
+WORKDIR /repo/apps/backend/${APP}
+COPY --from=prod-deps /repo/node_modules /repo/node_modules
+# node_modules/@tumbaland/backend-core is a link to this directory.
+COPY --from=build --chown=node:node /repo/libs/backend-core/package.json /repo/libs/backend-core/package.json
+COPY --from=build --chown=node:node /repo/libs/backend-core/dist /repo/libs/backend-core/dist
+COPY --from=build --chown=node:node /repo/apps/backend/${APP}/package.json ./package.json
+COPY --from=build --chown=node:node /repo/apps/backend/${APP}/dist ./dist
+COPY --from=build --chown=node:node /repo/apps/backend/${APP}/docs ./docs
+# Where file-service keeps uploads; harmless for the rest.
+RUN mkdir -p /data && chown node:node /data
+USER node
+EXPOSE ${PORT}
+# The health check runs in the container's shell, where build arguments no longer
+# exist; the default has to be an ENV to survive. A PORT given at run time wins.
+ENV HEALTH_PORT=${PORT}
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:${PORT:-$HEALTH_PORT}/health/live || exit 1
+CMD ["node", "dist/index.js"]

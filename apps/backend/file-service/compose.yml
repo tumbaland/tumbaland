@@ -1,8 +1,12 @@
 services:
   file-service:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The repository root: images install from the root lockfile.
+      context: ../../..
+      dockerfile: docker/Dockerfile.back
+      args:
+        APP: file-service
+        PORT: 5002
     image: toomastahves/tumbaland-file-service:${IMAGE_TAG:-latest}
     restart: unless-stopped
     stop_grace_period: 15s

@@ -1,8 +1,12 @@
 services:
   auth-service:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The repository root: images install from the root lockfile.
+      context: ../../..
+      dockerfile: docker/Dockerfile.back
+      args:
+        APP: auth-service
+        PORT: 5001
     image: toomastahves/tumbaland-auth-service:${IMAGE_TAG:-latest}
     restart: unless-stopped
     stop_grace_period: 15s

@@ -5,18 +5,16 @@
  *
  * Why exact, and why automated:
  *
- * Services install the shared libs from npm (`npm i` inside their Dockerfile),
- * never from the monorepo. Their `package.json` is therefore the only thing
- * Docker's layer cache can key the install on. A floating `"*"` — or even a
- * caret range — never changes when a lib is published, so buildx happily
- * restores a months-old `node_modules` and compiles fresh source against a
- * stale lib. That failure looks like "has no exported member X" and is
- * thoroughly confusing, because the registry *does* have the export.
+ * An app depends on a lib by version, and npm links the workspace copy only
+ * when that version matches the one in `libs/`. A stale pin makes npm fetch the
+ * published package instead, so the app is built and tested against a different
+ * lib than the one in the same commit. Images are built from the repository
+ * root with the lib compiled from source (docker/Dockerfile.*), which is why the
+ * pin has to move with every release: it is what keeps the lockfile, local
+ * development, CI and the image all on the same code.
  *
- * An exact version changes the file on every release, which busts that layer,
- * and makes an image built from a given commit reproducible — rebuilding an old
- * commit installs the lib it was written against, so a rollback is a real
- * rollback.
+ * An exact version also changes the consumer's package.json on every release,
+ * which is what makes the release plan rebuild it.
  *
  * Run automatically by each lib's `npm run release`. `--check` fails instead of
  * writing, for CI.

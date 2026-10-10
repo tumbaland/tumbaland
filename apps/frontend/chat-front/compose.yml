@@ -1,8 +1,11 @@
 services:
   chat-front:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The repository root: images install from the root lockfile.
+      context: ../../..
+      dockerfile: docker/Dockerfile.front
+      args:
+        APP: chat-front
     image: toomastahves/tumbaland-chat-front:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:

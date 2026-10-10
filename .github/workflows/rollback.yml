@@ -69,8 +69,8 @@ jobs:
             exit 1
           fi
 
-          # Every service that can be deployed: an app directory with a Dockerfile.
-          KNOWN=$(for f in apps/backend/*/Dockerfile apps/frontend/*/Dockerfile; do basename "$(dirname "$f")"; done)
+          # Every service that can be deployed: an app under apps/backend or apps/frontend.
+          KNOWN=$(node scripts/image-build.mjs --list)
 
           if [ "$REQUESTED" = "changed" ]; then
             # Everything that differs between that release and the newest one

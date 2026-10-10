@@ -53,14 +53,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Resolve paths
-        id: vars
-        run: |
-          case "${{ matrix.service }}" in
-            *-front) TIER=frontend ;;
-            *)       TIER=backend ;;
-          esac
-          echo "dir=apps/$TIER/${{ matrix.service }}" >> "$GITHUB_OUTPUT"
+      # See release.yml: one Dockerfile per tier, built from the repository root.
+      - name: Resolve the build
+        id: build
+        run: node scripts/image-build.mjs "${{ matrix.service }}" --version "$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -74,9 +70,10 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./${{ steps.vars.outputs.dir }}
-          file: ./${{ steps.vars.outputs.dir }}/Dockerfile
+          context: ${{ steps.build.outputs.context }}
+          file: ${{ steps.build.outputs.file }}
           push: true
+          build-args: ${{ steps.build.outputs.build-args }}
           # `tumbaland-` prefix: the Docker Hub account is shared with visin, which
           # publishes its own group-service, auth-service, file-service, auth-front
           # and account-front. See deploy-single-service.yml for the full note.

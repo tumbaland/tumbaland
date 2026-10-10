@@ -1,0 +1,18 @@
+{
+  "ports": {
+    "relationship-service": 4001,
+    "album-service": 4002,
+    "finance-service": 4003,
+    "chat-service": 4004,
+    "auth-service": 5001,
+    "file-service": 5002,
+    "public-service": 5003,
+    "payment-service": 5005,
+    "group-service": 5006,
+    "mcp-service": 5007
+  },
+  "nginx": {
+    "shell-front": "nginx:1.26-alpine"
+  },
+  "versioned": ["shell-front"]
+}

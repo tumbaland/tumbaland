@@ -148,3 +148,25 @@ Never edit a library's `package.json` version or run `npm publish` yourself. Tha
 registry, the changelog and git history drifted apart before; publishing through the workflow keeps
 all three in step.
 
+
+### Images
+
+Every service ships as an image built from the repository root, with one of two shared
+Dockerfiles: `docker/Dockerfile.front` and `docker/Dockerfile.back`. Both install with `npm ci`
+from the root `package-lock.json`, the same file local development and CI use, and build the
+library (`libs/*`) from the same commit. So what runs in production is what was tested, and the
+shell and its modules cannot end up on different versions of React or MUI.
+
+- What differs per service (a backend's port, the shell's version) is data in
+  `docker/services.json`. `node scripts/image-build.mjs <service> --cli` prints the `docker build`
+  command for one.
+- A pull request builds the image of every app it touches (ARM, like the Pi) without pushing, so
+  a change that only breaks inside an image fails the pull request and not the deploy.
+- A release rebuilds a service when its files, its library, its Dockerfile or the packages it
+  installs from the lockfile changed (`scripts/release-plan.mjs`), so a dependency bump nobody
+  uses does not redeploy everything.
+- To upgrade a dependency, change it at the root and commit `package-lock.json`: `npm update
+  <package>`, then run the tests. There is nothing to sync per app.
+- Do not list a platform-specific binary (`@rollup/rollup-linux-x64-gnu`, `@esbuild/linux-x64`) as a
+  dependency. The lockfile already carries every variant, and a binary for one platform makes
+  `npm ci` fail on the others, which is how the images first failed to build from the lockfile.

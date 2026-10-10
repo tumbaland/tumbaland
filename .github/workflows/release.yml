@@ -221,14 +221,13 @@ jobs:
         with:
           ref: app-v${{ needs.changelog.outputs.version }}
 
-      - name: Resolve paths
-        id: vars
-        run: |
-          case "${{ matrix.service }}" in
-            *-front) TIER=frontend ;;
-            *)       TIER=backend ;;
-          esac
-          echo "dir=apps/$TIER/${{ matrix.service }}" >> "$GITHUB_OUTPUT"
+      # The Dockerfile, context and build arguments for this service. Every image
+      # is built from the repository root against the root lockfile, so what runs
+      # in production is what was tested; docker/services.json holds the few facts
+      # that differ per service.
+      - name: Resolve the build
+        id: build
+        run: node scripts/image-build.mjs "${{ matrix.service }}" --version "${{ needs.changelog.outputs.version }}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -242,12 +241,10 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./${{ steps.vars.outputs.dir }}
-          file: ./${{ steps.vars.outputs.dir }}/Dockerfile
+          context: ${{ steps.build.outputs.context }}
+          file: ${{ steps.build.outputs.file }}
           push: true
-          # Only the shell shows a version, and a build-arg no Dockerfile
-          # declares is a warning in every other image's log.
-          build-args: ${{ matrix.service == 'shell-front' && format('APP_VERSION={0}', needs.changelog.outputs.version) || '' }}
+          build-args: ${{ steps.build.outputs.build-args }}
           # `tumbaland-` prefix: the Docker Hub account is shared with visin,
           # which publishes its own group-service, auth-service, file-service,
           # auth-front and account-front.

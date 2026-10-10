@@ -1,8 +1,12 @@
 services:
   album-service:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The repository root: images install from the root lockfile.
+      context: ../../..
+      dockerfile: docker/Dockerfile.back
+      args:
+        APP: album-service
+        PORT: 4002
     image: toomastahves/tumbaland-album-service:${IMAGE_TAG:-latest}
     restart: unless-stopped
     stop_grace_period: 15s

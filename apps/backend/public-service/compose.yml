@@ -1,8 +1,12 @@
 services:
   public-service:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The repository root: images install from the root lockfile.
+      context: ../../..
+      dockerfile: docker/Dockerfile.back
+      args:
+        APP: public-service
+        PORT: 5003
     image: toomastahves/tumbaland-public-service:${IMAGE_TAG:-latest}
     restart: unless-stopped
     stop_grace_period: 15s

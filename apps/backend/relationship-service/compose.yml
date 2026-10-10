@@ -1,8 +1,12 @@
 services:
   relationship-service:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The repository root: images install from the root lockfile.
+      context: ../../..
+      dockerfile: docker/Dockerfile.back
+      args:
+        APP: relationship-service
+        PORT: 4001
     image: toomastahves/tumbaland-relationship-service:${IMAGE_TAG:-latest}
     restart: unless-stopped
     stop_grace_period: 15s

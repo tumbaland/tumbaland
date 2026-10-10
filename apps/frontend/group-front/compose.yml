@@ -1,8 +1,11 @@
 services:
   group-front:
     build:
-      context: .
-      dockerfile: Dockerfile
+      # The repository root: images install from the root lockfile.
+      context: ../../..
+      dockerfile: docker/Dockerfile.front
+      args:
+        APP: group-front
     image: toomastahves/tumbaland-group-front:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
