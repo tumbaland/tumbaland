@@ -20,8 +20,8 @@ ways to pause, from narrowest to widest:
 
 | To hold                                  | Do this                                                                                                   |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| One pull request                         | Make it a draft, or convert an open one to a draft. GitHub will not merge a draft by any route, auto-merge included. Mark it ready to go on. |
-| Infra or breaking changes, automatically | Nothing. The `auto-merge` job in `ci.yml` does not turn auto-merge on for a PR that touches `apps/infra` or is a `type!:` change. You merge it. |
+| One pull request                         | Make it a draft, or convert an open one to a draft. GitHub will not merge a draft by any route. Mark it ready to go on: CI runs again, and the `merge` job with it. |
+| Infra or breaking changes, automatically | Nothing. The `merge` job in `ci.yml` does not merge a PR that touches `apps/infra` or is a `type!:` change. You merge it. |
 | Everything that is already merged        | Actions → **Release** → ⋯ → **Disable workflow**. Merges still land, nothing deploys.                    |
 
 **An infrastructure change that the apps depend on:**
@@ -130,6 +130,12 @@ around the pull request gate on purpose: use them for a service the release left
 alone, or for an emergency, and not as the usual path.
 
 ### The ruleset
+
+**Not active today.** Branch protection and rulesets on a private repository need a paid
+plan (GitHub Team for an organization, Pro for a personal account) or a public repository,
+and GitHub refuses to create one otherwise. Until then the `merge` job in `ci.yml` is the
+only gate: it merges only after `ci-passed`, and nothing stops a person merging by hand
+earlier. This file is what to import once that changes.
 
 `.github/rulesets/main.json` is what makes `main` take only pull requests. It
 requires the `ci-passed` check (the title check is part of it), allows squash merges only, and

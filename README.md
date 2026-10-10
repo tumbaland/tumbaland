@@ -100,7 +100,9 @@ Nothing is pushed to `main`. Work on a branch and open a pull request:
 1. `git switch -c fix/short-name`, commit, push, open a PR.
 2. CI (`ci.yml`) runs on the PR. The one check that has to be green is `ci-passed`, which
    includes the title check.
-3. Squash merge. That is the only merge method the ruleset allows.
+3. The `merge` job in `ci.yml` squash merges it once `ci-passed` is green. This repository is
+   private on a plan without branch protection, so that job is the only gate: do not merge by hand
+   while CI is still running.
 
 The **PR title becomes the commit on `main`**, and the version bump and `CHANGELOG.md` are built
 from it, so it has to be a [Conventional Commit](https://www.conventionalcommits.org/):
