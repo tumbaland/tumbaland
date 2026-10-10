@@ -525,6 +525,82 @@ describe('choosing the microphone', () => {
 
     expect(getMicrophone).not.toHaveBeenCalled();
   });
+
+  /** A microphone request the test settles itself, to put answers in the order it wants. */
+  const deferred = () => {
+    let resolve!: (stream: MediaStream) => void;
+    const promise = new Promise<MediaStream>((r) => {
+      resolve = r;
+    });
+    return { promise, resolve };
+  };
+
+  it('ends on the last choice when an earlier one is answered later', async () => {
+    const first = microphone('built-in');
+    const slow = deferred();
+    const fast = deferred();
+    const pending = [slow, fast];
+    const getMicrophone = vi.fn(async (id: string | null) => (id === null ? first : pending.shift()!.promise));
+    const irja = await answered(getMicrophone);
+    const sender = FakePeer.created[0]!.senders[0]!;
+    const usb = microphone('usb');
+    const headset = microphone('headset');
+
+    const one = irja.switchMicrophone('usb');
+    const two = irja.switchMicrophone('headset');
+    fast.resolve(headset);
+    await two;
+    slow.resolve(usb);
+    await one;
+
+    expect(irja.snapshot.micDeviceId).toBe('headset');
+    expect(sender.track).toBe(headset.getAudioTracks()[0]);
+    expect(usb.getAudioTracks()[0]!.stop).toHaveBeenCalled();
+  });
+
+  it('ends on the last choice when the earlier one is answered first', async () => {
+    const first = microphone('built-in');
+    const early = deferred();
+    const late = deferred();
+    const pending = [early, late];
+    const getMicrophone = vi.fn(async (id: string | null) => (id === null ? first : pending.shift()!.promise));
+    const irja = await answered(getMicrophone);
+    const usb = microphone('usb');
+    const headset = microphone('headset');
+
+    const one = irja.switchMicrophone('usb');
+    const two = irja.switchMicrophone('headset');
+    early.resolve(usb);
+    await one;
+    late.resolve(headset);
+    await two;
+
+    expect(irja.snapshot.micDeviceId).toBe('headset');
+    expect(usb.getAudioTracks()[0]!.stop).toHaveBeenCalled();
+    expect(headset.getAudioTracks()[0]!.stop).not.toHaveBeenCalled();
+  });
+
+  it('does not put a microphone chosen on one call into the next', async () => {
+    const first = microphone('built-in');
+    const pending = deferred();
+    const getMicrophone = vi.fn(async (id: string | null) => (id === 'headset' ? pending.promise : first));
+    const irja = await answered(getMicrophone);
+
+    const switching = irja.switchMicrophone('headset');
+    irja.hangUp();
+    // A new call, opened on its own microphone, while the old switch is outstanding.
+    const second = microphone('built-in-2');
+    getMicrophone.mockImplementation(async (id: string | null) => (id === 'headset' ? pending.promise : second));
+    irja.handleEvent(event('call.ringing', callView({ id: 'call-2' })));
+    await irja.accept();
+    const late = microphone('headset');
+    pending.resolve(late);
+    await switching;
+
+    expect(irja.snapshot.micDeviceId).toBe('built-in-2');
+    expect(late.getAudioTracks()[0]!.stop).toHaveBeenCalled();
+    expect(second.getAudioTracks()[0]!.stop).not.toHaveBeenCalled();
+  });
 });
 
 describe('review fixes', () => {

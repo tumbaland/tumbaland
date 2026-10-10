@@ -254,11 +254,20 @@ export function CallScreen({
     if (state.remoteStream) void element.play().catch(() => undefined);
   }, [state.remoteStream]);
 
-  // The output is an element property, so it is set once the element exists and
-  // again whenever a different one is chosen. Not every browser has it.
+  // A panel left open by a call that ended must not be open on the next one.
+  useEffect(() => {
+    if (!live || state.phase === 'ended') setAudioOpen(false);
+  }, [live, state.phase]);
+
+  // The output is an element property, so it is set once the element exists
+  // and again whenever a different one is chosen. Not every browser has it.
+  // Left alone until a speaker has been chosen: the default is not ours to set.
+  const chosenSpeaker = useRef(false);
   useEffect(() => {
     const element = audioRef.current as (HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> }) | null;
     if (!live || !element?.setSinkId) return;
+    if (speakerId === null && !chosenSpeaker.current) return;
+    if (speakerId !== null) chosenSpeaker.current = true;
     element.setSinkId(speakerId ?? '').catch((error: Error) => logger.warn('Could not set the speaker', { error: error.message }));
   }, [speakerId, live]);
 
