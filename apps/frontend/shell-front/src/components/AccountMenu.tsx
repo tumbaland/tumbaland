@@ -101,13 +101,6 @@ export function AccountMenu({
     // permission request without a user gesture, and Chrome holds
     // asking-on-load against the site.
     <NotificationSetting key="notifications" />,
-    <Divider key="sign-out-divider" />,
-    <MenuItem key="sign-out" onClick={handleSignOut} sx={{ borderRadius: 2, mx: 0.5 }}>
-      <ListItemIcon sx={{ color: 'inherit' }}>
-        <LogoutIcon fontSize="small" />
-      </ListItemIcon>
-      <ListItemText>Sign out</ListItemText>
-    </MenuItem>,
     // The quietest row in the menu: it is there to be found by someone who
     // looks, and the dot on the Account entry is what asks them to.
     <Divider key="about-divider" />,
@@ -131,6 +124,13 @@ export function AccountMenu({
         What's new
       </Typography>
       <Typography sx={{ fontSize: 12.5, color: ink.muted }}>{APP_VERSION}</Typography>
+    </MenuItem>,
+    <Divider key="sign-out-divider" />,
+    <MenuItem key="sign-out" onClick={handleSignOut} sx={{ borderRadius: 2, mx: 0.5 }}>
+      <ListItemIcon sx={{ color: 'inherit' }}>
+        <LogoutIcon fontSize="small" />
+      </ListItemIcon>
+      <ListItemText>Sign out</ListItemText>
     </MenuItem>
   ];
 

@@ -68,7 +68,7 @@ it('shows who is signed in, the account pages, appearance and sign out, and noth
     .getAllByRole('menuitem')
     .filter((item) => item.getAttribute('aria-disabled') !== 'true')
     .map((item) => item.textContent);
-  expect(actions).toEqual(['Profile', 'Groups', 'Billing', 'AutoLightDark', 'Sign out', `What's new${APP_VERSION}`]);
+  expect(actions).toEqual(['Profile', 'Groups', 'Billing', 'AutoLightDark', `What's new${APP_VERSION}`, 'Sign out']);
 });
 
 it('lists no Billing inside a native app, where store billing rules apply', () => {
@@ -80,7 +80,7 @@ it('lists no Billing inside a native app, where store billing rules apply', () =
       .getAllByRole('menuitem')
       .filter((item) => item.getAttribute('aria-disabled') !== 'true')
       .map((item) => item.textContent);
-    expect(actions).toEqual(['Profile', 'Groups', 'AutoLightDark', 'Sign out', `What's new${APP_VERSION}`]);
+    expect(actions).toEqual(['Profile', 'Groups', 'AutoLightDark', `What's new${APP_VERSION}`, 'Sign out']);
   } finally {
     delete window.Capacitor;
   }
