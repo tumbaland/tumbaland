@@ -55,7 +55,7 @@ jobs:
         run: node scripts/image-build.mjs --check
 
       - name: Test the release and image scripts
-        run: node --test scripts/
+        run: node --test scripts/*.test.mjs
 
   # Whole-repo lint in one pass. Doesn't need built libs (no type-aware
   # lint rules), so it runs standalone and stays cheap regardless of how
