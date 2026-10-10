@@ -124,6 +124,8 @@ export class CallEngine {
   private disposed = false;
   /** Bumped per `start`, so a slow answer to an abandoned attempt cannot claim a newer one. */
   private attempt = 0;
+  /** Bumped per microphone switch, so the last choice wins however the browser orders its answers. */
+  private micRequest = 0;
 
   private readonly createPeer: (config: RTCConfiguration) => RTCPeerConnection;
   private readonly getMicrophone: (deviceId: string | null) => Promise<MediaStream>;
@@ -262,7 +264,10 @@ export class CallEngine {
    */
   async switchMicrophone(deviceId: string | null): Promise<void> {
     if (!this.busy || !this.mic) return;
-    const callId = this.state.call?.id;
+    // What this switch is replacing. If it is not what the engine holds when
+    // the browser answers, the call it was for is over or has moved on.
+    const replacing = this.mic;
+    const request = ++this.micRequest;
 
     let next: MediaStream;
     try {
@@ -273,7 +278,8 @@ export class CallEngine {
     }
 
     const track = next.getAudioTracks()[0];
-    const stale = !this.busy || !this.mic || (callId !== undefined && this.state.call?.id !== callId);
+    // Two quick choices can be answered out of order: only the latest counts.
+    const stale = !this.busy || this.mic !== replacing || request !== this.micRequest;
     if (stale || !track) {
       for (const t of next.getTracks()) t.stop();
       return;
@@ -292,9 +298,13 @@ export class CallEngine {
       }
     }
 
-    const previous = this.mic;
+    // The swap itself took a turn: the call may have ended during it.
+    if (!this.busy || this.mic !== replacing) {
+      for (const t of next.getTracks()) t.stop();
+      return;
+    }
     this.holdMicrophone(next);
-    for (const t of previous.getTracks()) t.stop();
+    for (const t of replacing.getTracks()) t.stop();
   }
 
   toggleMute(): void {

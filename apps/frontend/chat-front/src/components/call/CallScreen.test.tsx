@@ -223,4 +223,40 @@ describe('call audio', () => {
 
     expect(sinks).toContain('monitor');
   });
+
+  it('closes the settings when the call ends, and does not reopen them on the next one', async () => {
+    const props = { ...handlers(), onSelectMicrophone: vi.fn() };
+    const { rerender } = render(<CallScreen state={state({ phase: 'active', connectedAt: Date.now() })} {...props} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Call audio settings' }));
+    expect(await screen.findByRole('dialog', { name: 'Call audio' })).toBeInTheDocument();
+
+    rerender(<CallScreen state={state({ phase: 'ended', message: 'Call ended' })} {...props} />);
+    rerender(<CallScreen state={IDLE} {...props} />);
+    rerender(<CallScreen state={state({ phase: 'incoming' })} {...props} />);
+
+    expect(screen.queryByRole('dialog', { name: 'Call audio' })).not.toBeInTheDocument();
+  });
+
+  it('leaves the output alone until a speaker has been chosen', () => {
+    render(<CallScreen state={state({ phase: 'connecting' })} {...handlers()} onSelectMicrophone={vi.fn()} />);
+
+    expect(sinks).toEqual([]);
+  });
+
+  it('puts the output back to the default when the choice is cleared', async () => {
+    localStorage.setItem('tumbaland.call.speaker', 'monitor');
+    render(
+      <CallScreen
+        state={state({ phase: 'active', connectedAt: Date.now() })}
+        {...handlers()}
+        onSelectMicrophone={vi.fn()}
+      />
+    );
+    expect(sinks).toEqual(['monitor']);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Call audio settings' }));
+    await userEvent.selectOptions(await screen.findByLabelText('Speaker or headphones'), 'default');
+
+    expect(sinks.at(-1)).toBe('default');
+  });
 });
