@@ -19,7 +19,7 @@
     "@mui/icons-material": "^9.4.0",
     "@mui/material": "^9.4.0",
     "@tanstack/react-query": "^5.102.8",
-    "@tumbaland/frontend-core": "1.21.0",
+    "@tumbaland/frontend-core": "1.21.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^8.3.1"
