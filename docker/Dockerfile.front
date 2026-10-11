@@ -23,12 +23,18 @@ RUN npm ci --workspace=apps/frontend/${APP} --workspace=libs/frontend-core --no-
 FROM deps AS build
 ARG APP
 COPY libs/frontend-core libs/frontend-core
+# Shared with album-service; built here from source like frontend-core.
+COPY libs/collage-core libs/collage-core
 COPY apps/frontend/${APP} apps/frontend/${APP}
 # The release this image belongs to, shown under "What's new" (shell-front only).
 ARG APP_VERSION
 ENV APP_VERSION=${APP_VERSION}
 # Every front imports the built library, not its source.
 RUN npm run build --workspace=libs/frontend-core
+# Only for the fronts that use it.
+RUN if grep -q '"@tumbaland/collage-core"' apps/frontend/${APP}/package.json; then \
+      npm run build --workspace=libs/collage-core; \
+    fi
 RUN npm run build --workspace=apps/frontend/${APP}
 
 # ---- Production ----

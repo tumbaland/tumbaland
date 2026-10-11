@@ -55,6 +55,10 @@ const SERVER_INSTRUCTIONS = [
   'shows. There is no way to find "the ones with the dog". Say so rather than searching album',
   'after album and reporting nothing found.',
   '',
+  'Collages: view_photos is how you see what photos show. You may change only collages an',
+  'assistant made; for one a person made, make a new one like it. What you make is theirs to',
+  'check and adjust in the app, so say what you chose rather than asking them to approve each step.',
+  '',
   'recategorise_transactions moves many rows at once. Say how many are involved and get agreement',
   'before calling it.',
   '',
@@ -82,14 +86,25 @@ const authorizationServer = (): string =>
  * discovery, took the error as a failure, and reported "No matching tools
  * found" for a server whose tools were listed correctly the whole time. An
  * empty list is the honest answer and costs nothing.
+ *
+ * Prompts only when there are none. A module that registered one (the collage
+ * tools do) has already set up the real listing, and answering empty over it
+ * would hide the prompt from every client.
  */
 function answerEmptyListings(server: McpServer): void {
-  server.server.registerCapabilities({ resources: {}, prompts: {} });
+  // The SDK throws on a second handler for a method, which is the public way to ask.
+  let hasPrompts = false;
+  try {
+    server.server.assertCanSetRequestHandler(ListPromptsRequestSchema.shape.method.value);
+  } catch {
+    hasPrompts = true;
+  }
+  server.server.registerCapabilities({ resources: {}, ...(hasPrompts ? {} : { prompts: {} }) });
   server.server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: [] }));
   server.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
     resourceTemplates: []
   }));
-  server.server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: [] }));
+  if (!hasPrompts) server.server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: [] }));
 }
 
 interface Authenticated {

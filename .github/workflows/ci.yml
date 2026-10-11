@@ -149,9 +149,13 @@ jobs:
               - 'libs/backend-core/**'
             frontend-libs-changed: &frontend-libs-changed
               - 'libs/frontend-core/**'
+            # Shared by the collage editor, its server and the assistant's tools.
+            collage-libs-changed: &collage-libs-changed
+              - 'libs/collage-core/**'
             apps/backend/album-service:
               - *root-shared
               - *backend-libs-changed
+              - *collage-libs-changed
               - 'apps/backend/album-service/**'
             apps/backend/auth-service:
               - *root-shared
@@ -176,6 +180,7 @@ jobs:
             apps/backend/mcp-service:
               - *root-shared
               - *backend-libs-changed
+              - *collage-libs-changed
               - 'apps/backend/mcp-service/**'
             apps/backend/payment-service:
               - *root-shared
@@ -196,6 +201,7 @@ jobs:
             apps/frontend/album-front:
               - *root-shared
               - *frontend-libs-changed
+              - *collage-libs-changed
               - 'apps/frontend/album-front/**'
             apps/frontend/auth-front:
               - *root-shared
@@ -231,6 +237,9 @@ jobs:
             libs/frontend-core:
               - *root-shared
               - 'libs/frontend-core/**'
+            libs/collage-core:
+              - *root-shared
+              - 'libs/collage-core/**'
 
       - name: Build workspace matrix
         id: set-matrix
@@ -257,11 +266,11 @@ jobs:
       - name: Build shared libs
         # Order matters: components imports from frontend-core, so frontend-core
         # must be built (its dist/.d.ts emitted) before components typechecks.
-        run: npm run build -w @tumbaland/backend-core -w @tumbaland/frontend-core
+        run: npm run build -w @tumbaland/backend-core -w @tumbaland/frontend-core -w @tumbaland/collage-core
 
-      # Split into a backend and a frontend artifact so each verify job pulls
-      # only the lib its workspace actually consumes, instead of every job
-      # downloading both lib dists regardless of what it builds.
+      # One artifact per lib, so each verify job pulls only the libs its
+      # workspace actually consumes, instead of every job downloading every
+      # lib dist regardless of what it builds.
       - name: Upload built backend lib
         uses: actions/upload-artifact@v4
         with:
@@ -274,6 +283,13 @@ jobs:
         with:
           name: libs-dist-frontend
           path: libs/frontend-core/dist
+          retention-days: 1
+
+      - name: Upload built collage lib
+        uses: actions/upload-artifact@v4
+        with:
+          name: libs-dist-collage
+          path: libs/collage-core/dist
           retention-days: 1
 
   # Typecheck + test + build for each touched workspace, combined into one
@@ -320,6 +336,15 @@ jobs:
         with:
           name: libs-dist-frontend
           path: libs/frontend-core/dist
+
+      # Used by apps on both sides (album-front, album-service, mcp-service);
+      # small enough to hand every app rather than keep a list.
+      - name: Download collage lib
+        if: startsWith(matrix.workspace, 'apps/')
+        uses: actions/download-artifact@v4
+        with:
+          name: libs-dist-collage
+          path: libs/collage-core/dist
 
       - name: Typecheck
         run: npm run typecheck --workspace=${{ matrix.workspace }}

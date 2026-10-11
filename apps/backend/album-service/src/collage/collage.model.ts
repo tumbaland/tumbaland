@@ -31,6 +31,12 @@ export interface CollageConfig {
   albumIds: string[]; // Updated: albumIds array to support multiple albums
 }
 
+export interface CollageMaker {
+  kind: 'assistant';
+  /** "Claude", or whatever the connection is called in account settings */
+  label: string;
+}
+
 export interface ICollage extends Document {
   title: string;
   config: CollageConfig;
@@ -47,6 +53,12 @@ export interface ICollage extends Document {
   conversationId?: string;
   /** Durable idempotency key for requests from chat-service. */
   chatRequestKey?: string;
+  /**
+   * Set when a connected assistant made the collage, from the name its owner
+   * gave the connection. An assistant may change only collages carrying this;
+   * the ones people made are theirs. Absent on everything a person made.
+   */
+  madeBy?: CollageMaker;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -60,7 +72,11 @@ const CollageSchema = new Schema<ICollage>(
     groupId: { type: String, index: true },
     revision: { type: Number, default: 0 },
     conversationId: { type: String },
-    chatRequestKey: { type: String, unique: true, sparse: true }
+    chatRequestKey: { type: String, unique: true, sparse: true },
+    madeBy: {
+      type: new Schema<CollageMaker>({ kind: { type: String, enum: ['assistant'] }, label: String }, { _id: false }),
+      required: false
+    }
   },
   { timestamps: true }
 );

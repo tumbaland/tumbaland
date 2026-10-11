@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { useCollageEditor } from './useCollageEditor';
-import { CollageDoc } from '../components/collage/collageDoc';
+import { CollageDoc } from '@tumbaland/collage-core';
 
 const emptyDoc: CollageDoc = {
   canvas: { width: 1600, height: 900 },

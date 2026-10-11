@@ -6,7 +6,7 @@ import statisticsRoutes from './routes/statisticsRoutes';
 import collageRoutes from './collage/collageRoutes';
 import internalRoutes from './routes/internalRoutes';
 import { healthCheck } from './controllers/healthController';
-import { errorHandler, createBaseApp, metricsHandler, standardRateLimiter } from '@tumbaland/backend-core';
+import { errorHandler, createBaseApp, metricsHandler, createRateLimiter } from '@tumbaland/backend-core';
 import collageLiveRoutes from './collage/collageLiveRoutes';
 
 // The rate limiter is mounted by hand below rather than by createBaseApp, so
@@ -23,7 +23,17 @@ app.use('/internal', internalRoutes);
 // to the collage like any other request.
 app.use('/api/collages', collageLiveRoutes);
 
-app.use(standardRateLimiter);
+/**
+ * Everything else, counted per address. The default of 300 per 15 minutes was
+ * sized for a person browsing, and it is far too small for what connected
+ * assistants send: they reach this service through mcp-service, so every
+ * assistant of every user arrives from one address and shares one bucket, and
+ * a single edit round of a collage is six or seven requests. Ten times the
+ * default, the same figure as saving in the editor above, still stops a
+ * runaway client within the minute.
+ */
+export const GENERAL_REQUESTS_PER_WINDOW = 3000;
+app.use(createRateLimiter({ max: GENERAL_REQUESTS_PER_WINDOW }));
 
 // Routes
 app.use('/api/albums', albumRoutes);

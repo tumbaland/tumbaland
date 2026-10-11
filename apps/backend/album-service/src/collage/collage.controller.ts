@@ -14,7 +14,9 @@ export const createCollage = async (req: Request, res: Response): Promise<void> 
   const user = req.user!;
   const userGroups = req.userGroups || [];
 
-  const collage = await collageService.createCollage(req.body, user.id, userGroups);
+  // Who made it is settled by the credential, never by the request body.
+  const madeBy = req.apiKey ? { kind: 'assistant' as const, label: req.apiKey.label } : undefined;
+  const collage = await collageService.createCollage(req.body, user.id, userGroups, madeBy);
   res.status(201).json({
     success: true,
     message: 'Collage created successfully',
@@ -49,13 +51,14 @@ export const applyCollageChanges = async (req: Request, res: Response): Promise<
   const { id } = req.params;
 
   const { changes, session } = req.body as { changes: collageService.CollageChanges; session?: string };
-  const result = await collageService.applyCollageChanges(id as string, changes, user.id, userGroups);
-  live.publish(
-    id as string,
-    'changes',
-    { revision: result.revision, changes, by: { userId: user.id, name: user.name } },
-    session
-  );
+  const assistant = Boolean(req.apiKey);
+  const result = await collageService.applyCollageChanges(id as string, changes, user.id, userGroups, { assistant });
+  // An assistant has no tab and no session, so everyone with the collage open
+  // gets its changes, under the name its connection was given.
+  const by = assistant
+    ? { userId: user.id, name: req.apiKey!.label, assistant: true }
+    : { userId: user.id, name: user.name };
+  live.publish(id as string, 'changes', { revision: result.revision, changes, by }, session);
   res.json({ success: true, data: result });
 };
 
@@ -151,7 +154,10 @@ export const getCollageById = async (req: Request, res: Response): Promise<void>
   const userGroups = req.userGroups || [];
   const { id } = req.params;
 
-  const result = await collageService.getCollageWithPhotos(id as string, user.id, userGroups);
+  // `urls=0` skips signing the photos' links, for callers that only read about them.
+  const result = await collageService.getCollageWithPhotos(id as string, user.id, userGroups, {
+    signUrls: req.query.urls !== '0'
+  });
 
   res.json({
     success: true,

@@ -1,6 +1,6 @@
 import { vi } from 'vite-plus/test';
 import { exportCollageToPng, exportCollageToVideo, pickVideoFormat } from './exportCollage';
-import { CollageDoc } from './collageDoc';
+import { CollageDoc } from '@tumbaland/collage-core';
 import { ResolvePhoto } from './CollageStage';
 
 /**

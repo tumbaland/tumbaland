@@ -1000,6 +1000,116 @@ paths:
       security:
         - bearerAuth: []
 
+  /photos/album/{albumId}/sheet:
+    get:
+      tags: [Photos]
+      summary: An album as a numbered sheet of pictures
+      description: >
+        One page of an album's photos, in the order they were taken, as a numbered
+        grid in one JPEG, with the list of which number is which photo. Made for a
+        connected assistant choosing photos for a collage.
+      parameters:
+        - name: albumId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 36
+            maximum: 48
+          description: Photos on a page
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Taken on or after
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Taken on or before
+      responses:
+        '200':
+          description: The sheet and its list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      image:
+                        type: string
+                        description: The picture, base64
+                      mimeType:
+                        type: string
+                        example: image/jpeg
+                      width:
+                        type: integer
+                      height:
+                        type: integer
+                      page:
+                        type: integer
+                      pages:
+                        type: integer
+                      total:
+                        type: integer
+                      photos:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            n:
+                              type: integer
+                              description: The number on the picture
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            dateTaken:
+                              type: string
+                              format: date-time
+                            aspect:
+                              type: number
+                              description: Width over height, as drawn
+                            mimetype:
+                              type: string
+                            tags:
+                              type: array
+                              items:
+                                type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Album not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
   /photos/album/{albumId}:
     get:
       tags: [Photos]
@@ -1344,6 +1454,71 @@ paths:
                 $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /collages/{id}/preview:
+    get:
+      tags: [Collages]
+      summary: Look at a collage
+      description: >
+        The collage drawn as its export draws it, as a JPEG. Photos are drawn from
+        their thumbnails. Made for a connected assistant to see what it made.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Collage ID
+        - name: width
+          in: query
+          schema:
+            type: integer
+            default: 1024
+            minimum: 256
+            maximum: 2048
+          description: Width of the picture in pixels
+        - name: outline
+          in: query
+          schema:
+            type: boolean
+          description: Draw each item's box and short name (p1, t1) over the collage
+      responses:
+        '200':
+          description: The collage, drawn
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      image:
+                        type: string
+                        description: The picture, base64
+                      mimeType:
+                        type: string
+                        example: image/jpeg
+                      width:
+                        type: integer
+                      height:
+                        type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collage not found
           content:
             application/json:
               schema:

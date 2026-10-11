@@ -7,7 +7,7 @@ import {
   serializePhoto,
   serializeSettings,
   serializeText
-} from './collageDoc';
+} from '@tumbaland/collage-core';
 import type { CollageConfigPhoto, CollageTextBox } from '../../types/collage';
 
 /**

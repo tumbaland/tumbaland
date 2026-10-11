@@ -1,20 +1,23 @@
 import { Router } from 'express';
-import { authenticateToken, validate } from '@tumbaland/backend-core';
+import { authenticateAgent, authenticateToken, requireScope, validate } from '@tumbaland/backend-core';
 import * as collageController from './collage.controller';
+import { getCollagePreview } from './preview/preview.controller';
 import { createCollageSchema, updateCollageSchema } from '../validation/schemas';
 
 const router = Router();
 
-// Authentication also populates req.userGroups from the JWT.
-router.use(authenticateToken);
-
-router.post('/', validate(createCollageSchema), collageController.createCollage);
-router.put('/:id', validate(updateCollageSchema), collageController.updateCollage);
-// Live editing (changes, presence, moving, the stream) is in
-// collageLiveRoutes, mounted ahead of the general rate limiter.
-router.get('/:id', collageController.getCollageById);
+// A connected assistant can list, read, look at and make collages. Changing
+// one goes through the changes route (collageLiveRoutes), where it is held to
+// the collages it made.
+router.post('/', authenticateAgent(), requireScope('album:write'), validate(createCollageSchema), collageController.createCollage);
+router.get('/:id/preview', authenticateAgent(), requireScope('album:read'), getCollagePreview);
+router.get('/:id', authenticateAgent(), requireScope('album:read'), collageController.getCollageById);
 // GET /collages?albumId=... to filter by album
-router.get('/', collageController.getCollageList);
-router.delete('/:id', collageController.deleteCollage);
+router.get('/', authenticateAgent(), requireScope('album:read'), collageController.getCollageList);
+
+// A person's to do: replacing a whole collage at once, and deleting one.
+// authenticateToken refuses every API key and assistant token.
+router.put('/:id', authenticateToken, validate(updateCollageSchema), collageController.updateCollage);
+router.delete('/:id', authenticateToken, collageController.deleteCollage);
 
 export default router;

@@ -24,7 +24,7 @@ import {
   normalizeOrientation,
   orientationTurns,
   rotateCropClockwise
-} from './collageDoc';
+} from '@tumbaland/collage-core';
 import CollageCropSelector from './CollageCropSelector';
 
 interface CollagePhotoDialogProps {

@@ -601,6 +601,23 @@ describe('with someone else in the collage', () => {
     await userEvent.click(screen.getByRole('button', { name: /add text/i }));
     await waitFor(() => expect(mockedSetPresence).toHaveBeenLastCalledWith('collage-1', session, expect.any(String)));
   });
+
+  it('shows a connected assistant with the faces while its changes come in', async () => {
+    (collageService.setPresence as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    renderPage();
+    const stream = FakeEventSource.latest!;
+    await act(async () => stream.emit('ready', { heartbeatMs: 25_000, revision: 0 }));
+
+    await act(async () =>
+      stream.emit('changes', {
+        revision: 1,
+        changes: [{ type: 'settings', values: { backgroundColor: '#000000' } }],
+        by: { userId: 'user-1', name: 'Claude', assistant: true }
+      })
+    );
+
+    expect(screen.getByLabelText('Claude is here')).toBeInTheDocument();
+  });
 });
 
 describe('stickers, shapes, chat and video', () => {

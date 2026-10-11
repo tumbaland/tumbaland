@@ -9,7 +9,7 @@ import {
   DEFAULT_TEXT_COLOR,
   DEFAULT_TEXT_SIZE,
   newItemId
-} from '../components/collage/collageDoc';
+} from '@tumbaland/collage-core';
 import { applyDocChange, diffDocs, DocChange, rebase } from '../components/collage/collageChanges';
 
 /**

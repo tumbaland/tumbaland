@@ -32,8 +32,19 @@ describe('createCollage', () => {
 
     await createCollage(baseReq({ body: { title: 'Trip' } }), res);
 
-    expect(mocked.createCollage).toHaveBeenCalledWith({ title: 'Trip' }, 'user-1', []);
+    expect(mocked.createCollage).toHaveBeenCalledWith({ title: 'Trip' }, 'user-1', [], undefined);
     expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  it('marks a collage an assistant made with the name of its connection', async () => {
+    mocked.createCollage.mockResolvedValue({ _id: 'c1' } as never);
+
+    await createCollage(baseReq({ body: { title: 'Trip' }, apiKey: { label: 'Claude' } } as Partial<Request>), mockRes());
+
+    expect(mocked.createCollage).toHaveBeenCalledWith({ title: 'Trip' }, 'user-1', [], {
+      kind: 'assistant',
+      label: 'Claude'
+    });
   });
 });
 
@@ -55,8 +66,18 @@ describe('getCollageById', () => {
 
     await getCollageById(baseReq({ params: { id: 'c1' } }), res);
 
-    expect(mocked.getCollageWithPhotos).toHaveBeenCalledWith('c1', 'user-1', []);
+    expect(mocked.getCollageWithPhotos).toHaveBeenCalledWith('c1', 'user-1', [], { signUrls: true });
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { collage: { _id: 'c1' }, photos: [] } }));
+  });
+});
+
+describe('getCollageById without links', () => {
+  it('skips signing the photos’ links when asked for urls=0', async () => {
+    mocked.getCollageWithPhotos.mockResolvedValue({ collage: { _id: 'c1' }, photos: [] } as never);
+
+    await getCollageById(baseReq({ params: { id: 'c1' }, query: { urls: '0' } }), mockRes());
+
+    expect(mocked.getCollageWithPhotos).toHaveBeenCalledWith('c1', 'user-1', [], { signUrls: false });
   });
 });
 

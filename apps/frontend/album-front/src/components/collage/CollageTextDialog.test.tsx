@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, vi } from 'vite-plus/test';
 import CollageTextDialog from './CollageTextDialog';
-import { CollageTextItem } from './collageDoc';
+import { CollageTextItem } from '@tumbaland/collage-core';
 
 const text: CollageTextItem = {
   id: 'text-1',

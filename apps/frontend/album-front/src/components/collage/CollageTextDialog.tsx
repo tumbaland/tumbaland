@@ -30,18 +30,15 @@ import {
   DEFAULT_TEXT,
   DEFAULT_TEXT_COLOR,
   DEFAULT_TEXT_SIZE,
-  TextAlign
-} from './collageDoc';
-import {
+  TextAlign,
   COLLAGE_FONTS,
-  ensureCollageFonts,
   fontById,
   labelRadius,
   SHAPE_LABELS,
   SHAPE_PATHS,
-  STICKERS,
-  textCss
-} from './collageElements';
+  STICKERS
+} from '@tumbaland/collage-core';
+import { ensureCollageFonts, textCss } from './collageElements';
 
 /** What Apply writes back: the item's look and content, never its place. */
 export type CollageTextPatch = Partial<Omit<CollageTextItem, 'id' | 'x' | 'y' | 'width' | 'height' | 'rotation'>>;

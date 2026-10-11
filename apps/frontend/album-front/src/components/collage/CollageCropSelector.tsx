@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Box } from '@mui/material';
-import { CollageCrop, MIN_CROP_SIZE, isQuarterTurned } from './collageDoc';
+import { CollageCrop, MIN_CROP_SIZE, isQuarterTurned } from '@tumbaland/collage-core';
 
 interface CollageCropSelectorProps {
   src: string;

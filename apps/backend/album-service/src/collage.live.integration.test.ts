@@ -285,11 +285,11 @@ describe('collage live', () => {
     expect(statuses.filter((status) => status !== 204)).toEqual([]);
   }, 30_000);
 
-  it('refuses someone outside the collage’s group before any stream opens', async () => {
+  it('answers someone outside the collage’s group as not found, before any stream opens', async () => {
     const id = await groupCollage();
     const stranger = open(STRANGER, id, 'stranger-session');
     await new Promise((resolve) => setTimeout(resolve, 200));
-    expect(stranger.status()).toBe(403);
+    expect(stranger.status()).toBe(404);
   });
 
   it('refuses a stream without a session', async () => {

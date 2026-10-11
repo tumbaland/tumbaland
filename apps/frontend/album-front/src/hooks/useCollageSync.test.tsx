@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, type ReactNode } from 'react';
 import { AUTOSAVE_DELAY_MS, useCollageSync, UseCollageSyncOptions } from './useCollageSync';
-import { CollageDoc } from '../components/collage/collageDoc';
+import { CollageDoc } from '@tumbaland/collage-core';
 import type { ServerChange } from '../components/collage/collageChanges';
 import { useCollageEditor } from './useCollageEditor';
 

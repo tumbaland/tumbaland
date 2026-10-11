@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { describe, vi } from 'vite-plus/test';
 import { useCollageEditor } from '../../hooks/useCollageEditor';
 import CollageStage, { ResolvePhoto, pinchGeometry } from './CollageStage';
-import { CollageDoc } from './collageDoc';
+import { CollageDoc } from '@tumbaland/collage-core';
 import type { StageMotion } from './CollagePeople';
 
 const baseDoc: CollageDoc = {

@@ -18,8 +18,16 @@ COPY --parents package.json package-lock.json apps/*/*/package.json libs/*/packa
 ARG APP
 RUN npm ci --workspace=apps/backend/${APP} --workspace=libs/backend-core --no-audit --no-fund
 COPY libs/backend-core libs/backend-core
+# What a collage is and how it is drawn, shared with album-front. Built here
+# from source like backend-core, so the image holds what was tested.
+COPY libs/collage-core libs/collage-core
 COPY apps/backend/${APP} apps/backend/${APP}
 RUN npm run build --workspace=libs/backend-core
+# Only for the services that use it: the rest keep exactly the image they had.
+# The dist directory exists either way, since the production stage copies it.
+RUN if grep -q '"@tumbaland/collage-core"' apps/backend/${APP}/package.json; then \
+      npm run build --workspace=libs/collage-core; \
+    else mkdir -p libs/collage-core/dist; fi
 RUN npm run build --workspace=apps/backend/${APP}
 # Not every service ships API docs; the production stage copies the directory
 # either way.
@@ -43,6 +51,9 @@ COPY --from=prod-deps /repo/node_modules /repo/node_modules
 # node_modules/@tumbaland/backend-core is a link to this directory.
 COPY --from=build --chown=node:node /repo/libs/backend-core/package.json /repo/libs/backend-core/package.json
 COPY --from=build --chown=node:node /repo/libs/backend-core/dist /repo/libs/backend-core/dist
+# And node_modules/@tumbaland/collage-core to this one, for the services that use it.
+COPY --from=build --chown=node:node /repo/libs/collage-core/package.json /repo/libs/collage-core/package.json
+COPY --from=build --chown=node:node /repo/libs/collage-core/dist /repo/libs/collage-core/dist
 COPY --from=build --chown=node:node /repo/apps/backend/${APP}/package.json ./package.json
 COPY --from=build --chown=node:node /repo/apps/backend/${APP}/dist ./dist
 COPY --from=build --chown=node:node /repo/apps/backend/${APP}/docs ./docs

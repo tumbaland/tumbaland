@@ -41,7 +41,8 @@ export default defineConfig(({ mode }) => ({
     alias: {
       '@': resolve(__dirname, './src'),
       ...(mode === 'development' && {
-        '@tumbaland/frontend-core': resolve(__dirname, '../../../libs/frontend-core/src')
+        '@tumbaland/frontend-core': resolve(__dirname, '../../../libs/frontend-core/src'),
+        '@tumbaland/collage-core': resolve(__dirname, '../../../libs/collage-core/src')
       })
     }
   },

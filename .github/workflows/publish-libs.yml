@@ -22,6 +22,7 @@ on:
         options:
           - backend-core
           - frontend-core
+          - collage-core
       release-type:
         description: 'Version bump. auto derives it from the commits that touched the library.'
         required: true

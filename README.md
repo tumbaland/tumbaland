@@ -21,6 +21,9 @@ npm workspaces monorepo with three workspace groups:
   - `@tumbaland/frontend-core` — frontend: `createApiClient` (generic authenticated fetch wrapper),
     `createAuthService`, `createGroupService` — factories each frontend instantiates with its own
     config accessor.
+  - `@tumbaland/collage-core` — both sides: what a collage is (reading and writing its stored
+    config) and how it is drawn on a canvas, so the editor's export, the server's preview and
+    the assistant's tools agree.
 
 ## Ports (local dev)
 
@@ -137,9 +140,9 @@ run in the Actions tab and choose **Re-run failed jobs**: it deploys the same ve
 the images already built. Running **Release** by hand instead works too, but it cuts a new version
 even when nothing changed. See `.github/DEPLOYMENT.md` for rollback and the manual deploys.
 
-### Libraries (`libs/backend-core`, `libs/frontend-core`)
+### Libraries (`libs/backend-core`, `libs/frontend-core`, `libs/collage-core`)
 
-Both are real npm packages (`@tumbaland/*`), installed from the registry by every image, so there
+These are real npm packages (`@tumbaland/*`), installed from the registry by every image, so there
 is nothing to run by hand: change the library in a PR, and its merge publishes it. The version is
 derived from the conventional commits that touched the library since it last changed (breaking is
 major, `feat` is minor, anything else patch).

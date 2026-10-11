@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "comment": "The CommonJS build the backends require. No DOM in lib on purpose: this runs in the browser and on the server, so it may only touch a canvas through the Canvas2D interface in src/canvas.ts.",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "types": []
+  },
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/testUtils.ts"]
+}
