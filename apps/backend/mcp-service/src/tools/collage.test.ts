@@ -302,6 +302,18 @@ describe('the make_collage prompt', () => {
     expect(message).toContain('update_collage');
   });
 
+  it('carries the layout rules: canvas filled, title kept clear, a caption on every photo, faces in frame', async () => {
+    const payload = await rpc('prompts/get', { name: 'make_collage', arguments: { albumName: 'Finland 2025' } });
+    const message = payload.result.messages[0].content.text as string;
+
+    expect(message).toContain('Fill the whole canvas');
+    expect(message).toContain('Keep the middle for the title');
+    expect(message).toContain('Give every photo a short caption');
+    expect(message).toContain('focus "top"');
+    // Captions are not copied from older collages, so the rule says so.
+    expect(message).toContain('never copy an old caption');
+  });
+
   it('leaves out what was not given', async () => {
     const payload = await rpc('prompts/get', { name: 'make_collage', arguments: { albumName: 'Finland 2025' } });
     expect(payload.result.messages[0].content.text).toMatch(/^Make a collage from the album "Finland 2025"\.\n\n1\./);
