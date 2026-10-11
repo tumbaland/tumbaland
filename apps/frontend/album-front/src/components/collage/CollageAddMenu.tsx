@@ -1,8 +1,7 @@
 import React from 'react';
 import { Box, Button, ButtonBase, Popover, Typography } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
-import { COLLAGE_SHAPES, CollageShape } from './collageDoc';
-import { SHAPE_LABELS, SHAPE_PATHS, STICKERS } from './collageElements';
+import { COLLAGE_SHAPES, CollageShape, SHAPE_LABELS, SHAPE_PATHS, STICKERS } from '@tumbaland/collage-core';
 
 /** The colour a new shape starts in. */
 export const DEFAULT_SHAPE_COLOR = '#e91e63';

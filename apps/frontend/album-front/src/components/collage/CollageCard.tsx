@@ -18,8 +18,7 @@ import {
   DriveFileRenameOutline as RenameIcon
 } from '@mui/icons-material';
 import { Collage } from '../../types/collage';
-import { normalizeCollageConfig } from './collageDoc';
-import { SHAPE_PATHS, stickerFontSize } from './collageElements';
+import { normalizeCollageConfig, SHAPE_PATHS, stickerFontSize } from '@tumbaland/collage-core';
 
 interface CollageCardProps {
   collage: Collage;
@@ -230,12 +229,22 @@ const CollageCard: React.FC<CollageCardProps> = ({ collage, onView, onEdit, onEd
         )}
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto', pt: 1 }}>
-          <Chip
-            label={`${collage.config?.photos?.length || 0} photos`}
-            size="small"
-            variant="outlined"
-            sx={{ borderRadius: 1.5, bgcolor: 'rgba(0,0,0,0.02)', borderColor: 'rgba(0,0,0,0.08)' }}
-          />
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            <Chip
+              label={`${collage.config?.photos?.length || 0} photos`}
+              size="small"
+              variant="outlined"
+              sx={{ borderRadius: 1.5, bgcolor: 'rgba(0,0,0,0.02)', borderColor: 'rgba(0,0,0,0.08)' }}
+            />
+            {collage.madeBy && (
+              <Chip
+                label={`Made with ${collage.madeBy.label}`}
+                size="small"
+                variant="outlined"
+                sx={{ borderRadius: 1.5, bgcolor: 'rgba(0,0,0,0.02)', borderColor: 'rgba(0,0,0,0.08)' }}
+              />
+            )}
+          </Box>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             {formatDate(collage.updatedAt)}
           </Typography>

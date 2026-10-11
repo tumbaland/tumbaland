@@ -108,12 +108,12 @@ describe('collage changes', () => {
     expect((await stored(id)).revision).toBe(1);
   });
 
-  it('refuses someone outside the collage’s group', async () => {
+  it('answers someone outside the collage’s group as if it were not there', async () => {
     const id = await groupCollage();
 
     const res = await change(STRANGER, id, [{ type: 'remove', layer: 'photos', id: 'a' }]);
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(404);
     expect((await stored(id)).config.photos).toHaveLength(2);
   });
 

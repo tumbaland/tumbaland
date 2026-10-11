@@ -1,4 +1,4 @@
-import { CollageConfig, CollageConfigPhoto, CollageTextBox } from '../../types/collage';
+import { CollageConfig, CollageConfigPhoto, CollageTextBox } from './config';
 
 /**
  * Normalized, editor-friendly representation of a collage.
@@ -127,9 +127,12 @@ export const isVideoType = (mimetype?: string): boolean => Boolean(mimetype?.sta
 /** Animated as far as a collage is concerned: a video, or a GIF, which may or may not move. */
 export const isMovingType = (mimetype?: string): boolean => isVideoType(mimetype) || mimetype === 'image/gif';
 
+/** Web Crypto, which browsers and Node both put on globalThis; typed here because this lib has no DOM. */
+const webCrypto = () => (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+
 export const newItemId = (): string =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
+  webCrypto()?.randomUUID
+    ? webCrypto()!.randomUUID!()
     : `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const toNumber = (value: unknown, fallback: number): number => {
@@ -361,3 +364,16 @@ export const serializeCollageDoc = (doc: CollageDoc, existingConfig?: CollageCon
 
 /** Effective frame state for a photo, honoring the per-photo override. */
 export const photoHasFrame = (doc: CollageDoc, photo: CollagePhotoItem): boolean => photo.frame ?? doc.frameEnabled;
+
+/**
+ * Short names for a collage's items, in stacking order: `p1`, `p2`… for photos
+ * and `t1`, `t2`… for texts, stickers and shapes. What an assistant reads in a
+ * description and sees drawn on a preview, so it can say "move p3" about
+ * something it saw. They follow the order, so a removal renumbers what is
+ * after it; a description is always read fresh before the next change.
+ */
+export const shortIdsOf = (doc: Pick<CollageDoc, 'photos' | 'texts'>): Map<string, string> =>
+  new Map([
+    ...doc.photos.map((photo, index) => [photo.id, `p${index + 1}`] as const),
+    ...doc.texts.map((item, index) => [item.id, `t${index + 1}`] as const)
+  ]);

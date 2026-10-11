@@ -1,0 +1,44 @@
+{
+  "name": "@tumbaland/collage-core",
+  "version": "1.0.0",
+  "description": "What a collage is and how it is drawn, shared by the Tumbaland editor and server",
+  "author": "Tumbaland",
+  "license": "MIT",
+  "main": "dist/cjs/index.js",
+  "types": "dist/cjs/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/cjs/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.esm.json && node scripts/mark-esm.mjs",
+    "release": "commit-and-tag-version && npm run build && npm publish --access public && node ../../scripts/sync-lib-versions.mjs",
+    "release:beta": "commit-and-tag-version --prerelease beta && npm run build && npm publish --access public --tag beta",
+    "test": "vp test run",
+    "test:coverage": "vp test run --coverage",
+    "lint": "vp lint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.5.1",
+    "@vitest/coverage-v8": "5.0.1",
+    "commit-and-tag-version": "^13.2.1",
+    "typescript": "^6.0.3",
+    "vite-plus": "1.0.0",
+    "vitest": "5.0.1"
+  },
+  "keywords": [
+    "tumbaland",
+    "collage",
+    "canvas"
+  ],
+  "commit-and-tag-version": {
+    "tagPrefix": "collage-core-v"
+  }
+}

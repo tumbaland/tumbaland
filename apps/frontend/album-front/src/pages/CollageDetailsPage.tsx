@@ -24,6 +24,7 @@ import { CollageViewer, useCollageLive } from '../hooks/useCollageLive';
 import { useMotionReport, useRemoteMotion } from '../hooks/useCollageMotion';
 import { collageService } from '../services/collageService';
 import { CollagePerson, personColour } from '../components/collage/CollagePeople';
+import { ChangeAuthor, useAssistantPresence } from '../hooks/useAssistantPresence';
 import type { DocChange, ServerChange } from '../components/collage/collageChanges';
 import {
   CollageDoc,
@@ -32,7 +33,7 @@ import {
   newItemId,
   normalizeCollageConfig,
   serializeCollageDoc
-} from '../components/collage/collageDoc';
+} from '@tumbaland/collage-core';
 import { CollageConfig } from '../types/collage';
 import CollageStage, { ResolvedPhoto } from '../components/collage/CollageStage';
 import CollageToolbar from '../components/collage/CollageToolbar';
@@ -288,13 +289,18 @@ const CollageDetailsPage: React.FC = () => {
 
   const motion = useRemoteMotion();
   const { settle } = motion;
+  const assistant = useAssistantPresence();
+  const { noteChange } = assistant;
   const onChanges = useCallback(
-    (rev: number, changes: ServerChange[], by: { userId: string }) => {
+    (rev: number, changes: ServerChange[], by: ChangeAuthor) => {
       sync.receive(rev, changes);
       // Their save is in: the item is where they left it, no need to follow it.
-      settle(by.userId);
+      // An assistant drags nothing, and saves under its person's id, whose
+      // drag in another tab is still going.
+      if (by.assistant) noteChange(by);
+      else settle(by.userId);
     },
-    [sync, settle]
+    [sync, settle, noteChange]
   );
 
   const live = useCollageLive({
@@ -310,6 +316,8 @@ const CollageDetailsPage: React.FC = () => {
   });
 
   const people = useMemo(() => othersIn(viewers, session), [viewers, session]);
+  // The assistant shows with the faces, but has no selection to outline or drag to follow.
+  const faces = useMemo(() => (assistant.person ? [...people, assistant.person] : people), [people, assistant.person]);
   // Only people still here: a tab that closed mid-drag leaves nothing behind.
   const motions = useMemo(
     () => motion.motions.filter((moving) => people.some((person) => person.userId === moving.userId)),
@@ -546,7 +554,7 @@ const CollageDetailsPage: React.FC = () => {
         <CollageToolbar
           title={collage.title}
           saveStatus={sync.status}
-          people={people}
+          people={faces}
           canUndo={editor.canUndo}
           canRedo={editor.canRedo}
           background={doc.background}

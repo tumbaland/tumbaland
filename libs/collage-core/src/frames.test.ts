@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vite-plus/test';
-import { normalizeCollageConfig, photoHasFrame, CollageDoc } from './collageDoc';
+import { normalizeCollageConfig, photoHasFrame, shortIdsOf, CollageDoc } from './doc';
 
 const docWith = (overrides: Partial<CollageDoc>): CollageDoc => ({
   canvas: { width: 1600, height: 900 },
@@ -66,5 +66,19 @@ describe('normalizeCollageConfig frame/transparency inference', () => {
     expect(normalizeCollageConfig({ photoTransparencyMode: false } as never).frameEnabled).toBe(true);
     // default when unspecified: frames off
     expect(normalizeCollageConfig({} as never).frameEnabled).toBe(false);
+  });
+});
+
+describe('shortIdsOf', () => {
+  it('numbers photos and overlay items separately, in stacking order', () => {
+    const ids = shortIdsOf({
+      photos: [photo(true), { ...photo(false), id: 'p-two' }],
+      texts: [{ id: 'x', text: 'Hi', x: 0, y: 0, width: 10, height: 10, fontSize: 12, color: '#000' }]
+    });
+    expect([...ids]).toEqual([
+      ['p1', 'p1'],
+      ['p-two', 'p2'],
+      ['x', 't1']
+    ]);
   });
 });

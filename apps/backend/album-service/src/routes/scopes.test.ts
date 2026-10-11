@@ -93,3 +93,40 @@ describe('the scope matches what the verb does', () => {
     expect(route.rest).toContain(expected);
   });
 });
+
+/**
+ * The collage routes live with the rest of the collage code, and follow the
+ * same rule, with one difference: a few stay a person's alone. Replacing a
+ * whole collage and deleting one have no undo, and the live-editing routes are
+ * for an open editor, so they keep `authenticateToken`, which refuses every
+ * key and assistant token. Listed here so making one reachable is a visible
+ * edit.
+ */
+describe('collage routes', () => {
+  const COLLAGE_DIR = join(__dirname, '..', 'collage');
+  const PERSON_ONLY = new Set(['put /:id', 'delete /:id', 'get /:id/live', 'post /:id/presence', 'post /:id/moving']);
+
+  const collageRoutes = ['collageRoutes.ts', 'collageLiveRoutes.ts'].flatMap((file) =>
+    [...readFileSync(join(COLLAGE_DIR, file), 'utf8').matchAll(ROUTE_PATTERN)].map((match) => ({
+      file,
+      verb: match[1],
+      path: match[2],
+      rest: match[3]
+    }))
+  );
+
+  it('finds the collage routes', () => {
+    expect(collageRoutes.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it.each(collageRoutes.map((d) => [`${d.file} ${d.verb.toUpperCase()} ${d.path}`, d] as const))('%s', (_label, route) => {
+    if (PERSON_ONLY.has(`${route.verb} ${route.path}`)) {
+      expect(route.rest).toContain('authenticateToken');
+      expect(route.rest).not.toContain('authenticateAgent');
+      return;
+    }
+    const expected = READ_VERBS.has(route.verb) ? "requireScope('album:read')" : "requireScope('album:write')";
+    expect(route.rest).toContain('authenticateAgent()');
+    expect(route.rest).toContain(expected);
+  });
+});

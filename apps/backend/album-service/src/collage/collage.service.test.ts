@@ -62,9 +62,9 @@ describe('collage.service', () => {
       expect(await getCollageById('c1', OWNER)).toBe(collage);
     });
 
-    it('throws ForbiddenError for a non-owner with no group access', async () => {
+    it('answers as not found for a non-owner with no group access, as journal entries do', async () => {
       mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER });
-      await expect(getCollageById('c1', OTHER)).rejects.toMatchObject({ name: 'ForbiddenError' });
+      await expect(getCollageById('c1', OTHER)).rejects.toMatchObject({ name: 'NotFoundError' });
     });
 
     it('allows a member of the collage group', async () => {
@@ -80,9 +80,9 @@ describe('collage.service', () => {
       await expect(updateCollage('missing', collageInput, OWNER)).rejects.toMatchObject({ name: 'NotFoundError' });
     });
 
-    it('throws ForbiddenError when the user cannot access the collage', async () => {
+    it('answers as not found when the user cannot reach the collage', async () => {
       mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER });
-      await expect(updateCollage('c1', collageInput, OTHER)).rejects.toMatchObject({ name: 'ForbiddenError' });
+      await expect(updateCollage('c1', collageInput, OTHER)).rejects.toMatchObject({ name: 'NotFoundError' });
       expect(mockedFindByIdAndUpdate).not.toHaveBeenCalled();
     });
 
@@ -125,9 +125,9 @@ describe('collage.service', () => {
       await expect(deleteCollage('missing', OWNER)).rejects.toMatchObject({ name: 'NotFoundError' });
     });
 
-    it('throws ForbiddenError when the user cannot access the collage', async () => {
+    it('answers as not found when the user cannot reach the collage', async () => {
       mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER });
-      await expect(deleteCollage('c1', OTHER)).rejects.toMatchObject({ name: 'ForbiddenError' });
+      await expect(deleteCollage('c1', OTHER)).rejects.toMatchObject({ name: 'NotFoundError' });
       expect(mockedFindByIdAndDelete).not.toHaveBeenCalled();
     });
 
@@ -153,7 +153,8 @@ describe('collage.service', () => {
 
     it('scopes to personal collages (no group) when no groupId is given', async () => {
       await getCollageList(undefined, OWNER);
-      expect(mockedFind).toHaveBeenCalledWith({ userId: OWNER, groupId: { $exists: false } });
+      // A collage with no group, however that is stored: null matches absent too.
+      expect(mockedFind).toHaveBeenCalledWith({ userId: OWNER, groupId: null });
     });
 
     it('scopes to a group when the user is a member', async () => {
@@ -206,6 +207,19 @@ describe('collage.service', () => {
       const result = await getCollageWithPhotos(collageId, OWNER);
 
       expect(result.photos[0]).toMatchObject({ signedUrl: 'https://original', thumbnailSignedUrl: 'https://thumb' });
+    });
+
+    it('signs nothing when the caller only wants to read about the photos', async () => {
+      mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER, albumIds: ['507f1f77bcf86cd799439012'] });
+      mockedAggregate.mockResolvedValue([
+        { userId: OWNER, photos: [{ _id: 'p1', minioFileId: 'file-1', originalName: 'IMG_1.jpg' }] }
+      ]);
+
+      const result = await getCollageWithPhotos(collageId, OWNER, [], { signUrls: false });
+
+      expect(mockedGetSignedUrlsBatch).not.toHaveBeenCalled();
+      expect(result.photos[0]).toMatchObject({ _id: 'p1', originalName: 'IMG_1.jpg' });
+      expect(result.photos[0]!.signedUrl).toBeUndefined();
     });
 
     it("signs a video's still, so the editor has a picture of it", async () => {

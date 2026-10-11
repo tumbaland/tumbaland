@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, createRateLimiter, validate } from '@tumbaland/backend-core';
+import { authenticateAgent, authenticateToken, createRateLimiter, requireScope, validate } from '@tumbaland/backend-core';
 import * as collageController from './collage.controller';
 import { collageChangesSchema, collageMovingSchema, collagePresenceSchema } from '../validation/schemas';
 
@@ -22,10 +22,13 @@ const motionLimiter = createRateLimiter({ max: 20_000 });
 
 // The stream is one request that stays open as long as the editor does.
 router.get('/:id/live', authenticateToken, collageController.liveStream);
+// An assistant saves through here too, held to the collages it made (see
+// applyCollageChanges). The stream, presence and moving are for open editors.
 router.post(
   '/:id/changes',
   editLimiter,
-  authenticateToken,
+  authenticateAgent(),
+  requireScope('album:write'),
   validate(collageChangesSchema),
   collageController.applyCollageChanges
 );

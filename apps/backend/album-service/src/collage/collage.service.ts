@@ -1,5 +1,5 @@
 import { CollageInput } from './collage.types';
-import { CollageModel, ICollage } from './collage.model';
+import { CollageMaker, CollageModel, ICollage } from './collage.model';
 import { applyChanges, CollageChange, StoredConfig } from './collageChanges';
 import Album from '../models/Album';
 import { getSignedUrlsBatch } from '../services/fileServiceClient';
@@ -9,6 +9,8 @@ import { canAccessResource, ConflictError, ForbiddenError, logger, NotFoundError
 interface AggregatedPhoto {
   _id: unknown;
   filename: string;
+  originalName?: string;
+  dateTaken?: Date;
   minioFileId?: string;
   minioThumbnailFileId?: string;
   minioPosterFileId?: string;
@@ -42,14 +44,15 @@ interface PhotoWithSignedUrl extends AggregatedPhoto {
 
 interface CollageListFilter {
   albumIds?: { $in: string[] };
-  groupId?: string | { $exists: false };
+  groupId?: string | null;
   userId?: string;
 }
 
 export const createCollage = async (
   data: CollageInput,
   userId: string,
-  userGroups: string[] = []
+  userGroups: string[] = [],
+  madeBy?: CollageMaker
 ): Promise<ICollage> => {
   // Creating a collage in a group is writing into that group.
   if (data.groupId && !userGroups.includes(data.groupId)) {
@@ -59,7 +62,8 @@ export const createCollage = async (
   // Set the userId on the collage data
   const collageData = {
     ...data,
-    userId
+    userId,
+    ...(madeBy ? { madeBy } : {})
   };
 
   const collage = new CollageModel(collageData);
@@ -89,7 +93,7 @@ export const updateCollage = async (
   );
 
   if (!hasAccess) {
-    throw new ForbiddenError('Access denied');
+    throw new NotFoundError('Collage not found');
   }
 
   // Moving a collage into a group is writing into that group.
@@ -108,26 +112,41 @@ export type CollageChanges = CollageChange[];
 /** How many times a batch is re-applied when another write lands first. */
 const CHANGE_ATTEMPTS = 5;
 
+/** Who is sending a batch: a person in the editor, or an assistant. */
+export interface ChangeAuthor {
+  assistant: boolean;
+}
+
 /**
  * Apply a batch of small changes to a collage's config.
  *
  * Read, apply, and store only if the revision is still the one read. When the
  * other person's batch got there first, this one is applied again on top of
  * theirs: both land, and neither overwrites the other.
+ *
+ * An assistant may change only a collage an assistant made. The ones people
+ * made are theirs to change, and there is no undo for a batch that rearranged
+ * one; an assistant asked to rework one makes a new one like it instead.
  */
 export const applyCollageChanges = async (
   id: string,
   changes: CollageChange[],
   userId: string,
-  userGroups: string[] = []
+  userGroups: string[] = [],
+  author: ChangeAuthor = { assistant: false }
 ): Promise<{ revision: number }> => {
   for (let attempt = 0; attempt < CHANGE_ATTEMPTS; attempt += 1) {
-    const current = await CollageModel.findById(id).select('userId groupId config revision').lean();
+    const current = await CollageModel.findById(id).select('userId groupId config revision madeBy').lean();
     if (!current) {
       throw new NotFoundError('Collage not found');
     }
     if (!canAccessResource(userId, current.userId || '', current.groupId, userGroups, false)) {
-      throw new ForbiddenError('Access denied');
+      throw new NotFoundError('Collage not found');
+    }
+    if (author.assistant && current.madeBy?.kind !== 'assistant') {
+      throw new ForbiddenError(
+        'This collage was made by a person, so an assistant cannot change it. Make a new collage like it instead.'
+      );
     }
 
     const config = applyChanges((current.config ?? {}) as unknown as StoredConfig, changes);
@@ -168,7 +187,7 @@ export const getCollageById = async (
   );
 
   if (!hasAccess) {
-    throw new ForbiddenError('Access denied');
+    throw new NotFoundError('Collage not found');
   }
 
   return collage;
@@ -180,7 +199,8 @@ export const getCollageById = async (
 export const getCollageWithPhotos = async (
   id: string,
   userId: string,
-  userGroups: string[] = []
+  userGroups: string[] = [],
+  options: { signUrls?: boolean } = {}
 ): Promise<{ collage: ICollage; photos: PhotoWithSignedUrl[] }> => {
   const collage = await getCollageById(id, userId, userGroups);
 
@@ -212,6 +232,10 @@ export const getCollageWithPhotos = async (
             in: {
               _id: '$$photo._id',
               filename: '$$photo.filename',
+              // What a person or an assistant calls a photo, and when it was
+              // taken: how a photo is told apart without looking at it.
+              originalName: '$$photo.originalName',
+              dateTaken: '$$photo.metadata.dateTaken',
               minioFileId: '$$photo.minioFileId',
               minioThumbnailFileId: '$$photo.minioThumbnailFileId',
               minioPosterFileId: '$$photo.minioPosterFileId',
@@ -251,14 +275,20 @@ export const getCollageWithPhotos = async (
   // Flatten all photos and fetch every signed URL (originals + thumbnails)
   // in a single batch request to file-service.
   const allPhotos = albumsWithPhotos.flatMap((album) => album.photos);
+  // Not every caller draws the photos: an assistant reads titles and shapes,
+  // and signing three URLs for every photo of a big album costs a round trip
+  // to file-service that it would only throw away.
+  const { signUrls = true } = options;
   let urlMap: Awaited<ReturnType<typeof getSignedUrlsBatch>> = {};
   try {
-    urlMap = await getSignedUrlsBatch(
-      allPhotos
-        .flatMap((photo) => [photo.minioFileId, photo.minioThumbnailFileId, photo.minioPosterFileId])
-        .filter((id): id is string => Boolean(id)),
-      60
-    );
+    if (signUrls) {
+      urlMap = await getSignedUrlsBatch(
+        allPhotos
+          .flatMap((photo) => [photo.minioFileId, photo.minioThumbnailFileId, photo.minioPosterFileId])
+          .filter((id): id is string => Boolean(id)),
+        60
+      );
+    }
   } catch (error) {
     logger.error('Failed to get signed URLs for collage photos', { error: (error as Error)?.message });
   }
@@ -304,9 +334,10 @@ export const getCollageList = async (
       }
       filter.groupId = groupId;
     } else {
-      // No groupId specified: show only personal collages (no group)
+      // No groupId specified: show only personal collages (no group). A null
+      // matches an absent field as well as a stored null, as for journal entries.
       filter.userId = userId;
-      filter.groupId = { $exists: false };
+      filter.groupId = null;
     }
   }
 
@@ -330,7 +361,7 @@ export const deleteCollage = async (id: string, userId: string, userGroups: stri
   );
 
   if (!hasAccess) {
-    throw new ForbiddenError('Access denied');
+    throw new NotFoundError('Collage not found');
   }
 
   await CollageModel.findByIdAndDelete(id);

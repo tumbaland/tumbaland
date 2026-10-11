@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { applyDocChange, diffDocs, reorderItems, toServerChanges } from './collageChanges';
-import { CollageDoc, CollagePhotoItem } from './collageDoc';
+import { CollageDoc, CollagePhotoItem } from '@tumbaland/collage-core';
 
 const photo = (id: string, x = 0): CollagePhotoItem => ({
   id,

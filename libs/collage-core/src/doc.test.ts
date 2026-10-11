@@ -15,8 +15,8 @@ import {
   cleanTextPatch,
   isMovingType,
   isVideoType
-} from './collageDoc';
-import { CollageConfig } from '../../types/collage';
+} from './doc';
+import { CollageConfig } from './config';
 
 // A config exactly as the pre-refactor editor saved it.
 const legacyV1Config = {

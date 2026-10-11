@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { album, Album, Photo, resolveAlbum } from '../album';
-import { Caller, ToolModule, explain, groupIdFor, journalSchema, ok, resolveJournal } from './module';
+import { Caller, ToolModule, explain, journalSchema, ok, tenantFor } from './module';
 
 /**
  * Photos.
@@ -37,7 +37,7 @@ const describePhoto = (photo: Photo): string => {
 
 /** Albums in the acting tenant, for both listing and name resolution. */
 const albumsFor = (caller: Caller, journal?: string) => {
-  const groupId = groupIdFor(resolveJournal(caller, journal));
+  const groupId = tenantFor(caller, journal);
   return { groupId, load: () => album.listAlbums(caller.token, { groupId, limit: 100 }) };
 };
 

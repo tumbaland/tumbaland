@@ -1,6 +1,6 @@
 import React from 'react';
 import { Avatar, AvatarGroup, Box, Tooltip } from '@mui/material';
-import { CollageDoc } from './collageDoc';
+import { CollageDoc } from '@tumbaland/collage-core';
 
 /** Someone else with the collage open, as the editor shows them. */
 export interface CollagePerson {

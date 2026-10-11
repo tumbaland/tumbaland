@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { vi } from 'vite-plus/test';
 import CollageCropSelector from './CollageCropSelector';
-import { CollageCrop } from './collageDoc';
+import { CollageCrop } from '@tumbaland/collage-core';
 
 /** jsdom gives every element a zero-sized box, so the preview needs a fake one. */
 const PREVIEW_SIZE = { width: 200, height: 100 };

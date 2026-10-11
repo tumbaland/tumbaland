@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { logger } from '@tumbaland/frontend-core';
-import { CollageDoc } from '../components/collage/collageDoc';
+import { CollageDoc } from '@tumbaland/collage-core';
 import {
   applyDocChange,
   applyServerChanges,

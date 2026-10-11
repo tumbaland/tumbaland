@@ -266,12 +266,23 @@ describe('tools are gated by the key’s scopes', () => {
     await expect(toolsFor(['relationship:write'])).resolves.toEqual([]);
   });
 
-  it('shows an album-only key the photo tools and nothing else', async () => {
+  it('shows an album-only key the photo and collage reading tools and nothing else', async () => {
     await expect(toolsFor(['album:read'])).resolves.toEqual([
+      'get_collage',
       'get_photo_memories',
       'list_albums',
-      'search_photos'
+      'list_collages',
+      'search_photos',
+      'view_collage',
+      'view_photos'
     ]);
+  });
+
+  it('gives making and changing collages only to a key that may write to albums', async () => {
+    const tools = await toolsFor(['album:read', 'album:write']);
+
+    expect(tools).toEqual(expect.arrayContaining(['create_collage', 'update_collage']));
+    expect(await toolsFor(['album:read'])).not.toContain('create_collage');
   });
 
   it('shows nothing for a key with a scope no module serves', async () => {
@@ -382,6 +393,14 @@ describe('listings this server has nothing for', () => {
 
     expect(payload.error).toBeUndefined();
     expect(payload.result[key]).toEqual([]);
+  });
+
+  it('lists the prompts a key does have, rather than answering empty over them', async () => {
+    mockedVerify.mockResolvedValue({ ok: true, userId: 'u1', keyId: 'k1', scopes: ['album:read', 'album:write'], groupId: null });
+
+    const payload = await listing('prompts/list');
+
+    expect(payload.result.prompts.map((prompt: { name: string }) => prompt.name)).toEqual(['make_collage']);
   });
 
   it('advertises the capabilities it answers for', async () => {

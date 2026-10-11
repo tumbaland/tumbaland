@@ -3,6 +3,7 @@ import type { ApiKeyScope } from '@tumbaland/backend-core';
 import { auditTools } from '../audit';
 import { Caller, ToolModule } from './module';
 import { albumRead, albumWrite } from './album';
+import { collageRead, collageWrite } from './collage';
 import { financeRead, financeWrite } from './finance';
 import { relationshipRead, relationshipWrite } from './relationship';
 
@@ -21,7 +22,9 @@ export const MODULES: ToolModule[] = [
   financeRead,
   financeWrite,
   albumRead,
-  albumWrite
+  albumWrite,
+  collageRead,
+  collageWrite
 ];
 
 /**

@@ -42,3 +42,20 @@ describe('POST /api/albums (validate() middleware → errorHandler wiring)', () 
     expect(res.body).toEqual({ success: false, error: 'BadRequestError', message: 'name: Album name is required' });
   });
 });
+
+describe('rate limit', () => {
+  it('lets a connected assistant make far more than the default 300 requests, since they share one address', async () => {
+    const statuses: number[] = [];
+    for (let i = 0; i < 400; i++) {
+      statuses.push((await request(app).get('/api/albums')).status);
+    }
+
+    // Refused for want of a token, every time; never for being too many.
+    expect(new Set(statuses)).toEqual(new Set([401]));
+  }, 60_000);
+
+  it('still has a limit, and says what it is', async () => {
+    const res = await request(app).get('/api/albums').set('X-Forwarded-For', '10.9.9.9');
+    expect(res.headers['ratelimit-limit']).toBe('3000');
+  });
+});

@@ -14,6 +14,7 @@ import {
   getRecentPhotos,
   getRandomPhotos
 } from '../controllers/photoController';
+import { getAlbumContactSheet } from '../collage/preview/preview.controller';
 import {
   createPhotoSchema,
   updatePhotoSchema,
@@ -27,6 +28,8 @@ const router = express.Router();
 router.post('/', authenticateAgent(), requireScope('album:write'), validate(createPhotoSchema), createPhoto);
 router.get('/album/:albumId', authenticateAgent(), requireScope('album:read'), getPhotosByAlbum);
 router.get('/album/:albumId/tags', authenticateAgent(), requireScope('album:read'), getAlbumTags);
+// The album as a numbered grid of pictures, for an assistant choosing photos for a collage.
+router.get('/album/:albumId/sheet', authenticateAgent(), requireScope('album:read'), getAlbumContactSheet);
 // Must precede PUT /:id — otherwise '/tags' is swallowed as an :id.
 router.put('/tags', authenticateAgent(), requireScope('album:write'), validate(bulkUpdateTagsSchema), bulkUpdateTags);
 // Must precede GET /:id, for the same reason PUT /tags does — a literal path

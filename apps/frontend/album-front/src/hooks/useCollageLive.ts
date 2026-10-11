@@ -3,6 +3,7 @@ import { logger } from '@tumbaland/frontend-core';
 import { collageService } from '../services/collageService';
 import type { ServerChange } from '../components/collage/collageChanges';
 import type { MovingItem } from './useCollageMotion';
+import type { ChangeAuthor } from './useAssistantPresence';
 
 /** Someone with the collage open, as the server reports them. */
 export interface CollageViewer {
@@ -17,8 +18,8 @@ export interface UseCollageLiveOptions {
   collageId?: string;
   session: string;
   enabled?: boolean;
-  /** Someone else saved changes. */
-  onChanges: (revision: number, changes: ServerChange[], by: { userId: string; name: string }) => void;
+  /** Someone else saved changes, or a connected assistant did. */
+  onChanges: (revision: number, changes: ServerChange[], by: ChangeAuthor) => void;
   /** Who is here now, this tab included. */
   onPresence: (viewers: CollageViewer[]) => void;
   /**
@@ -154,7 +155,7 @@ export function useCollageLive({
       stream.addEventListener('changes', (event) => {
         if (!current()) return;
         armWatchdog();
-        const data = read<{ revision: number; changes: ServerChange[]; by: { userId: string; name: string } }>(
+        const data = read<{ revision: number; changes: ServerChange[]; by: ChangeAuthor }>(
           event as MessageEvent
         );
         if (data) onChangesRef.current(data.revision, data.changes, data.by);

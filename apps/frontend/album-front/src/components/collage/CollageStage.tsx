@@ -12,11 +12,15 @@ import {
   isVideoType,
   orientationTurns,
   photoHasFrame,
-  sourceCrop
-} from './collageDoc';
+  sourceCrop,
+  labelRadius,
+  SHAPE_OUTLINE_WIDTH,
+  SHAPE_PATHS,
+  TEXT_SHADOW
+} from '@tumbaland/collage-core';
 import { CollagePerson, FOLLOW_TRANSITION, RemoteSelections, StageMotion } from './CollagePeople';
 import { CHAT_FILE_DRAG_TYPE } from '../../services/chatDock';
-import { labelRadius, SHAPE_OUTLINE_WIDTH, SHAPE_PATHS, TEXT_SHADOW, textCss } from './collageElements';
+import { textCss } from './collageElements';
 
 export interface ResolvedPhoto {
   src?: string;

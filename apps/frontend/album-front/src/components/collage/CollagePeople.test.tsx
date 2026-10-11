@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { render, screen } from '@testing-library/react';
 import { CollagePeopleFaces, CollagePerson, personColour, RemoteSelections } from './CollagePeople';
-import { CollageDoc } from './collageDoc';
+import { CollageDoc } from '@tumbaland/collage-core';
 
 const irja: CollagePerson = { userId: 'u-irja', name: 'Irja Tamm', picture: null, color: '#ec4899', selection: 'a' };
 

@@ -88,7 +88,7 @@ is something unseen.
 
 ## Libraries
 
-`libs/backend-core` and `libs/frontend-core` are npm packages that every image
+`libs/backend-core`, `libs/frontend-core` and `libs/collage-core` are npm packages that every image
 installs from the registry. Change them in a PR like anything else. Merging
 publishes them and re-pins their consumers; that is what the `chore(release)`
 commits are. Never edit a library's `package.json` version or run `npm publish`.

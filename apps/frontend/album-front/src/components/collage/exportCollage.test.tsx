@@ -1,6 +1,6 @@
 import { vi } from 'vite-plus/test';
 import { collageMoves, downloadBlob, exportCollageToPng, exportCollageToVideo, frameIndexAt } from './exportCollage';
-import { CollageDoc } from './collageDoc';
+import { CollageDoc } from '@tumbaland/collage-core';
 import { ResolvePhoto } from './CollageStage';
 
 /** Defaults to a successful image load; flip FakeImage.nextFails per-test to

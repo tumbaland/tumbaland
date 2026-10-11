@@ -49,6 +49,17 @@ it('shows "0 photos" when the collage has no photos', () => {
   expect(screen.getByText('0 photos')).toBeInTheDocument();
 });
 
+it('says when an assistant made it, by the name of its connection', () => {
+  const made = { ...collage, madeBy: { kind: 'assistant' as const, label: 'Claude' } };
+  const { rerender } = render(
+    <CollageCard collage={made} onView={vi.fn()} onEdit={vi.fn()} onEditDetails={vi.fn()} onDelete={vi.fn()} />
+  );
+  expect(screen.getByText('Made with Claude')).toBeInTheDocument();
+
+  rerender(<CollageCard collage={collage} onView={vi.fn()} onEdit={vi.fn()} onEditDetails={vi.fn()} onDelete={vi.fn()} />);
+  expect(screen.queryByText(/Made with/)).not.toBeInTheDocument();
+});
+
 it('shows the empty-collage placeholder when there are no photos or texts', () => {
   const empty = { ...collage, config: { ...collage.config, photos: [], texts: [] } };
   render(<CollageCard collage={empty} onView={vi.fn()} onEdit={vi.fn()} onEditDetails={vi.fn()} onDelete={vi.fn()} />);

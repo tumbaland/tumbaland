@@ -34,7 +34,7 @@ import MovieOutlinedIcon from '@mui/icons-material/MovieOutlined';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import type { SaveStatus } from '../../hooks/useCollageSync';
 import { CollagePeopleFaces, CollagePerson } from './CollagePeople';
-import type { CollageShape } from './collageDoc';
+import type { CollageShape } from '@tumbaland/collage-core';
 import CollageAddMenu from './CollageAddMenu';
 
 interface ColorSwatchProps {
