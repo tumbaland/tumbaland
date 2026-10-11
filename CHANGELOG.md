@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.529](https://github.com/tumbaland/tumbaland/compare/app-v0.0.528...app-v0.0.529) (2026-10-11)
+
+### Features
+
+* **mcp:** teach the collage assistant our layout ([#74](https://github.com/tumbaland/tumbaland/issues/74)) ([d849728](https://github.com/tumbaland/tumbaland/commit/d849728e72a57588f8b2d36427b308dc567a37d7))
+
 ## [0.0.528](https://github.com/tumbaland/tumbaland/compare/app-v0.0.527...app-v0.0.528) (2026-10-11)
 
 ### Features
