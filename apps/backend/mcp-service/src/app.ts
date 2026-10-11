@@ -58,6 +58,8 @@ const SERVER_INSTRUCTIONS = [
   'Collages: view_photos is how you see what photos show. You may change only collages an',
   'assistant made; for one a person made, make a new one like it. What you make is theirs to',
   'check and adjust in the app, so say what you chose rather than asking them to approve each step.',
+  'Lay collages out as the make_collage prompt describes: the canvas filled, the title kept clear,',
+  'a funny caption on every photo.',
   '',
   'recategorise_transactions moves many rows at once. Say how many are involved and get agreement',
   'before calling it.',
