@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.528](https://github.com/tumbaland/tumbaland/compare/app-v0.0.527...app-v0.0.528) (2026-10-11)
+
+### Features
+
+* **album:** let assistants read, make and fix collages ([#73](https://github.com/tumbaland/tumbaland/issues/73)) ([0fc48f0](https://github.com/tumbaland/tumbaland/commit/0fc48f0a46d09c72a103dbbdc831a56870914c00))
+
 ## [0.0.527](https://github.com/tumbaland/tumbaland/compare/app-v0.0.526...app-v0.0.527) (2026-10-10)
 
 ### Bug Fixes
