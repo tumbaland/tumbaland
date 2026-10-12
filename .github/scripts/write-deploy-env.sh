@@ -45,6 +45,9 @@ KEYS=(
   PAYMENT_URL
   GROUP_FRONT_URL
   CHAT_API_URL
+  # Container-to-container, for album-service's collage nudge and the plan
+  # reminders relationship-service posts into a chat.
+  CHAT_INTERNAL_URL
   CHAT_FRONT_URL
   ACCOUNT_FRONT_URL
   SHELL_FRONT_URL
