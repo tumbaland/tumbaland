@@ -10,6 +10,8 @@ import {
   InputAdornment,
   MenuItem,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -17,6 +19,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
 import PlaceIcon from '@mui/icons-material/Place';
 import TuneIcon from '@mui/icons-material/Tune';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { useSearchParams } from 'react-router';
 import { useTenantFilter } from '@tumbaland/frontend-core';
 import { logger } from '@tumbaland/frontend-core';
@@ -25,6 +29,7 @@ import { getDays } from '../services/days';
 import { getActivityTypes } from '../services/activityTypes';
 import DayEditorDialog from '../components/DayEditorDialog';
 import ActivityTypesDialog from '../components/ActivityTypesDialog';
+import JournalCalendar, { CalendarMonth, currentMonth } from '../components/JournalCalendar';
 
 const PAGE_SIZE = 30;
 /** Bigger pages for the export, so a long history takes few round trips. */
@@ -117,6 +122,26 @@ const JournalPage: React.FC = () => {
   const [editorDate, setEditorDate] = useState(todayKey());
   const [editorDateEditable, setEditorDateEditable] = useState(false);
   const [typesDialogOpen, setTypesDialogOpen] = useState(false);
+
+  // ?view=calendar keeps the calendar across a reload or a link; the list is
+  // the default. The month lives here so a trip to the list and back keeps it.
+  const view = searchParams.get('view') === 'calendar' ? 'calendar' : 'list';
+  const [calendarMonth, setCalendarMonth] = useState<CalendarMonth>(currentMonth);
+  const [calendarRefresh, setCalendarRefresh] = useState(0);
+  const setView = (next: 'list' | 'calendar') =>
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === 'calendar') params.set('view', 'calendar');
+        else params.delete('view');
+        return params;
+      },
+      { replace: true }
+    );
+  const reloadAll = () => {
+    void reload();
+    setCalendarRefresh((n) => n + 1);
+  };
 
   useEffect(() => {
     const handle = setTimeout(() => setDebouncedSearch(search.trim()), 350);
@@ -337,7 +362,20 @@ const JournalPage: React.FC = () => {
             </MenuItem>
           ))}
         </TextField>
-        <Box sx={{ display: 'flex', gap: 0.5, ml: 'auto' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 'auto' }}>
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            value={view}
+            onChange={(_, next: 'list' | 'calendar' | null) => next && setView(next)}
+          >
+            <ToggleButton value="list" aria-label="List">
+              <ViewListIcon fontSize="small" />
+            </ToggleButton>
+            <ToggleButton value="calendar" aria-label="Calendar">
+              <CalendarMonthIcon fontSize="small" />
+            </ToggleButton>
+          </ToggleButtonGroup>
           <Button
             startIcon={<TuneIcon />}
             onClick={() => setTypesDialogOpen(true)}
@@ -364,7 +402,17 @@ const JournalPage: React.FC = () => {
         </Alert>
       )}
 
-      {loading ? (
+      {view === 'calendar' ? (
+        <JournalCalendar
+          month={calendarMonth}
+          onMonthChange={setCalendarMonth}
+          groupId={tenantGroupId}
+          typeId={typeFilter || undefined}
+          search={debouncedSearch || undefined}
+          refreshKey={calendarRefresh}
+          onDayClick={(date) => openEditor(date, false)}
+        />
+      ) : loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
           <CircularProgress />
         </Box>
@@ -418,7 +466,7 @@ const JournalPage: React.FC = () => {
         ))
       )}
 
-      {!loading && page < totalPages && (
+      {view === 'list' && !loading && page < totalPages && (
         <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
           <Button onClick={loadMore} disabled={loadingMore} variant="outlined" sx={{ textTransform: 'none' }}>
             {loadingMore ? 'Loading…' : 'Load older days'}
@@ -431,7 +479,7 @@ const JournalPage: React.FC = () => {
         date={editorDate}
         dateEditable={editorDateEditable}
         onClose={() => setEditorOpen(false)}
-        onSaved={() => void reload()}
+        onSaved={reloadAll}
       />
 
       <ActivityTypesDialog
@@ -442,7 +490,7 @@ const JournalPage: React.FC = () => {
           // Days carry their type's name and colour, so a rename, recolour or
           // delete has to be reflected in the entries already on screen.
           void loadTypes();
-          void reload();
+          reloadAll();
         }}
       />
     </Box>

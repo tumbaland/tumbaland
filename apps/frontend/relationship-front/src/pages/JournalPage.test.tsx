@@ -398,3 +398,42 @@ it('reports a failure to export without wiping the journal', async () => {
   expect(screen.getByText('May 2024')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Export CSV' })).toBeEnabled();
 });
+
+it('switches to the calendar and opens a day from it', async () => {
+  mockedGetDays.mockResolvedValue({ days: [dayWithEntry('2024-05-01')], page: 1, totalPages: 1, total: 1 });
+  renderPage();
+  await screen.findByText('May 2024');
+
+  await userEvent.click(screen.getByRole('button', { name: 'Calendar' }));
+
+  expect(await screen.findByText(/logged this month/)).toBeInTheDocument();
+  expect(mockedGetDays).toHaveBeenCalledWith(expect.objectContaining({ limit: 31, groupId: 'g1' }));
+  expect(screen.queryByText('Load older days')).not.toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: 'Previous month' }));
+  await userEvent.click(screen.getAllByRole('button', { name: /, \w+ 1$/ })[0]);
+  expect(screen.getByText(/DayEditorDialog for \d{4}-\d{2}-01$/)).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: 'List' }));
+  expect(await screen.findByText('May 2024')).toBeInTheDocument();
+});
+
+it('opens straight on the calendar from ?view=calendar', async () => {
+  mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 0, total: 0 });
+  renderPage('/journal?view=calendar');
+  expect(await screen.findByText(/logged this month/)).toBeInTheDocument();
+  expect(screen.queryByText('Nothing logged yet')).not.toBeInTheDocument();
+});
+
+it('refreshes the calendar month after a save', async () => {
+  mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 0, total: 0 });
+  renderPage('/journal?view=calendar');
+  await screen.findByText(/logged this month/);
+  const monthCalls = () => mockedGetDays.mock.calls.filter(([o]) => (o as GetDaysOptions).limit === 31).length;
+  expect(monthCalls()).toBe(1);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Log a day' }));
+  await userEvent.click(screen.getByText('save-editor'));
+
+  await waitFor(() => expect(monthCalls()).toBe(2));
+});
