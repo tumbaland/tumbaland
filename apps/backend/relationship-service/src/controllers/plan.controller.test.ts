@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 
 jest.mock('../services/plan.service', () => ({
   listPlans: jest.fn(),
+  getPlan: jest.fn(),
   createPlan: jest.fn(),
   updatePlan: jest.fn(),
   deletePlan: jest.fn(),
@@ -9,7 +10,7 @@ jest.mock('../services/plan.service', () => ({
 }));
 
 import * as PlanService from '../services/plan.service';
-import { createPlan, deletePlan, getPlans, logPlan, updatePlan } from './plan.controller';
+import { createPlan, deletePlan, getPlan, getPlans, logPlan, updatePlan } from './plan.controller';
 
 function mockRes(): Response {
   const res: Partial<Response> = { locals: {} };
@@ -52,6 +53,12 @@ describe('getPlans', () => {
       'Date must be formatted as YYYY-MM-DD'
     );
   });
+});
+
+it('reads one plan', async () => {
+  (PlanService.getPlan as jest.Mock).mockResolvedValue({ id: 'p1' });
+  await getPlan(req({ params: { id: 'p1' } }), mockRes());
+  expect(PlanService.getPlan).toHaveBeenCalledWith('p1', 'u1', ['g1']);
 });
 
 it('creates a plan', async () => {

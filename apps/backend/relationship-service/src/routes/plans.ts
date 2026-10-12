@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateAgent, requireScope, validate } from '@tumbaland/backend-core';
-import { createPlan, deletePlan, getPlans, logPlan, updatePlan } from '../controllers/plan.controller';
+import { createPlan, deletePlan, getPlan, getPlans, logPlan, updatePlan } from '../controllers/plan.controller';
 import { createPlanSchema, logPlanSchema, updatePlanSchema } from '../validation/schemas';
 
 const router = Router();
@@ -10,6 +10,7 @@ const router = Router();
 router.use(authenticateAgent());
 
 router.get('/', requireScope('relationship:read'), getPlans);
+router.get('/:id', requireScope('relationship:read'), getPlan);
 router.post('/', requireScope('relationship:write'), validate(createPlanSchema), createPlan);
 router.patch('/:id', requireScope('relationship:write'), validate(updatePlanSchema), updatePlan);
 router.delete('/:id', requireScope('relationship:write'), deletePlan);

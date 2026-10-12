@@ -213,6 +213,13 @@ export const updatePlan = async (
   return toPlanView(plan);
 };
 
+/** One plan, for a link to it (a reminder's Open). */
+export const getPlan = async (id: string, userId: string, userGroupIds: string[]): Promise<PlanView> => {
+  const plan = await findReachable(id, userId, userGroupIds);
+  await plan.populate('typeId');
+  return toPlanView(plan);
+};
+
 export const deletePlan = async (id: string, userId: string, userGroupIds: string[]): Promise<void> => {
   const plan = await findReachable(id, userId, userGroupIds);
   await plan.deleteOne();

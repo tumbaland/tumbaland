@@ -24,6 +24,12 @@ export const getPlans = async (req: Request, res: Response): Promise<void> => {
   sendSuccess(res, plans);
 };
 
+export const getPlan = async (req: Request, res: Response): Promise<void> => {
+  const plan = await PlanService.getPlan(req.params.id as string, req.user!.id, req.userGroups || []);
+  countRead(res, 1);
+  sendSuccess(res, plan);
+};
+
 export const createPlan = async (req: Request, res: Response): Promise<void> => {
   const plan = await PlanService.createPlan(req.body, req.user!.id, req.userGroups || []);
   sendSuccess(res, plan, 'Plan saved', 201);

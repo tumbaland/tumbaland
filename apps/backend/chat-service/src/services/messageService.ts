@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { Types } from 'mongoose';
 import { BadRequestError, ForbiddenError, NotFoundError, logger } from '@tumbaland/backend-core';
 import { Conversation, IConversation } from '../models/Conversation';
-import { IAttachment, ICollageCard, IMessage, Message, MessageEffect } from '../models/Message';
+import { IAttachment, ICollageCard, IMessage, IPlanCard, Message, MessageEffect } from '../models/Message';
 import { attachmentNoun, belongsToConversation, bytesOf, fileIdsOf, folderFor, withDownloadUrls, withStoredSizes } from './attachmentService';
 import { deleteFolder } from './fileServiceClient';
 import { recordStoredBytes, releaseStoredBytes } from './storageUsage';
@@ -40,6 +40,7 @@ export interface MessageView {
   replyTo: string | null;
   effect: MessageEffect | null;
   collage: ICollageCard | null;
+  plan: IPlanCard | null;
   reactions: Array<{ userId: string; name: string; emoji: string; at: Date }>;
   clientId: string;
   editedAt: Date | null;
@@ -66,6 +67,7 @@ export function toView(document: IMessage): MessageView {
     replyTo: message.replyTo ?? null,
     effect: message.deletedAt ? null : (message.effect ?? null),
     collage: message.deletedAt ? null : (message.collage ?? null),
+    plan: message.deletedAt ? null : (message.plan ?? null),
     reactions: message.deletedAt ? [] : message.reactions,
     clientId: message.clientId,
     editedAt: message.editedAt ?? null,

@@ -9,6 +9,7 @@ import { isTypeAccessible } from './activity.service';
 import {
   createPlan,
   deletePlan,
+  getPlan,
   listPlans,
   logPlan,
   scheduleFields,
@@ -229,6 +230,14 @@ describe('updatePlan', () => {
       'Plan not found'
     );
     await expect(updatePlan('nope', { title: 'x' }, 'u1', [])).rejects.toThrow('Plan not found');
+  });
+});
+
+describe('getPlan', () => {
+  it('reads a plan the caller can reach', async () => {
+    const existing = storedPlan();
+    jest.spyOn(Plan, 'findOne').mockResolvedValue(existing);
+    expect(await getPlan(existing.id, 'u1', ['g1'])).toMatchObject({ title: 'Concert' });
   });
 });
 

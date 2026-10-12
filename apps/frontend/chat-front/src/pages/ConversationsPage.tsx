@@ -38,6 +38,7 @@ function isGroup(conversation: Conversation, currentUserId: string): boolean {
 function previewOf(message: Message): string {
   // As the server words it, so the line does not change on the next reload.
   if (message.collage) return `Collage: ${message.collage.title}`;
+  if (message.plan) return `Reminder: ${message.plan.title}`;
   if (message.body.trim()) return message.body.trim();
   if (message.attachments.length === 0) return '';
   const [only] = message.attachments;
