@@ -1,4 +1,14 @@
 # Tumbalog
+## [0.0.530](https://github.com/tumbaland/tumbaland/compare/app-v0.0.529...app-v0.0.530) (2026-10-12)
+
+### Features
+
+* **journal:** plan things ahead on a calendar, with reminders in chat ([#76](https://github.com/tumbaland/tumbaland/issues/76)) ([67dc636](https://github.com/tumbaland/tumbaland/commit/67dc6363d7ed4a0f2a83bd2325a94b2049b330b6))
+
+### Bug Fixes
+
+* **deploy:** write CHAT_INTERNAL_URL to the Pi's env ([#75](https://github.com/tumbaland/tumbaland/issues/75)) ([69d29fa](https://github.com/tumbaland/tumbaland/commit/69d29fad529d8f0071f7c8769af2ff4f07119e48))
+
 ## [0.0.529](https://github.com/tumbaland/tumbaland/compare/app-v0.0.528...app-v0.0.529) (2026-10-11)
 
 ### Features
