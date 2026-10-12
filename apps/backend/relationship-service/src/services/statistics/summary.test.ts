@@ -25,6 +25,33 @@ describe('getRelationshipStatistics', () => {
     }
   );
 
+  it('counts in Tallinn days: today’s entries and the new month just after midnight', async () => {
+    // 01:30 on 1 November in Tallinn is 23:30 UTC on 31 October.
+    await getRelationshipStatistics('month', { userId: 'u1' }, new Date('2026-10-31T23:30:00Z'));
+    expect(mockedAggregate).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        {
+          $match: expect.objectContaining({
+            date: { $gte: new Date('2026-11-01T00:00:00.000Z'), $lte: new Date('2026-11-01T00:00:00.000Z') }
+          })
+        }
+      ])
+    );
+  });
+
+  it('takes a week as today and the six days before it', async () => {
+    await getRelationshipStatistics('week', { userId: 'u1' }, new Date('2026-10-12T12:00:00Z'));
+    expect(mockedAggregate).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        {
+          $match: expect.objectContaining({
+            date: { $gte: new Date('2026-10-06T00:00:00.000Z'), $lte: new Date('2026-10-12T00:00:00.000Z') }
+          })
+        }
+      ])
+    );
+  });
+
   it('scopes to a specific group when groupId is provided', async () => {
     await getRelationshipStatistics('all', { userId: 'u1', groupId: 'g1' });
     expect(mockedAggregate).toHaveBeenCalledWith(

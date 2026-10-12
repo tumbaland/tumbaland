@@ -30,7 +30,12 @@ jest.mock('../tumbaland', () => {
       updateActivity: jest.fn(),
       deleteActivity: jest.fn(),
       getStatistics: jest.fn(),
-      getTrends: jest.fn()
+      getTrends: jest.fn(),
+      listPlans: jest.fn(),
+      getPlan: jest.fn(),
+      createPlan: jest.fn(),
+      updatePlan: jest.fn(),
+      deletePlan: jest.fn()
     }
   };
 });
@@ -608,5 +613,121 @@ describe('choosing a journal', () => {
     expect(isError).toBe(true);
     expect(text).toContain('My own data, Irja & Tom');
     expect(api.createActivity).not.toHaveBeenCalled();
+  });
+});
+
+describe('plans', () => {
+  const concert = {
+    _id: 'p1',
+    title: 'Concert',
+    date: '2026-10-16',
+    endDate: null,
+    time: '19:00',
+    remindBefore: 60,
+    loggedActivityId: null,
+    location: { label: 'Saku Arena' }
+  };
+  const trip = { ...concert, _id: 'p2', title: 'Rome', endDate: '2026-10-18', time: null, remindBefore: 1440, location: null };
+
+  it('lists what is coming up from today when no days are given', async () => {
+    api.listPlans.mockResolvedValue([concert, trip]);
+    const { text } = await callTool('list_plans', { today: '2026-10-12' });
+
+    expect(api.listPlans).toHaveBeenCalledWith(expect.any(String), {
+      startDate: '2026-10-12',
+      endDate: undefined,
+      upcoming: true,
+      limit: 50,
+      groupId: undefined
+    });
+    expect(text).toContain('- 2026-10-16 19:00: Concert at Saku Arena (reminder 1 hour before)  [id p1]');
+    expect(text).toContain('- 2026-10-16 to 2026-10-18: Rome (reminder the day before at 09:00)  [id p2]');
+  });
+
+  it('reads a range of days, and says when it is empty', async () => {
+    api.listPlans.mockResolvedValue([]);
+    const { text } = await callTool('list_plans', { from: '2026-11-01', to: '2026-11-30' });
+    expect(api.listPlans).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ upcoming: false, startDate: '2026-11-01' }));
+    expect(text).toBe('No plans in those days.');
+  });
+
+  it('defaults upcoming to today in Tallinn', async () => {
+    api.listPlans.mockResolvedValue([]);
+    const { text } = await callTool('list_plans');
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Tallinn' }).format(new Date());
+    expect(api.listPlans.mock.calls[0][1].startDate).toBe(today);
+    expect(text).toBe('Nothing planned from today on.');
+  });
+
+  it('plans something with its type resolved by name', async () => {
+    api.createPlan.mockResolvedValue({ ...concert, remindBefore: null, time: null });
+    const { text } = await callTool('plan_event', {
+      title: 'Concert',
+      date: '2026-10-16',
+      type: 'dining',
+      remindBefore: null
+    });
+
+    expect(api.createPlan).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ title: 'Concert', date: '2026-10-16', typeId: 't1', remindBefore: null }),
+      undefined
+    );
+    expect(text).toContain('Planned');
+    expect(text).toContain('(all day): Concert at Saku Arena (no reminder)');
+  });
+
+  it('refuses a 12-hour time before anything is written', async () => {
+    const { isError } = await callTool('plan_event', { title: 'Concert', date: '2026-10-16', time: '7pm' });
+    expect(isError).toBe(true);
+    expect(api.createPlan).not.toHaveBeenCalled();
+  });
+
+  it('changes a plan and says what it was and what it is', async () => {
+    api.getPlan.mockResolvedValue(concert);
+    api.updatePlan.mockResolvedValue({ ...concert, date: '2026-10-17', remindBefore: 180, loggedActivityId: 'a1' });
+    const { text } = await callTool('edit_plan', { id: 'p1', date: '2026-10-17', remindBefore: 180, type: 'Together' });
+
+    expect(api.updatePlan).toHaveBeenCalledWith(
+      expect.any(String),
+      'p1',
+      expect.objectContaining({ date: '2026-10-17', remindBefore: 180, typeId: 't2' }),
+      undefined
+    );
+    expect(text).toContain('from - 2026-10-16 19:00');
+    expect(text).toContain('to   - 2026-10-17 19:00: Concert at Saku Arena (reminder 3 hours before, logged in the journal)');
+  });
+
+  it('needs something to change', async () => {
+    const { isError, text } = await callTool('edit_plan', { id: 'p1' });
+    expect(isError).toBe(true);
+    expect(text).toContain('Nothing to change');
+  });
+
+  it('removes a plan and says which', async () => {
+    api.getPlan.mockResolvedValue({ ...concert, remindBefore: 30, time: '18:30' });
+    api.deletePlan.mockResolvedValue(undefined);
+    const { text } = await callTool('delete_plan', { id: 'p1' });
+    expect(api.deletePlan).toHaveBeenCalledWith(expect.any(String), 'p1', undefined);
+    expect(text).toContain('Deleted');
+    expect(text).toContain('(reminder 30 minutes before)');
+  });
+
+  it('words reminders of days, and that morning for an all-day plan', async () => {
+    api.listPlans.mockResolvedValue([
+      { ...concert, remindBefore: 2880 },
+      { ...concert, _id: 'p3', time: null, remindBefore: 0 }
+    ]);
+    const { text } = await callTool('list_plans', { today: '2026-10-12' });
+    expect(text).toContain('reminder 2 days before');
+    expect(text).toContain('reminder that morning at 09:00');
+  });
+
+  it('turns an API failure into a sentence', async () => {
+    api.getPlan.mockRejectedValue(new TumbalandError('Plan not found', 404));
+    const { isError, text } = await callTool('delete_plan', { id: 'nope' });
+    expect(isError).toBe(true);
+    expect(text).toContain('Plan not found');
+    expect(api.deletePlan).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,6 @@
 import { Activity } from '../../models/Activity';
 import { StatisticsFilters, accessQueryFor, MS_PER_DAY, dayNumber, dayKeyOf } from './shared';
+import { todayIn } from '../../utils/time';
 
 /** How a window compares to the one before it. */
 export type TrendDirection = 'up' | 'down' | 'flat' | 'new' | 'stopped';
@@ -95,7 +96,7 @@ function directionOf(current: number, previous: number): TrendDirection {
 export const getTrends = async (filters: StatisticsFilters, options: TrendOptions = {}): Promise<TrendsResult> => {
   const { windowDays = 30, hiddenTypeIds = [], now = new Date() } = options;
 
-  const today = dayNumber(now.toISOString().slice(0, 10));
+  const today = dayNumber(todayIn(now));
   // Both windows are `windowDays` long and end the day before the next begins,
   // with the current one ending today inclusive.
   const currentStartDay = today - windowDays + 1;

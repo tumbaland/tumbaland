@@ -3,6 +3,7 @@ import { Box, TextField, MenuItem, Button, Chip, Typography, Paper } from '@mui/
 import { Clear as ClearIcon } from '@mui/icons-material';
 import { TransactionQuery, TransactionPage } from '../../services/cashflowService';
 import { formatCurrency } from '../../utils/numberUtils';
+import { localDayKey } from '../../utils/dates';
 
 export interface FilterValues {
   from: string;
@@ -28,8 +29,9 @@ export function toQuery(filters: FilterValues): Omit<TransactionQuery, 'groupId'
 export const hasAnyFilter = (filters: FilterValues): boolean =>
   Object.values(filters).some((value) => value !== '');
 
-const iso = (d: Date) => d.toISOString().slice(0, 10);
-const startOfMonth = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+// Local days: "This month" just after midnight on the 1st is the new month.
+const iso = localDayKey;
+const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 
 export interface Period {
   label: string;
@@ -46,9 +48,9 @@ export interface Period {
  * about as often as not. The date fields stay for the rare exact range.
  */
 export function periodPresets(years: number[], today = new Date()): Period[] {
-  const thisYear = today.getUTCFullYear();
+  const thisYear = today.getFullYear();
   const monthStart = startOfMonth(today);
-  const yearAgo = new Date(Date.UTC(thisYear - 1, today.getUTCMonth(), today.getUTCDate()));
+  const yearAgo = new Date(thisYear - 1, today.getMonth(), today.getDate());
 
   return [
     { label: 'This month', from: iso(monthStart), to: iso(today) },

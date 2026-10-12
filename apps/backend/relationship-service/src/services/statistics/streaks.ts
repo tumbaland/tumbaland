@@ -1,5 +1,6 @@
 import { Activity } from '../../models/Activity';
 import { StatisticsFilters, accessQueryFor, MS_PER_DAY, dayNumber } from './shared';
+import { todayIn } from '../../utils/time';
 
 interface LoggedDayAggRow {
   _id: string; // YYYY-MM-DD
@@ -65,7 +66,7 @@ export const getStreakStatistics = async (
   filters: StatisticsFilters,
   now: Date = new Date()
 ): Promise<StreakStatistics> => {
-  const todayKey = now.toISOString().slice(0, 10);
+  const todayKey = todayIn(now);
   const today = dayNumber(todayKey);
   const tomorrow = new Date((today + 1) * MS_PER_DAY);
 

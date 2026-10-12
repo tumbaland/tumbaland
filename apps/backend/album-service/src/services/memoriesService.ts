@@ -58,6 +58,23 @@ interface MonthDay {
 }
 
 /**
+ * Where the people are. The server runs in UTC, and for the first two or three
+ * hours of a Tallinn day the UTC date is still yesterday's, so "on this day"
+ * showed yesterday's memories after midnight.
+ */
+const TIME_ZONE = 'Europe/Tallinn';
+
+/** Today's date in TIME_ZONE, as the UTC midnight of that calendar day. */
+export const localToday = (now: Date, timeZone: string = TIME_ZONE): Date => {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' })
+      .formatToParts(now)
+      .map((part) => [part.type, part.value])
+  );
+  return new Date(Date.UTC(+parts.year!, +parts.month! - 1, +parts.day!));
+};
+
+/**
  * The calendar days the window covers, as month/day pairs.
  *
  * Walking real dates rather than doing arithmetic on the day number is what
@@ -89,7 +106,8 @@ class MemoriesService {
    * something photographed last week is not a memory yet.
    */
   async getMemories(filter: MemoriesFilter, context: MemoriesContext): Promise<MemoriesResult> {
-    const { groupId, windowDays = 3, limitPerYear = 12, now = new Date() } = filter;
+    const { groupId, windowDays = 3, limitPerYear = 12 } = filter;
+    const now = localToday(filter.now ?? new Date());
     const { userId, userGroups } = context;
 
     if (groupId && !userGroups.includes(groupId)) {

@@ -9,6 +9,7 @@ import { keyframes } from '@mui/material/styles';
 import { brand, ink } from '@tumbaland/frontend-core';
 import type { ConversationMember, ReadReceipt, ThreadMessage } from '../../types';
 import { CollageCard } from './CollageCard';
+import { ReminderCard } from './ReminderCard';
 import { DaySeparator } from './DaySeparator';
 import { MessageBubble } from './MessageBubble';
 import { SeenMarker, placeSeenMarkers } from './SeenMarker';
@@ -29,6 +30,8 @@ export interface MessageListProps {
   onRemoveFromAlbum?: (messageId: string) => void;
   /** Join on a collage card: opens that collage in Album. */
   onOpenCollage?: (collageId: string) => void;
+  /** A reminder card's Open: the plan in the journal's calendar. */
+  onOpenPlan?: (planId: string) => void;
   /** Your own bubbles' colour, from the conversation's theme. */
   accent?: string;
   /** For senders' pictures and the "seen" markers. */
@@ -87,6 +90,7 @@ export function MessageList({
   onEditAlbum,
   onRemoveFromAlbum,
   onOpenCollage,
+  onOpenPlan,
   accent,
   members = NO_MEMBERS,
   reads = NO_READS,
@@ -327,11 +331,22 @@ export function MessageList({
               );
             }
 
+            if (message.kind === 'reminder' && message.plan && !message.deletedAt) {
+              return (
+                <Box key={message.clientId || message.id} {...rowProps(message)}>
+                  {newDay && <DaySeparator iso={message.createdAt} />}
+                  <ReminderCard message={message} onOpen={(planId) => onOpenPlan?.(planId)} />
+                  {seen.has(message.id) && <SeenMarker seers={seen.get(message.id)!} />}
+                </Box>
+              );
+            }
+
             const showSender =
               newDay ||
               !previous ||
               previous.kind === 'system' ||
               previous.kind === 'collage' ||
+              previous.kind === 'reminder' ||
               previous.senderId !== message.senderId ||
               new Date(message.createdAt).getTime() - new Date(previous.createdAt).getTime() > GROUP_WINDOW_MS;
 

@@ -26,6 +26,9 @@ services:
       # retention floor. No group URL — retention is a per-caller limit, not a
       # pooled meter, so there is no group subject to resolve.
       - PAYMENT_INTERNAL_URL=${PAYMENT_INTERNAL_URL}
+      # Plan reminders are posted into the group's chat. Without it plans work
+      # and nobody is reminded.
+      - CHAT_INTERNAL_URL=${CHAT_INTERNAL_URL}
     init: true
     networks:
       - tumbanet

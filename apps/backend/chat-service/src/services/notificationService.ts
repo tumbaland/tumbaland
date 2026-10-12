@@ -6,6 +6,7 @@ import type { Caller } from './accessService';
 import { attachmentNoun } from './attachmentService';
 import { MessageView } from './messageService';
 import { isPushConfigured, sendToUsers } from './pushService';
+import { planReminderPush } from './planText';
 
 /**
  * Give the foreground thread time to acknowledge this message. Having a
@@ -85,6 +86,7 @@ export async function notifyNewMessage(
 /** What the notification says. Kept short: a lock screen truncates anyway. */
 function notificationBody(message: MessageView): string {
   if (message.collage) return `Started a collage: ${message.collage.title}`;
+  if (message.plan) return planReminderPush(message.plan);
   if (message.body.trim()) return message.body.trim().slice(0, 140);
   if (message.attachments.length === 0) return 'New message';
 

@@ -124,13 +124,27 @@ export interface CollageCard {
   title: string;
 }
 
+/** A plan from the journal that a `reminder` message is about, as it was when it fell due. */
+export interface PlanCard {
+  id: string;
+  title: string;
+  /** YYYY-MM-DD, the first day */
+  date: string;
+  /** YYYY-MM-DD, the last day of a trip; absent or null for one day */
+  endDate?: string | null;
+  /** HH:mm, null all day */
+  time: string | null;
+  timeZone: string;
+  place: string | null;
+}
+
 export interface Message {
   id: string;
   conversationId: string;
   senderId: string;
   senderEmail: string;
   senderName: string;
-  kind: 'text' | 'media' | 'system' | 'collage';
+  kind: 'text' | 'media' | 'system' | 'collage' | 'reminder';
   body: string;
   attachments: Attachment[];
   replyTo: string | null;
@@ -138,6 +152,8 @@ export interface Message {
   effect?: MessageEffect | null;
   /** On a `collage` message: the collage in Album that "Join" opens. */
   collage?: CollageCard | null;
+  /** On a `reminder` message: the plan in the journal that "Open" shows. */
+  plan?: PlanCard | null;
   reactions: Reaction[];
   clientId: string;
   editedAt: string | null;

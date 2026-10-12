@@ -1316,6 +1316,63 @@ describe('the internal route for Album', () => {
   });
 });
 
+describe('the internal route for plan reminders', () => {
+  const reminder = (over: Record<string, unknown> = {}) => ({
+    planId: 'p-concert',
+    groupId: 'g1',
+    userId: 'u-tom',
+    title: 'Concert',
+    date: '2026-10-16',
+    time: '19:00',
+    timeZone: 'Europe/Tallinn',
+    place: 'Saku Arena',
+    remindAt: '2026-10-16T15:00:00.000Z',
+    ...over
+  });
+  const post = (body: object) =>
+    request(app).post('/internal/plan-reminder').set('x-internal-token', 'internal-test-token').send(body);
+
+  it('refuses a caller without the service token', async () => {
+    expect((await request(app).post('/internal/plan-reminder').send(reminder())).status).toBe(401);
+  });
+
+  it('refuses a reminder without the fields it needs', async () => {
+    expect((await post({ ...reminder(), time: '7pm' })).status).toBe(400);
+  });
+
+  it('posts a card into the group’s chat that is news to everyone, the planner included', async () => {
+    const id = await conversationInG1();
+    await as(IRJA).get(`/api/chat/conversations/${id}`);
+
+    const res = await post(reminder());
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ posted: true });
+
+    const messages = (await as(IRJA).get(`/api/chat/conversations/${id}/messages`)).body.data.messages;
+    const card = messages.find((m: { kind: string }) => m.kind === 'reminder');
+    expect(card).toMatchObject({
+      senderName: 'Reminder',
+      body: 'Concert on Friday 16 October at 19:00 · Saku Arena',
+      plan: { id: 'p-concert', title: 'Concert', date: '2026-10-16', time: '19:00', place: 'Saku Arena' }
+    });
+    expect((await as(TOM).get('/api/chat/unread')).body.data.conversations[id]).toBe(1);
+    expect((await as(IRJA).get('/api/chat/unread')).body.data.conversations[id]).toBe(1);
+  });
+
+  it('posts a reminder once, however often it is retried', async () => {
+    const id = await conversationInG1();
+    await post(reminder({ planId: 'p-retry' }));
+    await post(reminder({ planId: 'p-retry' }));
+    const messages = (await as(TOM).get(`/api/chat/conversations/${id}/messages`)).body.data.messages;
+    expect(messages.filter((m: { plan?: { id: string } }) => m.plan?.id === 'p-retry')).toHaveLength(1);
+  });
+
+  it('has no thread to post in for a personal plan', async () => {
+    const res = await post(reminder({ groupId: undefined, planId: 'p-personal' }));
+    expect(res.body.data).toEqual({ posted: false });
+  });
+});
+
 describe('saving photos to Album', () => {
   /** Album work runs after the reply, so give it a moment. */
   const settle = () => new Promise((resolve) => setTimeout(resolve, 100));

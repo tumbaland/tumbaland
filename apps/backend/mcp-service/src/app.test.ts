@@ -144,12 +144,16 @@ describe('the MCP handshake', () => {
 
     expect(names).toEqual([
       'delete_activity',
+      'delete_plan',
       'edit_activity',
+      'edit_plan',
       'get_day',
       'get_stats',
       'list_activity_types',
+      'list_plans',
       'log_activity',
       'log_day',
+      'plan_event',
       'search_activities'
     ]);
   });
@@ -245,6 +249,7 @@ describe('tools are gated by the key’s scopes', () => {
       'get_day',
       'get_stats',
       'list_activity_types',
+      'list_plans',
       'search_activities'
     ]);
   });
@@ -252,12 +257,16 @@ describe('tools are gated by the key’s scopes', () => {
   it('shows a read+write key everything', async () => {
     await expect(toolsFor(['relationship:read', 'relationship:write'])).resolves.toEqual([
       'delete_activity',
+      'delete_plan',
       'edit_activity',
+      'edit_plan',
       'get_day',
       'get_stats',
       'list_activity_types',
+      'list_plans',
       'log_activity',
       'log_day',
+      'plan_event',
       'search_activities'
     ]);
   });
@@ -338,7 +347,7 @@ describe('OAuth access tokens', () => {
     const names = payload.result.tools.map((t: { name: string }) => t.name).sort();
 
     // Scope gating applies identically, whichever credential arrived.
-    expect(names).toEqual(['get_day', 'get_stats', 'list_activity_types', 'search_activities']);
+    expect(names).toEqual(['get_day', 'get_stats', 'list_activity_types', 'list_plans', 'search_activities']);
     expect(mockedVerify).not.toHaveBeenCalled();
   });
 

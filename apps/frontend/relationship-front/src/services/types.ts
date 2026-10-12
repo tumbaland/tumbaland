@@ -135,3 +135,56 @@ export interface PaginatedResponse<T> {
     totalPages: number;
   };
 }
+
+/**
+ * Something coming up: a concert on Friday at 19:00. Not an entry: it becomes
+ * one only when someone logs it afterwards (`loggedActivityId`).
+ */
+export interface Plan {
+  _id: string;
+  id: string;
+  title: string;
+  /** YYYY-MM-DD, the (first) day */
+  date: string;
+  /** YYYY-MM-DD, the last day of a trip; null for one day */
+  endDate: string | null;
+  /** HH:mm, null all day */
+  time: string | null;
+  timeZone: string;
+  startsAt: string;
+  notes?: string;
+  typeId: string | null;
+  type?: ActivityType;
+  location: ActivityLocation | null;
+  /** minutes before the start to remind the group; all-day plans count from 09:00 */
+  remindBefore: number | null;
+  remindAt: string | null;
+  remindedAt: string | null;
+  loggedActivityId: string | null;
+  userId: string;
+  groupId?: string;
+}
+
+export interface PlanInput {
+  title: string;
+  date: string;
+  endDate?: string | null;
+  time?: string | null;
+  timeZone?: string;
+  notes?: string;
+  typeId?: string | null;
+  location?: ActivityLocation | null;
+  remindBefore?: number | null;
+  groupId?: string;
+}
+
+export interface GetPlansFilters {
+  groupId?: string;
+  /** YYYY-MM-DD */
+  startDate?: string;
+  /** YYYY-MM-DD */
+  endDate?: string;
+  /** only the ones not yet logged */
+  upcoming?: boolean;
+  limit?: number;
+}

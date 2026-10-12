@@ -25,6 +25,7 @@ import { getActivityDescriptions } from '../services/activities';
 import { getDays, saveDay } from '../services/days';
 import { getPlaces } from '../services/places';
 import LocationPicker from './map/LocationPicker';
+import { todayKey } from '../utils/dates';
 
 interface DayEditorDialogProps {
   open: boolean;
@@ -51,8 +52,6 @@ interface OrphanEntry extends DayEntryInput {
   _id: string;
   typeName?: string;
 }
-
-const todayKey = () => new Date().toISOString().slice(0, 10);
 
 /**
  * "How was your day?" editor: one checklist row per activity type.

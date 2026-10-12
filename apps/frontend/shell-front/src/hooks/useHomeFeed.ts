@@ -5,7 +5,9 @@ import {
   getMilestones,
   getRecentActivities,
   getRecentPhotos,
+  getUpcomingPlans,
   type HomePhoto,
+  type HomePlan,
   type Memories,
   type Milestones,
   type RecentActivity
@@ -17,6 +19,7 @@ export interface HomeFeed {
   photos: HomePhoto[];
   activities: RecentActivity[];
   milestones: Milestones | null;
+  plans: HomePlan[];
   loading: boolean;
 }
 
@@ -35,6 +38,7 @@ export function useHomeFeed(): HomeFeed {
   const [photos, setPhotos] = useState<HomePhoto[]>([]);
   const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [milestones, setMilestones] = useState<Milestones | null>(null);
+  const [plans, setPlans] = useState<HomePlan[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -48,7 +52,8 @@ export function useHomeFeed(): HomeFeed {
       ALBUM_API_URL ? settle(getMemories(groupId), setMemories, 'memories') : Promise.resolve(),
       ALBUM_API_URL ? settle(getRecentPhotos(groupId), setPhotos, 'recent photos') : Promise.resolve(),
       RELATIONSHIP_API_URL ? settle(getRecentActivities(groupId), setActivities, 'recent entries') : Promise.resolve(),
-      RELATIONSHIP_API_URL ? settle(getMilestones(groupId), setMilestones, 'milestones') : Promise.resolve()
+      RELATIONSHIP_API_URL ? settle(getMilestones(groupId), setMilestones, 'milestones') : Promise.resolve(),
+      RELATIONSHIP_API_URL ? settle(getUpcomingPlans(groupId), setPlans, 'plans') : Promise.resolve()
     ]);
 
     setLoading(false);
@@ -58,5 +63,5 @@ export function useHomeFeed(): HomeFeed {
     load();
   }, [load]);
 
-  return { memories, photos, activities, milestones, loading };
+  return { memories, photos, activities, milestones, plans, loading };
 }

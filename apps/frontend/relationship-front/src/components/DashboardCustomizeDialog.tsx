@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { ActivityType } from '../services/types';
 import { DashboardSettingsData } from '../services/dashboardSettings';
+import { todayKey } from '../utils/dates';
 
 interface DashboardCustomizeDialogProps {
   open: boolean;
@@ -120,7 +121,7 @@ const DashboardCustomizeDialog: React.FC<DashboardCustomizeDialogProps> = ({
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
           slotProps={{
-            htmlInput: { max: new Date().toISOString().slice(0, 10), 'aria-label': 'Together since' }
+            htmlInput: { max: todayKey(), 'aria-label': 'Together since' }
           }}
         />
 

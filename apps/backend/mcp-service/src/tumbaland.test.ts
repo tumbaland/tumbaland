@@ -292,3 +292,59 @@ describe('preferTenant', () => {
     expect(kept[0]._id).toBe('group');
   });
 });
+
+describe('plans', () => {
+  const plan = {
+    _id: 'p1',
+    title: 'Concert',
+    date: '2026-10-16',
+    endDate: null,
+    time: '19:00',
+    remindBefore: 60,
+    loggedActivityId: null,
+    location: null
+  };
+  const lastUrl = () => new URL(String((global.fetch as jest.Mock).mock.calls.at(-1)[0]));
+  const lastInit = () => (global.fetch as jest.Mock).mock.calls.at(-1)[1] as RequestInit;
+
+  it('lists upcoming plans with the query the controller reads', async () => {
+    (global.fetch as jest.Mock).mockReturnValue(respond({ success: true, data: [plan] }));
+    await expect(tumbaland.listPlans(KEY, { startDate: '2026-10-12', upcoming: true, limit: 5, groupId: 'g1' })).resolves.toEqual([
+      plan
+    ]);
+    expect(lastUrl().pathname).toBe('/api/plans');
+    expect(Object.fromEntries(lastUrl().searchParams)).toEqual({
+      startDate: '2026-10-12',
+      upcoming: 'true',
+      limit: '5',
+      groupId: 'g1'
+    });
+  });
+
+  it('leaves upcoming out for a range of days', async () => {
+    (global.fetch as jest.Mock).mockReturnValue(respond({ success: true, data: [] }));
+    await tumbaland.listPlans(KEY, { startDate: '2026-11-01', endDate: '2026-11-30' });
+    expect(lastUrl().searchParams.has('upcoming')).toBe(false);
+  });
+
+  it('reads, makes, changes and removes one', async () => {
+    (global.fetch as jest.Mock).mockReturnValue(respond({ success: true, data: plan }));
+    await tumbaland.getPlan(KEY, 'p1');
+    expect(lastUrl().pathname).toBe('/api/plans/p1');
+
+    await tumbaland.createPlan(KEY, { title: 'Concert', date: '2026-10-16' }, 'g1');
+    expect(lastInit().method).toBe('POST');
+
+    await tumbaland.updatePlan(KEY, 'p1', { time: null });
+    expect(lastInit().method).toBe('PATCH');
+    expect(JSON.parse(String(lastInit().body))).toEqual({ time: null });
+
+    await tumbaland.deletePlan(KEY, 'p1');
+    expect(lastInit().method).toBe('DELETE');
+  });
+
+  it('treats a plan without a title as a changed contract', async () => {
+    (global.fetch as jest.Mock).mockReturnValue(respond({ success: true, data: { _id: 'p1' } }));
+    await expect(tumbaland.getPlan(KEY, 'p1')).rejects.toThrow();
+  });
+});

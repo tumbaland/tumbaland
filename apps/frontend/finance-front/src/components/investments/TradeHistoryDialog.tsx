@@ -24,6 +24,7 @@ import { useTrades, usePosition, useCreateTrade, useDeleteTrade } from '../../ho
 import { Trade, TradeType, isShareTrade, tradeValue } from '../../services/tradeService';
 import { parseNumericInput, formatCurrency, formatPrice } from '../../utils/numberUtils';
 import ConfirmationModal from '../ConfirmationModal';
+import { todayKey } from '../../utils/dates';
 
 interface TradeHistoryDialogProps {
   open: boolean;
@@ -46,7 +47,7 @@ interface TradeForm {
 
 const emptyForm = (): TradeForm => ({
   type: 'buy',
-  date: new Date().toISOString().slice(0, 10),
+  date: todayKey(),
   quantity: '',
   price: '',
   amount: '',

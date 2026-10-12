@@ -262,6 +262,8 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         : 'Not chosen yet';
 
   const openCollage = (collageId: string) => navigate(`/album/collages/${collageId}`);
+  const openPlan = (planId: string) =>
+    navigate(`/relationship/journal?view=calendar&plan=${encodeURIComponent(planId)}`);
 
   // The card is in the thread for the others; the one who made it goes straight in.
   const startCollage = async (title: string, clientId: string) => {
@@ -398,6 +400,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
           void thread.removeFromAlbum(messageId).catch(() => setActionError('Could not remove it from the album. Try again.'))
         }
         onOpenCollage={openCollage}
+        onOpenPlan={openPlan}
         accent={chatColors.bubble}
         members={thread.members}
         reads={thread.reads}

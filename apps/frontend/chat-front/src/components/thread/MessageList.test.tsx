@@ -122,6 +122,38 @@ describe('MessageList scrolling', () => {
     expect(list.scrollTop).toBe(bottom());
   });
 
+  it('shows a reminder card that opens the plan', () => {
+    const onOpenPlan = vi.fn();
+    render(
+      <MessageList
+        messages={[
+          {
+            ...message(1),
+            kind: 'reminder',
+            senderId: 'tumbaland-reminders',
+            senderName: 'Reminder',
+            body: 'Concert on Friday 16 October at 19:00',
+            plan: { id: 'p1', title: 'Concert', date: '2026-10-16', time: '19:00', timeZone: 'Europe/Tallinn', place: null }
+          }
+        ]}
+        currentUserId="u-irja"
+        hasOlder={false}
+        loadingOlder={false}
+        onLoadOlder={() => {}}
+        onReact={() => {}}
+        onRetry={() => {}}
+        onPickEmoji={() => {}}
+        onOpenMedia={() => {}}
+        onOpenPlan={onOpenPlan}
+      />
+    );
+
+    expect(screen.getByTestId('reminder-card')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+
+    expect(onOpenPlan).toHaveBeenCalledWith('p1');
+  });
+
   it('shows a collage card that opens the collage', () => {
     const onOpenCollage = vi.fn();
     render(

@@ -328,6 +328,107 @@ components:
       required:
         - entries
 
+    Plan:
+      type: object
+      description: |
+        Something coming up: a concert on Friday at 19:00, a trip over a few
+        days. Not an entry; it becomes one when it is logged afterwards.
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+          example: Concert
+        date:
+          type: string
+          format: date
+          description: The day, or the first day of a trip
+          example: "2026-10-16"
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: The last day of a trip; null for one day
+        time:
+          type: string
+          nullable: true
+          description: HH:mm in timeZone; null all day
+          example: "19:00"
+        timeZone:
+          type: string
+          example: Europe/Tallinn
+        startsAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+        typeId:
+          type: string
+          nullable: true
+        type:
+          $ref: '#/components/schemas/ActivityType'
+        location:
+          $ref: '#/components/schemas/ActivityLocation'
+        remindBefore:
+          type: integer
+          nullable: true
+          description: |
+            Minutes before the start to remind the group in its chat, or null
+            for none. An all-day plan counts from 09:00 on its day.
+        remindAt:
+          type: string
+          format: date-time
+          nullable: true
+        remindedAt:
+          type: string
+          format: date-time
+          nullable: true
+        loggedActivityId:
+          type: string
+          nullable: true
+        userId:
+          type: string
+        groupId:
+          type: string
+
+    PlanInput:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        date:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        time:
+          type: string
+          nullable: true
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+        timeZone:
+          type: string
+          description: IANA zone; Europe/Tallinn when absent
+        notes:
+          type: string
+          maxLength: 1000
+        typeId:
+          type: string
+          nullable: true
+        location:
+          $ref: '#/components/schemas/ActivityLocation'
+        remindBefore:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 43200
+          description: Absent on create means 60 for a timed plan, 0 for an all-day one
+        groupId:
+          type: string
+          description: Create only; a plan stays in the scope it was made in
+
     ActivityStats:
       type: object
       properties:
@@ -1467,6 +1568,169 @@ paths:
                     type: boolean
                   data:
                     $ref: '#/components/schemas/Day'
+
+  # Plan Endpoints
+  /api/plans:
+    get:
+      tags:
+        - Plans
+      summary: List plans
+      description: |
+        Plans in a range of days, earliest first; a trip is included if any of
+        its days are in the range. With upcoming=true, only the ones not yet
+        logged, from startDate on.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: upcoming
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 200
+      responses:
+        '200':
+          description: Plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Plan'
+    post:
+      tags:
+        - Plans
+      summary: Make a plan
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/PlanInput'
+                - required: [title, date]
+      responses:
+        '201':
+          description: The plan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Plan'
+
+  /api/plans/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - Plans
+      summary: Read one plan
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The plan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Plan'
+        '404':
+          description: Not found, or not in the caller's reach
+    patch:
+      tags:
+        - Plans
+      summary: Change a plan
+      description: Only the fields sent change. Moving it or changing the reminder schedules the reminder again.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanInput'
+      responses:
+        '200':
+          description: The plan
+    delete:
+      tags:
+        - Plans
+      summary: Remove a plan
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Deleted
+
+  /api/plans/{id}/log:
+    post:
+      tags:
+        - Plans
+      summary: Log a plan as an entry
+      description: |
+        Makes an entry on the plan's first day, in its scope, with the title as
+        the description and the place where the type takes them. Once only,
+        and not before the day has come in the plan's zone.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                typeId:
+                  type: string
+                  description: Needed when the plan has no type
+      responses:
+        '200':
+          description: The plan and the new entry's id
+        '409':
+          description: Already logged
 
   # Place (map) Endpoints
   /api/places:

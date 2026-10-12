@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { DayEntry, activityTypeOf, resolveType, tumbaland } from '../tumbaland';
+import { DayEntry, PlanInput, activityTypeOf, resolveType, tumbaland } from '../tumbaland';
+import type { Plan } from '../schemas';
 import {
   Caller,
   ToolModule,
@@ -44,6 +45,54 @@ const describeActivity = (
   const detail = activity.description ? ` — ${activity.description}` : '';
   return `- ${day}: ${typeName}${time}${detail}  [id ${activity._id}]`;
 };
+
+/** "1 hour before", for a plan's line; all-day plans count from 09:00. */
+const reminderText = (plan: Pick<Plan, 'remindBefore' | 'time'>): string => {
+  const minutes = plan.remindBefore;
+  if (minutes === null) return 'no reminder';
+  if (!plan.time) {
+    if (minutes === 0) return 'reminder that morning at 09:00';
+    if (minutes === 1440) return 'reminder the day before at 09:00';
+  }
+  if (minutes % 1440 === 0) return `reminder ${minutes / 1440} day${minutes === 1440 ? '' : 's'} before`;
+  if (minutes % 60 === 0) return `reminder ${minutes / 60} hour${minutes === 60 ? '' : 's'} before`;
+  return `reminder ${minutes} minutes before`;
+};
+
+/** One plan, on one line, with the id needed to change it. */
+const describePlan = (plan: Plan): string => {
+  const when = plan.endDate ? `${plan.date} to ${plan.endDate}` : plan.date;
+  const time = plan.time ? ` ${plan.time}` : plan.endDate ? '' : ' (all day)';
+  const place = plan.location ? ` at ${plan.location.label}` : '';
+  const logged = plan.loggedActivityId ? ', logged in the journal' : '';
+  return `- ${when}${time}: ${plan.title}${place} (${reminderText(plan)}${logged})  [id ${plan._id}]`;
+};
+
+/**
+ * Today in Tallinn when the model did not say. Not the UTC date, which is still
+ * yesterday until 03:00 there and would list a plan that is already over.
+ */
+const tallinnToday = (): string =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Tallinn', year: 'numeric', month: '2-digit', day: '2-digit' }).format(
+    new Date()
+  );
+
+/** HH:mm, 24-hour, as the journal stores a plan's time. */
+const timeSchema = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use 24-hour HH:mm, like 19:00');
+
+const remindSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(43_200)
+  .nullable()
+  .describe(
+    'Minutes before the start to remind everyone in the journal’s chat, or null for none. ' +
+      'An all-day plan counts from 09:00 on its day, so 0 is that morning and 1440 the day before. ' +
+      'Leave out for the usual: 60 for a timed plan, 0 for an all-day one.'
+  );
 
 function registerReadTools(server: McpServer, caller: Caller): void {
   const apiKey = caller.token;
@@ -150,6 +199,39 @@ function registerReadTools(server: McpServer, caller: Caller): void {
         );
 
         return ok(lines.join('\n'));
+      } catch (error) {
+        return explain(error);
+      }
+    }
+  );
+  server.registerTool(
+    'list_plans',
+    {
+      title: 'List plans',
+      description:
+        'What is coming up: plans like a concert on Friday or a trip next month, with the id of ' +
+        'each. With no dates, the upcoming ones from today on. Plans are separate from logged ' +
+        'entries; they become entries only when someone logs them after they happened.',
+      inputSchema: {
+        from: dateSchema.optional().describe('First day to include. Leave out with to for the upcoming ones'),
+        to: dateSchema.optional().describe('Last day to include'),
+        today: dateSchema.optional().describe('Today’s date where the user is, for the upcoming ones'),
+        ...journalSchema(caller)
+      }
+    },
+    async ({ from, to, today, journal }) => {
+      try {
+        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const upcoming = !from && !to;
+        const plans = await tumbaland.listPlans(apiKey, {
+          startDate: upcoming ? (today ?? tallinnToday()) : from,
+          endDate: to,
+          upcoming,
+          limit: 50,
+          groupId
+        });
+        if (plans.length === 0) return ok(upcoming ? 'Nothing planned from today on.' : 'No plans in those days.');
+        return ok(plans.map(describePlan).join('\n'));
       } catch (error) {
         return explain(error);
       }
@@ -443,6 +525,103 @@ function registerWriteTools(server: McpServer, caller: Caller): void {
   );
 }
 
+function registerPlanWriteTools(server: McpServer, caller: Caller): void {
+  const apiKey = caller.token;
+  server.registerTool(
+    'plan_event',
+    {
+      title: 'Plan something',
+      description:
+        'Put something coming up in the journal’s calendar: "concert on Friday at 7", "Rome from the ' +
+        '16th to the 18th". Everyone in the journal is reminded in its chat before it starts. Work out ' +
+        'the date from today first and say which one you used. A place can be added in the app.',
+      inputSchema: {
+        title: z.string().trim().min(1).max(200).describe('What it is, in the user’s words'),
+        date: dateSchema.describe('The day, or the first day of a trip'),
+        endDate: dateSchema.optional().describe('The last day, for something over several days'),
+        time: timeSchema.optional().describe('When it starts, 24-hour. Leave out for all day'),
+        remindBefore: remindSchema.optional(),
+        type: z.string().optional().describe('The activity type it is logged as afterwards, by name'),
+        notes: z.string().max(1000).optional().describe('Anything else the user said about it'),
+        timeZone: z.string().optional().describe('IANA zone, if the user is not in Estonia'),
+        ...journalSchema(caller)
+      }
+    },
+    async ({ title, date, endDate, time, remindBefore, type, notes, timeZone, journal }) => {
+      try {
+        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const typeId = type ? resolveType(await tumbaland.listActivityTypes(apiKey, groupId), type)._id : undefined;
+        const input: PlanInput = { title, date, endDate, time, remindBefore, typeId, notes, timeZone };
+        const plan = await tumbaland.createPlan(apiKey, input, groupId);
+        return ok(`Planned\n  ${describePlan(plan)}`);
+      } catch (error) {
+        return explain(error);
+      }
+    }
+  );
+  server.registerTool(
+    'edit_plan',
+    {
+      title: 'Change a plan',
+      description:
+        'Change a plan that is already in the calendar: move it, rename it, change the time or the ' +
+        'reminder. Get the id from list_plans first. Only the fields you pass change. Moving it ' +
+        'schedules the reminder again.',
+      inputSchema: {
+        id: z.string().min(1).describe('The plan to change, from list_plans'),
+        title: z.string().trim().min(1).max(200).optional(),
+        date: dateSchema.optional().describe('Move it to another day'),
+        endDate: dateSchema.nullable().optional().describe('The last day of a trip, or null to make it one day'),
+        time: timeSchema.nullable().optional().describe('A new start time, or null to make it all day'),
+        remindBefore: remindSchema.optional(),
+        type: z.string().optional().describe('The activity type it is logged as, by name'),
+        notes: z.string().max(1000).optional(),
+        ...journalSchema(caller)
+      }
+    },
+    async ({ id, title, date, endDate, time, remindBefore, type, notes, journal }) => {
+      try {
+        const patch: Partial<PlanInput> = { title, date, endDate, time, remindBefore, notes };
+        if (Object.values(patch).every((value) => value === undefined) && type === undefined) {
+          return fail('Nothing to change. Pass at least one field to change.');
+        }
+        const groupId = groupIdFor(resolveJournal(caller, journal));
+        if (type) patch.typeId = resolveType(await tumbaland.listActivityTypes(apiKey, groupId), type)._id;
+
+        // Read first, so a wrong id fails before anything changes and the answer names the plan.
+        const before = await tumbaland.getPlan(apiKey, id, groupId);
+        const after = await tumbaland.updatePlan(apiKey, id, patch, groupId);
+        return ok(`Changed\n  from ${describePlan(before)}\n  to   ${describePlan(after)}`);
+      } catch (error) {
+        return explain(error);
+      }
+    }
+  );
+  server.registerTool(
+    'delete_plan',
+    {
+      title: 'Remove a plan',
+      description:
+        'Take a plan out of the calendar for everyone. Get the id from list_plans first. Not undoable: ' +
+        'only when the user asked for it to be removed. To move it instead, use edit_plan.',
+      inputSchema: {
+        id: z.string().min(1).describe('The plan to remove, from list_plans'),
+        ...journalSchema(caller)
+      }
+    },
+    async ({ id, journal }) => {
+      try {
+        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const plan = await tumbaland.getPlan(apiKey, id, groupId);
+        await tumbaland.deletePlan(apiKey, id, groupId);
+        return ok(`Deleted\n  ${describePlan(plan)}`);
+      } catch (error) {
+        return explain(error);
+      }
+    }
+  );
+}
+
 export const relationshipRead: ToolModule = {
   scopes: ['relationship:read'],
   register: registerReadTools
@@ -450,5 +629,8 @@ export const relationshipRead: ToolModule = {
 
 export const relationshipWrite: ToolModule = {
   scopes: ['relationship:read', 'relationship:write'],
-  register: registerWriteTools
+  register: (server, caller) => {
+    registerWriteTools(server, caller);
+    registerPlanWriteTools(server, caller);
+  }
 };

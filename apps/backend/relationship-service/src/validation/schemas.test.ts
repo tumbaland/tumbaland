@@ -2,7 +2,9 @@ import {
   createActivitySchema,
   updateActivitySchema,
   saveDaySchema,
-  saveDashboardSettingsSchema
+  saveDashboardSettingsSchema,
+  createPlanSchema,
+  updatePlanSchema
 } from './schemas';
 
 describe('createActivitySchema', () => {
@@ -144,5 +146,21 @@ describe('saveDashboardSettingsSchema', () => {
         startDate: '2024-01-18T00:00:00Z'
       })
     ).toThrow();
+  });
+});
+
+describe('plan schemas', () => {
+  it('takes a trip that ends after it starts, and refuses one that ends before', () => {
+    expect(createPlanSchema.safeParse({ title: 'Rome', date: '2030-06-01', endDate: '2030-06-05' }).success).toBe(true);
+    const backwards = createPlanSchema.safeParse({ title: 'Rome', date: '2030-06-05', endDate: '2030-06-01' });
+    expect(backwards.success).toBe(false);
+    expect(backwards.error?.issues[0]?.message).toBe('A plan ends on or after the day it starts');
+    expect(updatePlanSchema.safeParse({ date: '2030-06-05', endDate: '2030-06-01' }).success).toBe(false);
+    expect(updatePlanSchema.safeParse({ endDate: '2030-06-01' }).success).toBe(true);
+  });
+
+  it('refuses a made-up time zone and a 12-hour time', () => {
+    expect(createPlanSchema.safeParse({ title: 'x', date: '2030-06-01', timeZone: 'Mars/Olympus' }).success).toBe(false);
+    expect(createPlanSchema.safeParse({ title: 'x', date: '2030-06-01', time: '7pm' }).success).toBe(false);
   });
 });
