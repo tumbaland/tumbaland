@@ -5,6 +5,7 @@ import BgImageBox from '../components/BgImageBox';
 import { GreetingHeader } from '../components/home/GreetingHeader';
 import { DailyTodo } from '../components/home/DailyTodo';
 import { HomeMilestones } from '../components/home/HomeMilestones';
+import { HomePlans } from '../components/home/HomePlans';
 import { MemoryCard } from '../components/home/MemoryCard';
 import { RecentPhotos } from '../components/home/RecentPhotos';
 import { RecentActivity } from '../components/home/RecentActivity';
@@ -34,7 +35,7 @@ interface HomePageProps {
  */
 export function HomePage({ user }: HomePageProps) {
   const navigate = useNavigate();
-  const { memories, photos, activities, milestones } = useHomeFeed();
+  const { memories, photos, activities, milestones, plans } = useHomeFeed();
 
   const handleOpen = useCallback((route: string) => navigate(route), [navigate]);
 
@@ -61,6 +62,10 @@ export function HomePage({ user }: HomePageProps) {
         {/* Renders nothing on a date with no history, which is most of the
             first year. The page reads fine without it. */}
         {memories && <MemoryCard memories={memories} onOpen={handleOpen} />}
+
+        {/* What the two of them have coming: a concert tonight is the most
+            useful thing this page can say on the day. Nothing when nothing is planned. */}
+        <HomePlans plans={plans} onOpen={handleOpen} />
 
         {/* Under the memory: the day count changes every morning and the
             rows say what is coming, beside what was written this week. Side by

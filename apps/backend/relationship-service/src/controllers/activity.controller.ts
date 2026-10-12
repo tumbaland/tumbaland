@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { BadRequestError, NotFoundError, countRead, sendSuccess } from '@tumbaland/backend-core';
 import * as ActivityService from '../services/activity.service';
 import { IActivity } from '../models/Activity';
+import { todayIn } from '../utils/time';
 
 /**
  * Create a new activity
@@ -202,9 +203,11 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
     result[category] = {};
 
     for (const timeline of timelines) {
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - timeline.months);
+      // Today as the people's own day, the way entries are stored: an instant
+      // left today's entries out for the first hours after midnight in Tallinn.
+      const endDate = new Date(`${todayIn()}T00:00:00.000Z`);
+      const startDate = new Date(endDate);
+      startDate.setUTCMonth(startDate.getUTCMonth() - timeline.months);
 
       const filters: Parameters<typeof ActivityService.getActivities>[0] = {
         startDate,

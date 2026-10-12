@@ -256,7 +256,12 @@ describe('updatePlan', () => {
   it('sets and clears the type and the place', async () => {
     const existing = storedPlan();
     jest.spyOn(Plan, 'findOne').mockResolvedValue(existing);
-    let plan = await updatePlan(existing.id, { typeId, location: { label: 'Saku Arena', lat: 59.4, lng: 24.7 } }, 'u1', ['g1']);
+    let plan = await updatePlan(
+      existing.id,
+      { typeId, location: { label: 'Saku Arena', lat: 59.4, lng: 24.7 } },
+      'u1',
+      ['g1']
+    );
     expect(plan).toMatchObject({ typeId, location: { label: 'Saku Arena' } });
     plan = await updatePlan(existing.id, { typeId: null, location: null }, 'u1', ['g1']);
     expect(plan).toMatchObject({ typeId: null, location: null });
@@ -265,7 +270,9 @@ describe('updatePlan', () => {
   it('turns a timed plan into an all-day one', async () => {
     const existing = storedPlan();
     jest.spyOn(Plan, 'findOne').mockResolvedValue(existing);
-    const plan = await updatePlan(existing.id, { time: null, remindBefore: 0, timeZone: 'Europe/Tallinn' }, 'u1', ['g1']);
+    const plan = await updatePlan(existing.id, { time: null, remindBefore: 0, timeZone: 'Europe/Tallinn' }, 'u1', [
+      'g1'
+    ]);
     expect(plan.time).toBeNull();
     expect(plan.remindAt?.toISOString()).toBe('2026-10-16T06:00:00.000Z');
   });
@@ -299,6 +306,12 @@ describe('deletePlan', () => {
 
 describe('logPlan', () => {
   const after = new Date('2026-10-17T10:00:00Z');
+  // The claim: the stored plan with the update applied, as findOneAndUpdate returns it.
+  let claim: jest.SpyInstance;
+  beforeEach(() => {
+    claim = jest.spyOn(Plan, 'findOneAndUpdate').mockImplementation(((filter: { _id: unknown }, update: { $set: Record<string, unknown> }) =>
+      Promise.resolve(Object.assign(storedPlan(), { _id: filter._id }, update.$set))) as never);
+  });
 
   it('makes an entry on the plan’s day in its scope, with the title and place', async () => {
     const existing = storedPlan({ location: { label: 'Saku Arena', lat: 59.4, lng: 24.7 } });
@@ -345,6 +358,20 @@ describe('logPlan', () => {
     await expect(logPlan(new mongoose.Types.ObjectId().toString(), undefined, 'u1', ['g1'], NOW)).rejects.toThrow(
       'A plan can be logged once its day has come'
     );
+  });
+
+  it('makes one entry when two people log it at once', async () => {
+    const existing = storedPlan({ typeId });
+    jest.spyOn(Plan, 'findOne').mockResolvedValue(existing);
+    jest.spyOn(ActivityType, 'findById').mockResolvedValue({ valueType: 'string' } as never);
+    const removed = jest.spyOn(Activity.prototype, 'deleteOne').mockResolvedValue({} as never);
+    claim.mockResolvedValueOnce(null); // the other one claimed it first
+
+    await expect(logPlan(existing.id, undefined, 'u1', ['g1'], after)).rejects.toThrow(
+      'This plan is already in the journal'
+    );
+    expect(claim.mock.calls[0][0]).toEqual({ _id: existing._id, loggedActivityId: null });
+    expect(removed).toHaveBeenCalled();
   });
 
   it('refuses to log one twice', async () => {

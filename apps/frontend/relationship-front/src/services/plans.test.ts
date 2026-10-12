@@ -47,6 +47,8 @@ it('changes, deletes and logs a plan', async () => {
   mockFetchOnce({ success: true, data: { id: 'p1' } });
   await updatePlan('p1', { title: 'Gig' });
   expect(lastCall().init.method).toBe('PATCH');
+  // an edit keeps the zone the plan was made in
+  expect(JSON.parse(String(lastCall().init.body))).toEqual({ title: 'Gig' });
 
   mockFetchOnce({ success: true });
   await deletePlan('p1');

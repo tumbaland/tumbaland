@@ -65,7 +65,12 @@ export async function postPlanReminder(input: PlanReminderInput): Promise<{ post
   // thread to post in, so the one person who certainly cares is told directly.
   if (!conversation) {
     if (isPushConfigured()) {
-      await sendToUsers([input.userId], { title: 'Reminder', body: planReminderPush(plan), tag: `plan-${input.planId}`, url });
+      await sendToUsers([input.userId], {
+        title: 'Reminder',
+        body: planReminderPush(plan),
+        tag: `plan-${input.planId}`,
+        url
+      });
     }
     return { posted: false };
   }

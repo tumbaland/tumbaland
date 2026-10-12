@@ -80,6 +80,20 @@ export interface Milestones {
   upcoming: Milestone[];
 }
 
+/** A plan from the journal; the fields the home page shows. */
+export interface HomePlan {
+  id: string;
+  title: string;
+  /** YYYY-MM-DD, the first day */
+  date: string;
+  /** YYYY-MM-DD, the last day of a trip */
+  endDate: string | null;
+  /** HH:mm, null all day */
+  time: string | null;
+  location: { label: string } | null;
+  type?: { color?: string };
+}
+
 /** Whichever context the session is reading, as every scoped endpoint spells it. */
 const scope = (groupId?: string) => (groupId ? { groupId } : undefined);
 
@@ -118,6 +132,19 @@ export const getMilestones = async (groupId?: string): Promise<Milestones> => {
     params: scope(groupId)
   });
   return data;
+};
+
+const pad = (n: number) => String(n).padStart(2, '0');
+/** Today in the browser's zone; the UTC date is still yesterday just after midnight in Tallinn. */
+export const localToday = (now: Date = new Date()): string =>
+  `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+/** The next few plans not yet logged, from today on (a trip under way included). */
+export const getUpcomingPlans = async (groupId?: string, limit = 3): Promise<HomePlan[]> => {
+  const { data } = await journalApi.get<Envelope<HomePlan[]>>('/api/plans', {
+    params: { ...scope(groupId), upcoming: 'true', startDate: localToday(), limit }
+  });
+  return data ?? [];
 };
 
 /** Whether the home page can ask at all: a front deployed without these stays as it was. */

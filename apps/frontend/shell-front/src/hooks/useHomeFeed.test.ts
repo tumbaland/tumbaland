@@ -10,7 +10,8 @@ vi.mock('../services/homeApi', () => ({
   getMemories: vi.fn(),
   getMilestones: vi.fn(),
   getRecentPhotos: vi.fn(),
-  getRecentActivities: vi.fn()
+  getRecentActivities: vi.fn(),
+  getUpcomingPlans: vi.fn()
 }));
 
 vi.mock('../config/ConfigProvider', () => ({
@@ -18,7 +19,7 @@ vi.mock('../config/ConfigProvider', () => ({
 }));
 
 import { useHomeFeed } from './useHomeFeed';
-import { getMemories, getMilestones, getRecentActivities, getRecentPhotos } from '../services/homeApi';
+import { getMemories, getMilestones, getRecentActivities, getRecentPhotos, getUpcomingPlans } from '../services/homeApi';
 import { getGlobalConfig } from '../config/ConfigProvider';
 
 const configured = { ALBUM_API_URL: 'https://album.example', RELATIONSHIP_API_URL: 'https://journal.example' };
@@ -27,6 +28,7 @@ const memories = { date: '2026-09-20', totalPhotos: 2, years: [] };
 const photos = [{ _id: 'p1', originalName: 'p1.jpg', albumId: 'a1', createdAt: '2026-09-19T00:00:00Z' }];
 const activities = [{ _id: 'e1', date: '2026-09-19T00:00:00Z' }];
 const milestones = { since: '2024-01-01', daysTogether: 628, recent: [], upcoming: [] };
+const plans = [{ id: 'p1', title: 'Concert', date: '2026-09-25', endDate: null, time: '19:00', location: null }];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -35,9 +37,10 @@ beforeEach(() => {
   vi.mocked(getRecentPhotos).mockResolvedValue(photos);
   vi.mocked(getRecentActivities).mockResolvedValue(activities);
   vi.mocked(getMilestones).mockResolvedValue(milestones);
+  vi.mocked(getUpcomingPlans).mockResolvedValue(plans);
 });
 
-it('loads all four feeds', async () => {
+it('loads every feed', async () => {
   const { result } = renderHook(() => useHomeFeed());
 
   await waitFor(() => expect(result.current.loading).toBe(false));
@@ -46,6 +49,7 @@ it('loads all four feeds', async () => {
   expect(result.current.photos).toEqual(photos);
   expect(result.current.activities).toEqual(activities);
   expect(result.current.milestones).toEqual(milestones);
+  expect(result.current.plans).toEqual(plans);
 });
 
 it('keeps the sections that worked when one feed fails', async () => {
@@ -67,6 +71,7 @@ it('finishes loading even when every feed fails', async () => {
   vi.mocked(getRecentPhotos).mockRejectedValue(new Error('down'));
   vi.mocked(getRecentActivities).mockRejectedValue(new Error('down'));
   vi.mocked(getMilestones).mockRejectedValue(new Error('down'));
+  vi.mocked(getUpcomingPlans).mockRejectedValue(new Error('down'));
 
   const { result } = renderHook(() => useHomeFeed());
 
@@ -74,6 +79,7 @@ it('finishes loading even when every feed fails', async () => {
 
   expect(result.current.memories).toBeNull();
   expect(result.current.milestones).toBeNull();
+  expect(result.current.plans).toEqual([]);
 });
 
 it('asks for nothing a front was not given a URL for', async () => {

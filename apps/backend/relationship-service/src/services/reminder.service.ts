@@ -21,7 +21,9 @@ const MAX_PER_RUN = 50;
  * reminder twice. A send Chat did not take is released again and retried on
  * the next run, until it is too late to be worth sending.
  */
-export async function sendDueReminders(now: Date = new Date()): Promise<{ sent: number; skipped: number; failed: number }> {
+export async function sendDueReminders(
+  now: Date = new Date()
+): Promise<{ sent: number; skipped: number; failed: number }> {
   const result = { sent: 0, skipped: 0, failed: 0 };
   const tried: mongoose.Types.ObjectId[] = [];
 

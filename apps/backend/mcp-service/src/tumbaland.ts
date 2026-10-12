@@ -5,8 +5,11 @@ import {
   activityTypesResponseSchema,
   daysResponseSchema,
   parseResponse,
+  planSchema,
+  plansResponseSchema,
   statisticsResponseSchema,
   trendsResponseSchema,
+  type Plan,
   type Statistics,
   type Trends
 } from './schemas';
@@ -104,6 +107,18 @@ export interface DayEntry {
   description?: string;
   hours?: number;
   location?: { label: string; lat: number; lng: number } | null;
+}
+
+/** What a plan is made from. Times are HH:mm in the plan's zone; null clears. */
+export interface PlanInput {
+  title: string;
+  date: string;
+  endDate?: string | null;
+  time?: string | null;
+  timeZone?: string;
+  notes?: string;
+  typeId?: string | null;
+  remindBefore?: number | null;
 }
 
 const relationshipUrl = () => serviceUrl('RELATIONSHIP');
@@ -206,6 +221,37 @@ export const tumbaland = {
 
   deleteActivity: (apiKey: string, id: string, groupId?: string): Promise<unknown> =>
     call(apiKey, 'DELETE', `/activities/${id}`, undefined, { groupId }),
+
+  /** Plans in a range of days, or the upcoming ones (not yet logged) from `startDate` on. */
+  listPlans: async (
+    apiKey: string,
+    params: { startDate?: string; endDate?: string; upcoming?: boolean; limit?: number; groupId?: string }
+  ): Promise<Plan[]> => {
+    const { upcoming, ...rest } = params;
+    const body = await call<unknown>(apiKey, 'GET', '/plans', undefined, {
+      ...rest,
+      upcoming: upcoming ? 'true' : undefined
+    });
+    return parseResponse(plansResponseSchema, '/plans', body);
+  },
+
+  getPlan: async (apiKey: string, id: string, groupId?: string): Promise<Plan> => {
+    const body = await call<unknown>(apiKey, 'GET', `/plans/${id}`, undefined, { groupId });
+    return parseResponse(planSchema, `/plans/${id}`, body);
+  },
+
+  createPlan: async (apiKey: string, plan: PlanInput, groupId?: string): Promise<Plan> => {
+    const body = await call<unknown>(apiKey, 'POST', '/plans', plan, { groupId });
+    return parseResponse(planSchema, '/plans', body);
+  },
+
+  updatePlan: async (apiKey: string, id: string, patch: Partial<PlanInput>, groupId?: string): Promise<Plan> => {
+    const body = await call<unknown>(apiKey, 'PATCH', `/plans/${id}`, patch, { groupId });
+    return parseResponse(planSchema, `/plans/${id}`, body);
+  },
+
+  deletePlan: (apiKey: string, id: string, groupId?: string): Promise<unknown> =>
+    call(apiKey, 'DELETE', `/plans/${id}`, undefined, { groupId }),
 
   getStatistics: async (apiKey: string, timeframe: string, groupId?: string): Promise<Statistics> => {
     const body = await call<unknown>(apiKey, 'GET', '/statistics', undefined, { timeframe, groupId });

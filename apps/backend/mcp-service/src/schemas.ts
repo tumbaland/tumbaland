@@ -199,3 +199,23 @@ export function parseResponse<T>(schema: z.ZodType<T>, path: string, body: unkno
   const where = issue.path.length > 0 ? issue.path.join('.') : '(root)';
   throw new ShapeError(path, `${where}: ${issue.message}`);
 }
+
+/** A plan: something coming up. `date` and `endDate` are already YYYY-MM-DD. */
+export const planSchema = z
+  .object({
+    _id: z.string(),
+    title: z.string(),
+    date: z.string(),
+    endDate: z.string().nullable().catch(null),
+    time: z.string().nullable().catch(null),
+    timeZone: z.string().optional(),
+    notes: z.string().optional(),
+    remindBefore: z.number().nullable().catch(null),
+    loggedActivityId: z.string().nullable().catch(null),
+    location: z.object({ label: z.string() }).loose().nullable().catch(null),
+    type: z.object({ name: z.string() }).loose().optional()
+  })
+  .loose();
+
+export const plansResponseSchema = z.array(planSchema);
+export type Plan = z.infer<typeof planSchema>;

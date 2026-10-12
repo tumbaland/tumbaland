@@ -271,7 +271,8 @@ export const logPlan = async (
 ): Promise<{ plan: PlanView; activityId: string }> => {
   const plan = await findReachable(id, userId, userGroupIds);
   if (plan.loggedActivityId) throw new ConflictError('This plan is already in the journal');
-  if (dayKey(plan.date) > todayIn(now, plan.timeZone)) throw new BadRequestError('A plan can be logged once its day has come');
+  if (dayKey(plan.date) > todayIn(now, plan.timeZone))
+    throw new BadRequestError('A plan can be logged once its day has come');
 
   const chosen = typeId || (plan.typeId ? String(plan.typeId) : undefined);
   if (!chosen) throw new BadRequestError('Choose an activity type to log it as');
@@ -288,9 +289,17 @@ export const logPlan = async (
   });
   await activity.save();
 
-  plan.loggedActivityId = activity._id as mongoose.Types.ObjectId;
-  if (!plan.typeId) plan.typeId = new mongoose.Types.ObjectId(chosen);
-  await plan.save();
-  await plan.populate('typeId');
-  return { plan: toPlanView(plan), activityId: String(activity._id) };
+  // Claimed in one update, so the two of you pressing "Log it" at once make one
+  // entry: whoever loses takes theirs back out.
+  const logged = await Plan.findOneAndUpdate(
+    { _id: plan._id, loggedActivityId: null },
+    { $set: { loggedActivityId: activity._id, ...(plan.typeId ? {} : { typeId: chosen }) } },
+    { returnDocument: 'after' }
+  );
+  if (!logged) {
+    await activity.deleteOne();
+    throw new ConflictError('This plan is already in the journal');
+  }
+  await logged.populate('typeId');
+  return { plan: toPlanView(logged), activityId: String(activity._id) };
 };

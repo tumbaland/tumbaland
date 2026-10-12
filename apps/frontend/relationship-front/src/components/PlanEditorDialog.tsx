@@ -57,6 +57,23 @@ const dayAfter = (day: string): string => {
   return localDayKey(new Date(year!, month! - 1, date! + 1));
 };
 const DEFAULT_TIME = '19:00';
+
+/** Whether this device will show a reminder's notification; the chat has it either way. */
+const notificationsOff = (): boolean => {
+  try {
+    return typeof Notification !== 'undefined' && Notification.permission !== 'granted';
+  } catch {
+    return false;
+  }
+};
+/** "2 hours before" for a reminder that is not one of the presets. */
+const minutesBefore = (minutes: number, allDay: boolean): string => {
+  const suffix = allDay ? ' 9:00' : '';
+  if (minutes % 1440 === 0) return `${minutes / 1440} day${minutes === 1440 ? '' : 's'} before${suffix}`;
+  if (minutes % 60 === 0) return `${minutes / 60} hour${minutes === 60 ? '' : 's'} before${suffix}`;
+  return `${minutes} minutes before${suffix}`;
+};
+
 /** A select can't hold null, so "no reminder" is this. */
 const NONE = 'none';
 
@@ -127,7 +144,13 @@ const PlanEditorDialog: React.FC<PlanEditorDialogProps> = ({
     };
   }, [open, groupId]);
 
-  const reminderOptions = allDay ? ALL_DAY_REMINDERS : TIMED_REMINDERS;
+  const presets = allDay ? ALL_DAY_REMINDERS : TIMED_REMINDERS;
+  // A reminder set elsewhere (Claude can pick any number of minutes) is kept
+  // as an option, so the field shows it rather than going blank.
+  const reminderOptions =
+    reminder === NONE || presets.some((option) => String(option.value) === reminder)
+      ? presets
+      : [...presets, { value: Number(reminder), label: minutesBefore(Number(reminder), allDay) }];
 
   const toggleAllDay = (next: boolean) => {
     setAllDay(next);
@@ -329,6 +352,11 @@ const PlanEditorDialog: React.FC<PlanEditorDialogProps> = ({
               >
                 <NotificationsActiveOutlinedIcon sx={{ fontSize: 14 }} />
                 {groupId ? 'Everyone in this journal gets it in your chat' : 'You get it as a notification'}
+              </Typography>
+            )}
+            {reminder !== NONE && notificationsOff() && (
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.25 }}>
+                Notifications are off on this device. Turn them on under Account to get a buzz too.
               </Typography>
             )}
           </Box>

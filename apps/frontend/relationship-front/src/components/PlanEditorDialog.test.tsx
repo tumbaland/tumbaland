@@ -227,8 +227,29 @@ it('says when a plan is in the journal already, and does not offer to log it aga
   expect(screen.queryByRole('button', { name: 'Log it' })).not.toBeInTheDocument();
 });
 
+it('shows a reminder set elsewhere that is not one of the choices', () => {
+  renderEditor({ plan: plan({ remindBefore: 120 }) });
+  expect(screen.getByLabelText('Reminder')).toHaveTextContent('2 hours before');
+});
+
 it('opens an all-day plan without a reminder as it was saved', () => {
   renderEditor({ plan: plan({ time: null, remindBefore: null }) });
   expect(screen.getByLabelText('All day')).toBeChecked();
   expect(screen.getByLabelText('Reminder')).toHaveTextContent('No reminder');
+});
+
+it('says when this device will not buzz for the reminder', () => {
+  const original = globalThis.Notification;
+  Object.defineProperty(globalThis, 'Notification', { value: { permission: 'default' }, configurable: true });
+  renderEditor();
+  expect(screen.getByText(/Notifications are off on this device/)).toBeInTheDocument();
+  Object.defineProperty(globalThis, 'Notification', { value: original, configurable: true });
+});
+
+it('says nothing about notifications once they are allowed', () => {
+  const original = globalThis.Notification;
+  Object.defineProperty(globalThis, 'Notification', { value: { permission: 'granted' }, configurable: true });
+  renderEditor();
+  expect(screen.queryByText(/Notifications are off on this device/)).not.toBeInTheDocument();
+  Object.defineProperty(globalThis, 'Notification', { value: original, configurable: true });
 });

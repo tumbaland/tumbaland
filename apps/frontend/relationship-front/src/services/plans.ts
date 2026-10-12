@@ -19,7 +19,11 @@ export const getPlans = async (filters?: GetPlansFilters): Promise<Plan[]> => {
 export const getPlan = async (id: string): Promise<Plan> =>
   (await relationshipApi.get<ApiResponse<Plan>>(`/plans/${encodeURIComponent(id)}`)).data;
 
-/** The browser's own zone goes with every plan, so 19:00 means 19:00 here. */
+/**
+ * The browser's own zone goes with a new plan, so 19:00 means 19:00 here.
+ * Only with a new one: an edit keeps the zone the plan was made in, or one of
+ * you renaming a Tallinn concert from abroad would move it to 19:00 there.
+ */
 const browserTimeZone = (): string | undefined => {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
@@ -32,12 +36,7 @@ export const createPlan = async (input: PlanInput): Promise<Plan> =>
   (await relationshipApi.post<ApiResponse<Plan>>('/plans', { timeZone: browserTimeZone(), ...input })).data;
 
 export const updatePlan = async (id: string, patch: Partial<Omit<PlanInput, 'groupId'>>): Promise<Plan> =>
-  (
-    await relationshipApi.patch<ApiResponse<Plan>>(`/plans/${encodeURIComponent(id)}`, {
-      timeZone: browserTimeZone(),
-      ...patch
-    })
-  ).data;
+  (await relationshipApi.patch<ApiResponse<Plan>>(`/plans/${encodeURIComponent(id)}`, patch)).data;
 
 export const deletePlan = async (id: string): Promise<void> => {
   await relationshipApi.delete(`/plans/${encodeURIComponent(id)}`);

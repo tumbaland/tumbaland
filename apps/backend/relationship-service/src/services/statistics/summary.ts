@@ -1,5 +1,6 @@
 import { Activity } from '../../models/Activity';
-import { StatisticsFilters, accessQueryFor } from './shared';
+import { StatisticsFilters, accessQueryFor, MS_PER_DAY } from './shared';
+import { todayIn } from '../../utils/time';
 
 interface PerTypeAggRow {
   _id: unknown;
@@ -36,33 +37,40 @@ export interface RelationshipStatistics {
 
 export const getRelationshipStatistics = async (
   timeframe: string = 'all',
-  filters: StatisticsFilters
+  filters: StatisticsFilters,
+  now: Date = new Date()
 ): Promise<RelationshipStatistics> => {
   // Calculate date range based on timeframe. 'all' needs no start date — it
   // builds an empty date filter below rather than reaching back to a cutoff.
-  const now = new Date();
+  //
+  // In whole days where the people are, as entries are stored (the UTC
+  // midnight of their day). Bounding by the instant `now` left today's entries
+  // out until 03:00 in Tallinn, since today's midnight is still ahead of UTC
+  // then, and the server's own calendar put the 1st of a month in the last one.
+  const today = new Date(`${todayIn(now)}T00:00:00.000Z`);
+  const year = today.getUTCFullYear();
+  const month = today.getUTCMonth();
   let startDate: Date | undefined;
 
   switch (timeframe) {
     case 'week':
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      // today and the six days before it
+      startDate = new Date(today.getTime() - 6 * MS_PER_DAY);
       break;
     case 'month':
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate = new Date(Date.UTC(year, month, 1));
       break;
-    case 'quarter': {
-      const quarterStart = Math.floor(now.getMonth() / 3) * 3;
-      startDate = new Date(now.getFullYear(), quarterStart, 1);
+    case 'quarter':
+      startDate = new Date(Date.UTC(year, Math.floor(month / 3) * 3, 1));
       break;
-    }
     case 'year':
-      startDate = new Date(now.getFullYear(), 0, 1);
+      startDate = new Date(Date.UTC(year, 0, 1));
       break;
     default:
       startDate = undefined;
   }
 
-  const endDate = now;
+  const endDate = today;
 
   const accessQuery = accessQueryFor(filters);
 
@@ -132,7 +140,7 @@ export const getRelationshipStatistics = async (
 
   const firstEntryDate = firstEntry ? new Date(firstEntry.date) : null;
   const daysSinceFirstEntry = firstEntryDate
-    ? Math.floor((now.getTime() - firstEntryDate.getTime()) / (1000 * 60 * 60 * 24))
+    ? Math.floor((today.getTime() - firstEntryDate.getTime()) / MS_PER_DAY)
     : 0;
 
   return {
