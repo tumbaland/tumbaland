@@ -129,6 +129,29 @@ describe('createPlan', () => {
     expect(plan.remindAt).toBeNull();
   });
 
+  it('keeps the last day of a trip, and none for a one-day plan', async () => {
+    const trip = await createPlan(
+      { title: 'Rome', date: day('2030-06-01'), endDate: day('2030-06-05'), remindBefore: 1440 },
+      'u1',
+      []
+    );
+    expect(trip).toMatchObject({ date: '2030-06-01', endDate: '2030-06-05' });
+    // reminded before the first day
+    expect(trip.remindAt?.toISOString()).toBe('2030-05-31T06:00:00.000Z');
+
+    const sameDay = await createPlan({ title: 'x', date: day('2030-06-01'), endDate: day('2030-06-01') }, 'u1', []);
+    expect(sameDay.endDate).toBeNull();
+  });
+
+  it('refuses a trip that ends before it starts or runs longer than 62 days', async () => {
+    await expect(
+      createPlan({ title: 'x', date: day('2030-06-05'), endDate: day('2030-06-01') }, 'u1', [])
+    ).rejects.toThrow('A plan ends on or after the day it starts');
+    await expect(
+      createPlan({ title: 'x', date: day('2030-06-01'), endDate: day('2030-08-02') }, 'u1', [])
+    ).rejects.toThrow('A plan can span at most 62 days');
+  });
+
   it('refuses a group the caller is not in', async () => {
     await expect(createPlan({ title: 'x', date: day('2030-06-01'), groupId: 'g2' }, 'u1', ['g1'])).rejects.toThrow(
       'Access denied'
@@ -164,7 +187,12 @@ describe('listPlans', () => {
       endDate: day('2026-10-31')
     });
 
-    expect(find).toHaveBeenCalledWith({ groupId: 'g1', date: { $gte: day('2026-10-01'), $lte: day('2026-10-31') } });
+    expect(find).toHaveBeenCalledWith({
+      groupId: 'g1',
+      // a trip that began up to 62 days before the month and runs into it counts
+      date: { $lte: day('2026-10-31'), $gte: day('2026-08-01') },
+      $and: [{ $or: [{ date: { $gte: day('2026-10-01') } }, { endDate: { $gte: day('2026-10-01') } }] }]
+    });
     expect(c.sort).toHaveBeenCalledWith({ date: 1, time: 1, createdAt: 1 });
     expect(c.limit).toHaveBeenCalledWith(100);
     expect(plans[0]).toMatchObject({ title: 'Concert', date: '2026-10-16' });
@@ -174,7 +202,11 @@ describe('listPlans', () => {
     const find = jest.spyOn(Plan, 'find').mockReturnValue(chain([]) as never);
     await listPlans({ userId: 'u1', userGroupIds: [], upcoming: true, startDate: day('2026-10-12'), limit: 500 });
     expect(find).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'u1', loggedActivityId: null, date: { $gte: day('2026-10-12') } })
+      expect.objectContaining({
+        userId: 'u1',
+        loggedActivityId: null,
+        $and: [{ $or: [{ date: { $gte: day('2026-10-12') } }, { endDate: { $gte: day('2026-10-12') } }] }]
+      })
     );
   });
 
@@ -197,6 +229,20 @@ describe('updatePlan', () => {
     expect(plan.date).toBe('2026-10-17');
     expect(plan.remindAt?.toISOString()).toBe('2026-10-17T15:00:00.000Z');
     expect(plan.remindedAt).toBeNull();
+  });
+
+  it('makes a plan a trip, checks it against the stored start, and back to one day', async () => {
+    const existing = storedPlan();
+    jest.spyOn(Plan, 'findOne').mockResolvedValue(existing);
+    let plan = await updatePlan(existing.id, { endDate: day('2026-10-18') }, 'u1', ['g1']);
+    expect(plan.endDate).toBe('2026-10-18');
+
+    await expect(updatePlan(existing.id, { endDate: day('2026-10-10') }, 'u1', ['g1'])).rejects.toThrow(
+      'A plan ends on or after the day it starts'
+    );
+
+    plan = await updatePlan(existing.id, { endDate: null }, 'u1', ['g1']);
+    expect(plan.endDate).toBeNull();
   });
 
   it('leaves the schedule alone for a rename', async () => {

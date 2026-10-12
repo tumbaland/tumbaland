@@ -51,5 +51,6 @@ describe('planWhen', () => {
   it('keeps the plan’s own calendar day, and leaves the time off an all-day plan', () => {
     expect(planWhen('2026-10-16', '19:00')).toMatch(/16.*at 19:00$/);
     expect(planWhen('2026-10-16', null)).not.toMatch(/at/);
+    expect(planWhen('2026-10-16', null, '2026-10-18')).toMatch(/16.* to .*18/);
   });
 });

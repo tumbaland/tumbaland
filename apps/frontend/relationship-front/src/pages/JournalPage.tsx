@@ -21,18 +21,24 @@ import PlaceIcon from '@mui/icons-material/Place';
 import TuneIcon from '@mui/icons-material/Tune';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import EventIcon from '@mui/icons-material/Event';
 import { useSearchParams } from 'react-router';
 import { useTenantFilter } from '@tumbaland/frontend-core';
 import { logger } from '@tumbaland/frontend-core';
-import { ActivityType, Day, DaysResponse } from '../services/types';
+import { ActivityType, Day, DaysResponse, Plan } from '../services/types';
 import { getDays } from '../services/days';
 import { getActivityTypes } from '../services/activityTypes';
+import { getPlan, getPlans } from '../services/plans';
 import DayEditorDialog from '../components/DayEditorDialog';
 import ActivityTypesDialog from '../components/ActivityTypesDialog';
 import JournalCalendar, { CalendarMonth, currentMonth } from '../components/JournalCalendar';
 import { todayKey } from '../utils/dates';
+import PlanEditorDialog from '../components/PlanEditorDialog';
+import PlanRow from '../components/PlanRow';
 
 const PAGE_SIZE = 30;
+/** How many upcoming plans the list shows above the logged days. */
+const COMING_UP = 5;
 /** Bigger pages for the export, so a long history takes few round trips. */
 const EXPORT_PAGE_SIZE = 200;
 
@@ -46,7 +52,10 @@ const dayLabel = (date: string): string => {
 };
 
 const monthLabel = (date: string): string =>
-  new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
+    month: 'long',
+    year: 'numeric'
+  });
 
 /** One entry rendered inside a day card. */
 const EntryChip: React.FC<{ entry: Day['entries'][number] }> = ({ entry }) => {
@@ -80,7 +89,15 @@ const EntryChip: React.FC<{ entry: Day['entries'][number] }> = ({ entry }) => {
           </span>
           {entry.location && (
             <>
-              <PlaceIcon sx={{ fontSize: 13, ml: 0.5, mr: 0.25, color: 'text.disabled', verticalAlign: 'text-bottom' }} />
+              <PlaceIcon
+                sx={{
+                  fontSize: 13,
+                  ml: 0.5,
+                  mr: 0.25,
+                  color: 'text.disabled',
+                  verticalAlign: 'text-bottom'
+                }}
+              />
               <span>{entry.location.label}</span>
             </>
           )}
@@ -93,7 +110,11 @@ const EntryChip: React.FC<{ entry: Day['entries'][number] }> = ({ entry }) => {
         // A chip's label never wraps by default, so a long description or place
         // name used to push the whole journal wider than a phone screen.
         height: 'auto',
-        '& .MuiChip-label': { whiteSpace: 'normal', overflowWrap: 'anywhere', py: 0.25 }
+        '& .MuiChip-label': {
+          whiteSpace: 'normal',
+          overflowWrap: 'anywhere',
+          py: 0.25
+        }
       }}
     />
   );
@@ -137,8 +158,40 @@ const JournalPage: React.FC = () => {
       },
       { replace: true }
     );
+
+  const [planEditorOpen, setPlanEditorOpen] = useState(false);
+  const [planEditorPlan, setPlanEditorPlan] = useState<Plan | null>(null);
+  const [planEditorDate, setPlanEditorDate] = useState<string | undefined>(undefined);
+  const [comingUp, setComingUp] = useState<Plan[]>([]);
+
+  const loadComingUp = useCallback(async () => {
+    try {
+      setComingUp(
+        await getPlans({
+          groupId: tenantGroupId,
+          upcoming: true,
+          startDate: todayKey(),
+          limit: COMING_UP
+        })
+      );
+    } catch (e) {
+      logger.error('Failed to load upcoming plans', e);
+    }
+  }, [tenantGroupId]);
+
+  useEffect(() => {
+    void loadComingUp();
+  }, [loadComingUp]);
+
+  const openPlan = (plan: Plan | null, date?: string) => {
+    setPlanEditorPlan(plan);
+    setPlanEditorDate(date);
+    setPlanEditorOpen(true);
+  };
+
   const reloadAll = () => {
     void reload();
+    void loadComingUp();
     setCalendarRefresh((n) => n + 1);
   };
 
@@ -240,6 +293,31 @@ const JournalPage: React.FC = () => {
     );
   }, [linkedDate, setSearchParams]);
 
+  // ?plan=<id> opens that plan on the calendar: how a reminder in the chat
+  // links back here. Consumed once, like ?date=.
+  const linkedPlan = searchParams.get('plan');
+  useEffect(() => {
+    if (!linkedPlan) return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('plan');
+        return next;
+      },
+      { replace: true }
+    );
+    getPlan(linkedPlan)
+      .then((plan) => {
+        const [year, month] = plan.date.split('-').map(Number);
+        setCalendarMonth({ year: year!, month: month! - 1 });
+        openPlan(plan);
+      })
+      .catch((e) => {
+        logger.error('Failed to open the linked plan', e);
+        setError('That plan is not in this journal any more');
+      });
+  }, [linkedPlan, setSearchParams]);
+
   /**
    * Exports every day matching the current filters, not just the pages already
    * scrolled into view — it re-fetches the full set rather than serialising
@@ -301,9 +379,22 @@ const JournalPage: React.FC = () => {
   }, [days]);
 
   return (
-    <Box sx={{ px: { xs: 0, sm: 3 }, py: { xs: 1.5, sm: 3 }, maxWidth: 900, mx: 'auto' }}>
+    <Box
+      sx={{
+        px: { xs: 0, sm: 3 },
+        py: { xs: 1.5, sm: 3 },
+        maxWidth: 900,
+        mx: 'auto'
+      }}
+    >
       <Box
-        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mb: { xs: 1.5, sm: 3 } }}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1.5,
+          mb: { xs: 1.5, sm: 3 }
+        }}
       >
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold', fontSize: { xs: '1.4rem', sm: '2rem' } }}>
@@ -313,20 +404,52 @@ const JournalPage: React.FC = () => {
             {total > 0 ? `${total} day${total === 1 ? '' : 's'} logged` : 'Your days together'}
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          disableElevation
-          startIcon={<AddIcon />}
-          onClick={openLogDay}
-          sx={{ flexShrink: 0, whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 600 }}
-        >
-          Log a day
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
+          <Button
+            variant="outlined"
+            startIcon={<EventIcon />}
+            onClick={() => openPlan(null)}
+            aria-label="Plan something"
+            sx={{
+              whiteSpace: 'nowrap',
+              textTransform: 'none',
+              fontWeight: 600
+            }}
+          >
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              Plan something
+            </Box>
+            <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+              Plan
+            </Box>
+          </Button>
+          <Button
+            variant="contained"
+            disableElevation
+            startIcon={<AddIcon />}
+            onClick={openLogDay}
+            sx={{
+              whiteSpace: 'nowrap',
+              textTransform: 'none',
+              fontWeight: 600
+            }}
+          >
+            Log a day
+          </Button>
+        </Box>
       </Box>
 
       {/* Search and the activity filter share a row that fits a narrow phone;
           the two text actions wrap under them rather than off the screen. */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: { xs: 1.5, sm: 3 } }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 1,
+          mb: { xs: 1.5, sm: 3 }
+        }}
+      >
         <TextField
           placeholder="Search descriptions…"
           size="small"
@@ -355,7 +478,14 @@ const JournalPage: React.FC = () => {
           {types.map((type) => (
             <MenuItem key={type._id} value={type._id}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: type.color || '#9e9e9e' }} />
+                <Box
+                  sx={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    bgcolor: type.color || '#9e9e9e'
+                  }}
+                />
                 {type.name}
               </Box>
             </MenuItem>
@@ -410,59 +540,107 @@ const JournalPage: React.FC = () => {
           search={debouncedSearch || undefined}
           refreshKey={calendarRefresh}
           onDayClick={(date) => openEditor(date, false)}
+          onPlanClick={(plan) => openPlan(plan)}
+          onNewPlan={(date) => openPlan(null, date)}
         />
-      ) : loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-          <CircularProgress />
-        </Box>
-      ) : days.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
-          <Typography variant="h6" sx={{ color: 'text.secondary' }} gutterBottom>
-            {debouncedSearch || typeFilter ? 'No days match these filters' : 'Nothing logged yet'}
-          </Typography>
-          {!debouncedSearch && !typeFilter && (
-            <Button variant="contained" startIcon={<AddIcon />} onClick={openLogDay}>
-              Log a day
-            </Button>
-          )}
-        </Box>
       ) : (
-        groupedByMonth.map((group) => (
-          <Box key={group.month} sx={{ mb: { xs: 2, sm: 3 } }}>
-            <Typography
-              variant="overline"
-              sx={{ color: 'text.secondary', letterSpacing: 1.5, display: 'block', mb: 0.5 }}
-            >
-              {group.month}
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {group.days.map((day) => (
-                <Card
-                  key={day.date}
-                  variant="outlined"
-                  sx={{ borderRadius: 2, '&:hover': { borderColor: 'primary.main' } }}
-                >
-                  <CardActionArea onClick={() => openEditor(day.date, false)} sx={{ p: { xs: 1.25, sm: 1.5 } }}>
-                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5 }}>
-                      <Typography sx={{ fontWeight: 600 }}>{dayLabel(day.date)}</Typography>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        {new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, minWidth: 0 }}>
-                      {day.entries.map((entry) => (
-                        <EntryChip key={entry._id} entry={entry} />
-                      ))}
-                    </Box>
-                  </CardActionArea>
-                </Card>
-              ))}
+        <>
+          {comingUp.length > 0 && (
+            <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+              <Typography
+                variant="overline"
+                sx={{
+                  color: 'text.secondary',
+                  letterSpacing: 1.5,
+                  display: 'block',
+                  mb: 0.5
+                }}
+              >
+                Coming up
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                {comingUp.map((plan) => (
+                  <PlanRow key={plan.id} plan={plan} onClick={(p) => openPlan(p)} />
+                ))}
+              </Box>
             </Box>
-          </Box>
-        ))
+          )}
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
+              <CircularProgress />
+            </Box>
+          ) : days.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <Typography variant="h6" sx={{ color: 'text.secondary' }} gutterBottom>
+                {debouncedSearch || typeFilter ? 'No days match these filters' : 'Nothing logged yet'}
+              </Typography>
+              {!debouncedSearch && !typeFilter && (
+                <Button variant="contained" startIcon={<AddIcon />} onClick={openLogDay}>
+                  Log a day
+                </Button>
+              )}
+            </Box>
+          ) : (
+            groupedByMonth.map((group) => (
+              <Box key={group.month} sx={{ mb: { xs: 2, sm: 3 } }}>
+                <Typography
+                  variant="overline"
+                  sx={{
+                    color: 'text.secondary',
+                    letterSpacing: 1.5,
+                    display: 'block',
+                    mb: 0.5
+                  }}
+                >
+                  {group.month}
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {group.days.map((day) => (
+                    <Card
+                      key={day.date}
+                      variant="outlined"
+                      sx={{
+                        borderRadius: 2,
+                        '&:hover': { borderColor: 'primary.main' }
+                      }}
+                    >
+                      <CardActionArea onClick={() => openEditor(day.date, false)} sx={{ p: { xs: 1.25, sm: 1.5 } }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: 1,
+                            mb: 0.5
+                          }}
+                        >
+                          <Typography sx={{ fontWeight: 600 }}>{dayLabel(day.date)}</Typography>
+                          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                            {new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, {
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </Typography>
+                        </Box>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 0.5,
+                            minWidth: 0
+                          }}
+                        >
+                          {day.entries.map((entry) => (
+                            <EntryChip key={entry._id} entry={entry} />
+                          ))}
+                        </Box>
+                      </CardActionArea>
+                    </Card>
+                  ))}
+                </Box>
+              </Box>
+            ))
+          )}
+        </>
       )}
 
       {view === 'list' && !loading && page < totalPages && (
@@ -479,6 +657,16 @@ const JournalPage: React.FC = () => {
         dateEditable={editorDateEditable}
         onClose={() => setEditorOpen(false)}
         onSaved={reloadAll}
+      />
+
+      <PlanEditorDialog
+        open={planEditorOpen}
+        plan={planEditorPlan}
+        date={planEditorDate}
+        onClose={() => setPlanEditorOpen(false)}
+        onSaved={reloadAll}
+        onDeleted={reloadAll}
+        onLogged={(date) => openEditor(date, false)}
       />
 
       <ActivityTypesDialog

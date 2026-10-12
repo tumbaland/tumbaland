@@ -58,6 +58,12 @@ it('claims each due plan before sending it, and sends it to the group’s chat',
   });
 });
 
+it('sends the last day of a trip', async () => {
+  claim.mockResolvedValueOnce(duePlan({ endDate: new Date('2026-10-18T00:00:00Z') })).mockResolvedValueOnce(null);
+  await sendDueReminders(NOW);
+  expect(mockedPost.mock.calls[0][0].endDate).toBe('2026-10-18');
+});
+
 it('leaves out what a personal all-day plan does not have', async () => {
   claim.mockResolvedValueOnce(duePlan({ groupId: undefined, time: null, location: null })).mockResolvedValueOnce(null);
   await sendDueReminders(NOW);
@@ -65,6 +71,7 @@ it('leaves out what a personal all-day plan does not have', async () => {
   expect(sent).not.toHaveProperty('groupId');
   expect(sent).not.toHaveProperty('time');
   expect(sent).not.toHaveProperty('place');
+  expect(sent).not.toHaveProperty('endDate');
 });
 
 it('drops a reminder more than an hour late instead of sending it', async () => {

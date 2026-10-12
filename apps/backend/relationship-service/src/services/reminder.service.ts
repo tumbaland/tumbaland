@@ -46,6 +46,7 @@ export async function sendDueReminders(now: Date = new Date()): Promise<{ sent: 
       userId: plan.userId,
       title: plan.title,
       date: plan.date.toISOString().slice(0, 10),
+      ...(plan.endDate ? { endDate: plan.endDate.toISOString().slice(0, 10) } : {}),
       ...(plan.time ? { time: plan.time } : {}),
       timeZone: plan.timeZone,
       ...(plan.location?.label ? { place: plan.location.label } : {}),

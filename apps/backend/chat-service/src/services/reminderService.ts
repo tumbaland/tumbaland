@@ -33,6 +33,7 @@ export interface PlanReminderInput {
   userId: string;
   title: string;
   date: string;
+  endDate?: string;
   time?: string;
   timeZone: string;
   place?: string;
@@ -49,6 +50,7 @@ export async function postPlanReminder(input: PlanReminderInput): Promise<{ post
     id: input.planId,
     title: input.title,
     date: input.date,
+    endDate: input.endDate ?? null,
     time: input.time ?? null,
     timeZone: input.timeZone,
     place: input.place ?? null

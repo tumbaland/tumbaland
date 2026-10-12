@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Button, ButtonBase, CircularProgress, IconButton, Typography } from '@mui/material';
+import ScheduleIcon from '@mui/icons-material/Schedule';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { logger } from '@tumbaland/frontend-core';
-import { Day } from '../services/types';
+import { Day, Plan } from '../services/types';
 import { getDays } from '../services/days';
+import { getPlans } from '../services/plans';
 import { localDayKey } from '../utils/dates';
+import PlanRow from './PlanRow';
 
 /** The first of a month, as the calendar keeps it: { year, month (0-11) }. */
 export interface CalendarMonth {
@@ -21,14 +24,25 @@ interface JournalCalendarProps {
   search?: string;
   /** bumped by the page after a save, so the month on screen is fetched again */
   refreshKey: number;
+  /** a day up to today: open it in the day editor */
   onDayClick: (date: string) => void;
+  /** a plan, from its day or the list under the month */
+  onPlanClick: (plan: Plan) => void;
+  /** a day after today with no plan to open: make one on it */
+  onNewPlan: (date: string) => void;
 }
 
-/** How many entries a cell lists by name before it says "+n more". */
+/** How many entries and plans a cell lists by name before it says "+n more". */
 const NAMED_ENTRIES = 2;
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const dateKey = (year: number, month: number, day: number) => `${year}-${pad(month + 1)}-${pad(day)}`;
+
+/** The day after a YYYY-MM-DD day. */
+const nextDay = (day: string): string => {
+  const [year, month, date] = day.split('-').map(Number);
+  return localDayKey(new Date(year!, month! - 1, date! + 1));
+};
 
 export const currentMonth = (): CalendarMonth => {
   const now = new Date();
@@ -47,9 +61,11 @@ const WEEKDAYS = Array.from({ length: 7 }, (_, i) =>
 
 /**
  * One month of the journal as a grid. Logged days show a dot per entry in its
- * type's colour (and the type names where there is room); tapping a day opens
- * it in the editor, the same as a card in the list. Days after today are
- * greyed out, since the editor won't log them.
+ * type's colour (and the type names where there is room), and plans show as a
+ * ring with their time. Tapping a day up to today opens it in the editor, the
+ * same as a card in the list; tapping a later day opens its plan, or starts
+ * one on it. The month's plans are also listed under the grid, since a phone's
+ * cells are too small to tap one plan among several.
  */
 const JournalCalendar: React.FC<JournalCalendarProps> = ({
   month,
@@ -58,9 +74,12 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
   typeId,
   search,
   refreshKey,
-  onDayClick
+  onDayClick,
+  onPlanClick,
+  onNewPlan
 }) => {
   const [days, setDays] = useState<Map<string, Day>>(new Map());
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,9 +91,22 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
     let cancelled = false;
     setLoading(true);
     setError(null);
-    getDays({ page: 1, limit: 31, groupId, typeId, search, startDate, endDate })
-      .then((result) => {
-        if (!cancelled) setDays(new Map(result.days.map((d) => [d.date, d])));
+    Promise.all([
+      getDays({
+        page: 1,
+        limit: 31,
+        groupId,
+        typeId,
+        search,
+        startDate,
+        endDate
+      }),
+      getPlans({ groupId, startDate, endDate })
+    ])
+      .then(([result, monthPlans]) => {
+        if (cancelled) return;
+        setDays(new Map(result.days.map((d) => [d.date, d])));
+        setPlans(monthPlans);
       })
       .catch((e) => {
         logger.error('Failed to load the calendar month', e);
@@ -91,11 +123,19 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
   // Blank cells before the 1st so it lands under its weekday, then the days.
   const cells = useMemo(() => {
     const leading = (new Date(month.year, month.month, 1).getDay() + 6) % 7;
-    return [
-      ...Array.from({ length: leading }, () => null),
-      ...Array.from({ length: daysInMonth }, (_, i) => i + 1)
-    ];
+    return [...Array.from({ length: leading }, () => null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
   }, [month.year, month.month, daysInMonth]);
+
+  const plansByDay = useMemo(() => {
+    const byDay = new Map<string, Plan[]>();
+    // A trip is on every one of its days, not only the first.
+    for (const plan of plans) {
+      for (let day = plan.date; day <= (plan.endDate ?? plan.date); day = nextDay(day)) {
+        byDay.set(day, [...(byDay.get(day) ?? []), plan]);
+      }
+    }
+    return byDay;
+  }, [plans]);
 
   const now = new Date();
   const today = localDayKey(now);
@@ -114,9 +154,20 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
         </IconButton>
       </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 30, mb: 1 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          minHeight: 30,
+          mb: 1
+        }}
+      >
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          {loading ? '' : `${days.size} day${days.size === 1 ? '' : 's'} logged this month`}
+          {loading
+            ? ''
+            : `${days.size} day${days.size === 1 ? '' : 's'} logged this month` +
+              (plans.length ? ` · ${plans.length} plan${plans.length === 1 ? '' : 's'}` : '')}
         </Typography>
         {!isCurrentMonth && (
           <Button size="small" onClick={() => onMonthChange(currentMonth())} sx={{ textTransform: 'none' }}>
@@ -132,12 +183,22 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
       )}
 
       <Box sx={{ position: 'relative' }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: { xs: 0.5, sm: 0.75 } }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+            gap: { xs: 0.5, sm: 0.75 }
+          }}
+        >
           {WEEKDAYS.map((name) => (
             <Typography
               key={name}
               variant="caption"
-              sx={{ color: 'text.secondary', textAlign: 'center', fontWeight: 600 }}
+              sx={{
+                color: 'text.secondary',
+                textAlign: 'center',
+                fontWeight: 600
+              }}
             >
               {name}
             </Typography>
@@ -148,7 +209,33 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
             const date = dateKey(month.year, month.month, dayOfMonth);
             const day = days.get(date);
             const entries = day?.entries ?? [];
+            const dayPlans = plansByDay.get(date) ?? [];
             const future = date > today;
+            const named = [
+              ...entries.map((entry) => ({
+                key: entry._id,
+                color: entry.type?.color,
+                name: entry.type?.name || 'Unknown',
+                time: null as string | null,
+                planned: false
+              })),
+              ...dayPlans.map((plan) => ({
+                key: plan.id,
+                color: plan.type?.color,
+                name: plan.title,
+                time: plan.time,
+                planned: true
+              }))
+            ];
+            const counts = [
+              entries.length ? `${entries.length} logged` : '',
+              dayPlans.length ? `${dayPlans.length} planned` : ''
+            ].filter(Boolean);
+            const open = () => {
+              if (!future) onDayClick(date);
+              else if (dayPlans.length === 1) onPlanClick(dayPlans[0]!);
+              else onNewPlan(date);
+            };
             const label = new Date(month.year, month.month, dayOfMonth).toLocaleDateString(undefined, {
               weekday: 'long',
               month: 'long',
@@ -157,9 +244,8 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
             return (
               <ButtonBase
                 key={date}
-                disabled={future}
-                onClick={() => onDayClick(date)}
-                aria-label={entries.length ? `${label}, ${entries.length} logged` : label}
+                onClick={open}
+                aria-label={counts.length ? `${label}, ${counts.join(', ')}` : label}
                 sx={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -172,50 +258,97 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
                   border: 1,
                   borderColor: date === today ? 'primary.main' : 'divider',
                   bgcolor: entries.length ? 'action.hover' : 'transparent',
-                  opacity: future ? 0.4 : 1,
+                  color: future && !dayPlans.length ? 'text.secondary' : 'text.primary',
                   textAlign: 'left',
                   '&:hover': { borderColor: 'primary.main' }
                 }}
               >
                 <Typography
                   variant="caption"
-                  sx={{ fontWeight: date === today ? 700 : 500, color: date === today ? 'primary.main' : 'text.primary' }}
+                  sx={{
+                    fontWeight: date === today ? 700 : 500,
+                    color: date === today ? 'primary.main' : 'inherit'
+                  }}
                 >
                   {dayOfMonth}
                 </Typography>
 
-                {entries.length > 0 && (
+                {named.length > 0 && (
                   <>
-                    {/* phones: one dot per entry */}
-                    <Box sx={{ display: { xs: 'flex', sm: 'none' }, flexWrap: 'wrap', gap: '3px', mt: 0.5 }}>
-                      {entries.map((entry) => (
+                    {/* phones: a dot per entry, a ring per plan */}
+                    <Box
+                      sx={{
+                        display: { xs: 'flex', sm: 'none' },
+                        flexWrap: 'wrap',
+                        gap: '3px',
+                        mt: 0.5
+                      }}
+                    >
+                      {named.map((item) => (
                         <Box
-                          key={entry._id}
-                          sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: entry.type?.color || '#9e9e9e' }}
+                          key={item.key}
+                          sx={{
+                            width: 7,
+                            height: 7,
+                            borderRadius: '50%',
+                            boxSizing: 'border-box',
+                            ...(item.planned
+                              ? {
+                                  border: 2,
+                                  borderColor: item.color || 'primary.main'
+                                }
+                              : { bgcolor: item.color || '#9e9e9e' })
+                          }}
                         />
                       ))}
                     </Box>
                     {/* wider screens: the first few by name */}
-                    <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', gap: 0.25, mt: 0.5 }}>
-                      {entries.slice(0, NAMED_ENTRIES).map((entry) => (
-                        <Box key={entry._id} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
-                          <Box
-                            sx={{
-                              width: 7,
-                              height: 7,
-                              flexShrink: 0,
-                              borderRadius: '50%',
-                              bgcolor: entry.type?.color || '#9e9e9e'
-                            }}
-                          />
+                    <Box
+                      sx={{
+                        display: { xs: 'none', sm: 'flex' },
+                        flexDirection: 'column',
+                        gap: 0.25,
+                        mt: 0.5
+                      }}
+                    >
+                      {named.slice(0, NAMED_ENTRIES).map((item) => (
+                        <Box
+                          key={item.key}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            minWidth: 0
+                          }}
+                        >
+                          {item.planned ? (
+                            <ScheduleIcon
+                              sx={{
+                                fontSize: 11,
+                                flexShrink: 0,
+                                color: item.color || 'primary.main'
+                              }}
+                            />
+                          ) : (
+                            <Box
+                              sx={{
+                                width: 7,
+                                height: 7,
+                                flexShrink: 0,
+                                borderRadius: '50%',
+                                bgcolor: item.color || '#9e9e9e'
+                              }}
+                            />
+                          )}
                           <Typography variant="caption" noWrap sx={{ lineHeight: 1.3 }}>
-                            {entry.type?.name || 'Unknown'}
+                            {item.time ? `${item.time} ` : ''}
+                            {item.name}
                           </Typography>
                         </Box>
                       ))}
-                      {entries.length > NAMED_ENTRIES && (
+                      {named.length > NAMED_ENTRIES && (
                         <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.3 }}>
-                          +{entries.length - NAMED_ENTRIES} more
+                          +{named.length - NAMED_ENTRIES} more
                         </Typography>
                       )}
                     </Box>
@@ -227,11 +360,40 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
         </Box>
 
         {loading && (
-          <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
             <CircularProgress size={32} />
           </Box>
         )}
       </Box>
+
+      {plans.length > 0 && (
+        <Box sx={{ mt: 2.5 }}>
+          <Typography
+            variant="overline"
+            sx={{
+              color: 'text.secondary',
+              letterSpacing: 1.5,
+              display: 'block',
+              mb: 0.5
+            }}
+          >
+            Plans this month
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+            {plans.map((plan) => (
+              <PlanRow key={plan.id} plan={plan} onClick={onPlanClick} />
+            ))}
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 };

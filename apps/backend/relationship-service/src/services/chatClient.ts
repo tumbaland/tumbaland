@@ -19,6 +19,8 @@ export interface PlanReminder {
   title: string;
   /** YYYY-MM-DD */
   date: string;
+  /** YYYY-MM-DD, the last day of a trip */
+  endDate?: string;
   /** HH:mm, absent all day */
   time?: string;
   timeZone: string;

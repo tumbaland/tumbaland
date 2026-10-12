@@ -13,8 +13,10 @@ import { IActivityLocation } from './Activity';
 export interface IPlan extends Document {
   id: string;
   title: string;
-  /** The day, stored as its UTC midnight like an entry's date. */
+  /** The (first) day, stored as its UTC midnight like an entry's date. */
   date: Date;
+  /** The last day of a plan that spans several, like a trip. Null for one day. */
+  endDate?: Date | null;
   /** 24-hour HH:mm on that day, in `timeZone`. Absent for an all-day plan. */
   time?: string | null;
   /** IANA zone the plan was made in, so 19:00 stays 19:00 across a clock change. */
@@ -57,6 +59,7 @@ const PlanSchema: Schema = new Schema(
   {
     title: { type: String, required: true, trim: true, maxlength: 200 },
     date: { type: Date, required: true },
+    endDate: { type: Date, default: null },
     time: { type: String, default: null, match: /^([01]\d|2[0-3]):[0-5]\d$/ },
     timeZone: { type: String, required: true },
     startsAt: { type: Date, required: true },
@@ -74,6 +77,8 @@ const PlanSchema: Schema = new Schema(
 );
 
 // Scoped reads filter on the tenancy field and then walk the days, as entries do.
+// A trip is found by its first day, bounded by the longest a plan may span
+// (MAX_PLAN_DAYS), so the range read stays on these indexes.
 PlanSchema.index({ groupId: 1, date: 1 });
 PlanSchema.index({ userId: 1, date: 1 });
 // The reminder sweep: pending ones, earliest first.

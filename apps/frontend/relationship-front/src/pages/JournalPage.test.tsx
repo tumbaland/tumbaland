@@ -5,6 +5,7 @@ import { vi } from 'vite-plus/test';
 import type { ComponentProps } from 'react';
 import type DayEditorDialog from '../components/DayEditorDialog';
 import type ActivityTypesDialog from '../components/ActivityTypesDialog';
+import type PlanEditorDialog from '../components/PlanEditorDialog';
 
 vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
@@ -16,6 +17,23 @@ vi.mock('../services/days', () => ({
 }));
 vi.mock('../services/activityTypes', () => ({
   getActivityTypes: vi.fn()
+}));
+vi.mock('../services/plans', () => ({
+  getPlans: vi.fn(),
+  getPlan: vi.fn()
+}));
+vi.mock('../components/PlanEditorDialog', () => ({
+  default: ({ open, plan, date, onSaved, onLogged }: ComponentProps<typeof PlanEditorDialog>) =>
+    open ? (
+      <div>
+        <div>
+          PlanEditorDialog for {plan ? plan.title : 'a new plan'}
+          {date ? ` on ${date}` : ''}
+        </div>
+        <button onClick={() => onSaved(plan!)}>save-plan</button>
+        <button onClick={() => onLogged?.('2024-05-02')}>log-plan</button>
+      </div>
+    ) : null
 }));
 vi.mock('../components/DayEditorDialog', () => ({
   default: ({ open, date, dateEditable, onClose, onSaved }: ComponentProps<typeof DayEditorDialog>) =>
@@ -43,11 +61,32 @@ vi.mock('../components/ActivityTypesDialog', () => ({
 
 import { getDays } from '../services/days';
 import { getActivityTypes } from '../services/activityTypes';
+import { getPlan, getPlans } from '../services/plans';
 import JournalPage from './JournalPage';
 
 const mockedGetDays = getDays as unknown as ReturnType<typeof vi.fn>;
 type GetDaysOptions = NonNullable<Parameters<typeof getDays>[0]>;
 const mockedGetActivityTypes = getActivityTypes as unknown as ReturnType<typeof vi.fn>;
+const mockedGetPlans = getPlans as unknown as ReturnType<typeof vi.fn>;
+const mockedGetPlan = getPlan as unknown as ReturnType<typeof vi.fn>;
+
+const concert = {
+  _id: 'p1',
+  id: 'p1',
+  title: 'Concert',
+  date: '2099-05-16',
+  endDate: null,
+  time: '19:00',
+  timeZone: 'Europe/Tallinn',
+  startsAt: '2099-05-16T16:00:00.000Z',
+  typeId: null,
+  location: null,
+  remindBefore: 60,
+  remindAt: '2099-05-16T15:00:00.000Z',
+  remindedAt: null,
+  loggedActivityId: null,
+  userId: 'u1'
+};
 
 const readingType = {
   _id: 't1',
@@ -80,6 +119,7 @@ const dayWithEntry = (date: string, overrides: Record<string, unknown> = {}) => 
 beforeEach(() => {
   vi.clearAllMocks();
   mockedGetActivityTypes.mockResolvedValue({ data: [readingType], pagination: {} as never });
+  mockedGetPlans.mockResolvedValue([]);
 });
 
 it('shows a spinner while loading', () => {
@@ -436,4 +476,68 @@ it('refreshes the calendar month after a save', async () => {
   await userEvent.click(screen.getByText('save-editor'));
 
   await waitFor(() => expect(monthCalls()).toBe(2));
+});
+
+it('shows what is coming up above the logged days, and opens a plan from there', async () => {
+  mockedGetDays.mockResolvedValue({ days: [dayWithEntry('2024-05-01')], page: 1, totalPages: 1, total: 1 });
+  mockedGetPlans.mockResolvedValue([concert]);
+  renderPage();
+
+  expect(await screen.findByText('Coming up')).toBeInTheDocument();
+  expect(mockedGetPlans).toHaveBeenCalledWith({ groupId: 'g1', upcoming: true, startDate: todayKey(), limit: 5 });
+
+  await userEvent.click(screen.getByText('Concert'));
+  expect(screen.getByText('PlanEditorDialog for Concert')).toBeInTheDocument();
+});
+
+it('starts a new plan from the Plan something button', async () => {
+  mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 1, total: 0 });
+  renderPage();
+  await screen.findByText('Nothing logged yet');
+
+  await userEvent.click(screen.getByRole('button', { name: 'Plan something' }));
+  expect(screen.getByText('PlanEditorDialog for a new plan')).toBeInTheDocument();
+});
+
+it('refreshes what is coming up after a plan is saved, and opens the day a plan was logged on', async () => {
+  mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 1, total: 0 });
+  mockedGetPlans.mockResolvedValue([concert]);
+  renderPage();
+  await userEvent.click(await screen.findByText('Concert'));
+
+  await userEvent.click(screen.getByText('save-plan'));
+  await waitFor(() => expect(mockedGetPlans).toHaveBeenCalledTimes(2));
+
+  await userEvent.click(screen.getByText('log-plan'));
+  expect(screen.getByText('DayEditorDialog for 2024-05-02')).toBeInTheDocument();
+});
+
+it('opens a plan linked from a chat reminder on its month in the calendar', async () => {
+  mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 0, total: 0 });
+  mockedGetPlan.mockResolvedValue(concert);
+  renderPage('/journal?view=calendar&plan=p1');
+
+  expect(await screen.findByText('PlanEditorDialog for Concert')).toBeInTheDocument();
+  expect(mockedGetPlan).toHaveBeenCalledWith('p1');
+  await waitFor(() =>
+    expect(mockedGetDays).toHaveBeenCalledWith(
+      expect.objectContaining({ startDate: '2099-05-01', endDate: '2099-05-31' })
+    )
+  );
+});
+
+it('says so when a linked plan is gone', async () => {
+  mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 0, total: 0 });
+  mockedGetPlan.mockRejectedValue(new Error('Plan not found'));
+  renderPage('/journal?plan=gone');
+  expect(await screen.findByText('That plan is not in this journal any more')).toBeInTheDocument();
+});
+
+it('opens a new plan from a later day in the calendar', async () => {
+  mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 0, total: 0 });
+  renderPage('/journal?view=calendar');
+  await screen.findByText(/logged this month/);
+  await userEvent.click(screen.getByRole('button', { name: 'Next month' }));
+  await userEvent.click(screen.getAllByRole('button', { name: /, \w+ 1$/ })[0]);
+  expect(screen.getByText(/PlanEditorDialog for a new plan on \d{4}-\d{2}-01/)).toBeInTheDocument();
 });

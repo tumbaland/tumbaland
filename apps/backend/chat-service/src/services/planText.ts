@@ -19,13 +19,18 @@ const longDay = (day: string): string =>
     month: 'long'
   });
 
+/** " to Sunday 18 October" for a trip, nothing for one day. */
+const until = (plan: Pick<IPlanCard, 'endDate'>): string => (plan.endDate ? ` to ${longDay(plan.endDate)}` : '');
+
 /**
- * When a plan is, as a line in the thread: "on Friday 16 October at 19:00".
- * Absolute, because the message stays in the history and "tomorrow" would be
- * wrong by the next day.
+ * When a plan is, as a line in the thread: "on Friday 16 October at 19:00",
+ * or "from Friday 16 October to Sunday 18 October" for a trip. Absolute,
+ * because the message stays in the history and "tomorrow" would be wrong by
+ * the next day.
  */
-export function planWhen(plan: Pick<IPlanCard, 'date' | 'time'>): string {
-  return `on ${longDay(plan.date)}${plan.time ? ` at ${plan.time}` : ''}`;
+export function planWhen(plan: Pick<IPlanCard, 'date' | 'endDate' | 'time'>): string {
+  const start = `${longDay(plan.date)}${plan.time ? ` at ${plan.time}` : ''}`;
+  return plan.endDate ? `from ${start}${until(plan)}` : `on ${start}`;
 }
 
 /**
@@ -33,11 +38,15 @@ export function planWhen(plan: Pick<IPlanCard, 'date' | 'time'>): string {
  * day itself. Relative, since it is read the moment it arrives; worked out in
  * the plan's own zone, so 01:00 in Tallinn is already the next day.
  */
-export function planWhenFromNow(plan: Pick<IPlanCard, 'date' | 'time' | 'timeZone'>, now: Date = new Date()): string {
+export function planWhenFromNow(
+  plan: Pick<IPlanCard, 'date' | 'endDate' | 'time' | 'timeZone'>,
+  now: Date = new Date()
+): string {
   const today = dayIn(now, plan.timeZone);
   const at = plan.time ? ` at ${plan.time}` : '';
-  if (plan.date === today) return `today${at}`;
-  if (plan.date === addDays(today, 1)) return `tomorrow${at}`;
+  const from = plan.endDate ? 'from ' : '';
+  if (plan.date === today) return `${from}today${at}${until(plan)}`;
+  if (plan.date === addDays(today, 1)) return `${from}tomorrow${at}${until(plan)}`;
   return planWhen(plan);
 }
 

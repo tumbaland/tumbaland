@@ -41,8 +41,10 @@ export interface IPlanCard {
   /** The plan's id in the journal (relationship-service). */
   id: string;
   title: string;
-  /** YYYY-MM-DD */
+  /** YYYY-MM-DD, the first day */
   date: string;
+  /** YYYY-MM-DD, the last day of a trip; null for one day */
+  endDate?: string | null;
   /** HH:mm, null all day */
   time: string | null;
   timeZone: string;
@@ -128,7 +130,7 @@ const MessageSchema = new Schema<IMessage>(
     collage: { type: new Schema<ICollageCard>({ id: String, title: String }, { _id: false }), default: null },
     plan: {
       type: new Schema<IPlanCard>(
-        { id: String, title: String, date: String, time: String, timeZone: String, place: String },
+        { id: String, title: String, date: String, endDate: String, time: String, timeZone: String, place: String },
         { _id: false }
       ),
       default: null

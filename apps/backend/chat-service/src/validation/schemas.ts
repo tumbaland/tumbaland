@@ -223,6 +223,7 @@ export const planReminderSchema = z.object({
   userId: z.string().min(1).max(64),
   title: z.string().min(1).max(200),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
   timeZone: z.string().min(1).max(64),
   place: z.string().max(200).optional(),

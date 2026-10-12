@@ -128,8 +128,10 @@ export interface CollageCard {
 export interface PlanCard {
   id: string;
   title: string;
-  /** YYYY-MM-DD */
+  /** YYYY-MM-DD, the first day */
   date: string;
+  /** YYYY-MM-DD, the last day of a trip; absent or null for one day */
+  endDate?: string | null;
   /** HH:mm, null all day */
   time: string | null;
   timeZone: string;

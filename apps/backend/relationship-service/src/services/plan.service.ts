@@ -10,6 +10,10 @@ import { DEFAULT_TIME_ZONE, todayIn, zonedTimeToUtc } from '../utils/time';
 /** All-day plans are reminded about from this time on their day (or before it). */
 export const ALL_DAY_REMINDER_TIME = '09:00';
 
+/** The longest a plan may span, first day to last: a long trip, not a season. */
+export const MAX_PLAN_DAYS = 62;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /** What a new plan is reminded with when the caller does not say. */
 export const DEFAULT_REMIND_BEFORE = { timed: 60, allDay: 0 };
 
@@ -17,6 +21,8 @@ export interface PlanInput {
   title: string;
   /** UTC midnight of the day, as the validator parses it */
   date: Date;
+  /** the last day of a trip; null for one day */
+  endDate?: Date | null;
   time?: string | null;
   timeZone?: string;
   notes?: string;
@@ -32,6 +38,8 @@ export interface PlanView {
   id: string;
   title: string;
   date: string;
+  /** YYYY-MM-DD, the last day of a trip; null for one day */
+  endDate: string | null;
   time: string | null;
   timeZone: string;
   startsAt: Date;
@@ -60,6 +68,7 @@ export function toPlanView(plan: IPlan): PlanView {
     id: String(raw._id),
     title: raw.title,
     date: dayKey(raw.date),
+    endDate: raw.endDate ? dayKey(raw.endDate) : null,
     time: raw.time ?? null,
     timeZone: raw.timeZone,
     startsAt: raw.startsAt,
@@ -115,9 +124,19 @@ async function assertType(
   }
 }
 
+/** A trip's days must be in order and within MAX_PLAN_DAYS. */
+function assertSpan(date: Date, endDate: Date | null | undefined): void {
+  if (!endDate) return;
+  if (endDate < date) throw new BadRequestError('A plan ends on or after the day it starts');
+  if ((endDate.getTime() - date.getTime()) / DAY_MS + 1 > MAX_PLAN_DAYS) {
+    throw new BadRequestError(`A plan can span at most ${MAX_PLAN_DAYS} days`);
+  }
+}
+
 /**
  * Plans in one scope, earliest first, all-day ones ahead of timed ones on the
- * same day. `startDate`/`endDate` bound the days (a calendar month);
+ * same day. `startDate`/`endDate` bound the days (a calendar month): a trip is
+ * in it if any of its days are, so one that started last month still shows.
  * `upcoming` keeps only the ones not yet logged.
  */
 export const listPlans = async (options: {
@@ -133,8 +152,12 @@ export const listPlans = async (options: {
   if (groupId && !userGroupIds.includes(groupId)) throw new ForbiddenError('Access denied');
 
   const query: Record<string, unknown> = { ...scopeQuery(userId, groupId) };
-  if (startDate || endDate) {
-    query.date = { ...(startDate ? { $gte: startDate } : {}), ...(endDate ? { $lte: endDate } : {}) };
+  if (endDate) query.date = { $lte: endDate };
+  if (startDate) {
+    // Starts in the range, or started at most MAX_PLAN_DAYS before it and ends in it.
+    const earliest = new Date(startDate.getTime() - (MAX_PLAN_DAYS - 1) * DAY_MS);
+    query.date = { ...(query.date as object), $gte: earliest };
+    query.$and = [{ $or: [{ date: { $gte: startDate } }, { endDate: { $gte: startDate } }] }];
   }
   if (upcoming) query.loggedActivityId = null;
 
@@ -147,6 +170,7 @@ export const listPlans = async (options: {
 
 export const createPlan = async (input: PlanInput, userId: string, userGroupIds: string[]): Promise<PlanView> => {
   if (input.groupId && !userGroupIds.includes(input.groupId)) throw new ForbiddenError('Access denied');
+  assertSpan(input.date, input.endDate);
   await assertType(input.typeId, userId, userGroupIds, input.groupId);
 
   const timeZone = input.timeZone || DEFAULT_TIME_ZONE;
@@ -161,6 +185,7 @@ export const createPlan = async (input: PlanInput, userId: string, userGroupIds:
   const plan = new Plan({
     title: input.title,
     ...fields,
+    endDate: input.endDate && input.endDate > input.date ? input.endDate : null,
     ...scheduleFields(fields),
     notes: input.notes,
     typeId: input.typeId || null,
@@ -198,6 +223,12 @@ export const updatePlan = async (
   if (patch.notes !== undefined) plan.notes = patch.notes;
   if (patch.typeId !== undefined) plan.typeId = patch.typeId ? new mongoose.Types.ObjectId(patch.typeId) : null;
   if (patch.location !== undefined) plan.location = patch.location;
+  if (patch.date !== undefined || patch.endDate !== undefined) {
+    const date = patch.date ?? plan.date;
+    const endDate = patch.endDate !== undefined ? patch.endDate : plan.endDate;
+    assertSpan(date, endDate);
+    plan.endDate = endDate && endDate > date ? endDate : null;
+  }
 
   const timing = ['date', 'time', 'timeZone', 'remindBefore'] as const;
   if (timing.some((field) => patch[field] !== undefined)) {

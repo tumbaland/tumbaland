@@ -10,15 +10,19 @@ export interface ReminderCardProps {
   onOpen: (planId: string) => void;
 }
 
-/** "Friday 16 October at 19:00", the plan's own calendar day whatever zone the phone is in. */
-export function planWhen(date: string, time: string | null): string {
-  const day = new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined, {
+/** "Friday 16 October", the plan's own calendar day whatever zone the phone is in. */
+const longDay = (date: string) =>
+  new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined, {
     timeZone: 'UTC',
     weekday: 'long',
     day: 'numeric',
     month: 'long'
   });
-  return time ? `${day} at ${time}` : day;
+
+/** "Friday 16 October at 19:00", or "Friday 16 October to Sunday 18 October" for a trip. */
+export function planWhen(date: string, time: string | null, endDate?: string | null): string {
+  const start = time ? `${longDay(date)} at ${time}` : longDay(date);
+  return endDate ? `${start} to ${longDay(endDate)}` : start;
 }
 
 /**
@@ -53,7 +57,7 @@ export function ReminderCard({ message, onOpen }: ReminderCardProps) {
             {plan.title}
           </Typography>
           <Typography variant="caption" component="div" sx={{ color: ink.muted }}>
-            {planWhen(plan.date, plan.time)}
+            {planWhen(plan.date, plan.time, plan.endDate)}
             {plan.place ? ` · ${plan.place}` : ''}
           </Typography>
         </Box>

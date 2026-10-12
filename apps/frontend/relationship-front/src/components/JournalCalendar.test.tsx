@@ -5,11 +5,16 @@ import { vi } from 'vite-plus/test';
 vi.mock('../services/days', () => ({
   getDays: vi.fn()
 }));
+vi.mock('../services/plans', () => ({
+  getPlans: vi.fn()
+}));
 
 import { getDays } from '../services/days';
+import { getPlans } from '../services/plans';
 import JournalCalendar, { currentMonth } from './JournalCalendar';
 
 const mockedGetDays = getDays as unknown as ReturnType<typeof vi.fn>;
+const mockedGetPlans = getPlans as unknown as ReturnType<typeof vi.fn>;
 
 const type = (name: string, color: string) => ({
   _id: name,
@@ -32,6 +37,8 @@ const may2024 = { year: 2024, month: 4 };
 const renderCalendar = (props: Partial<Parameters<typeof JournalCalendar>[0]> = {}) => {
   const onMonthChange = vi.fn();
   const onDayClick = vi.fn();
+  const onPlanClick = vi.fn();
+  const onNewPlan = vi.fn();
   const result = render(
     <JournalCalendar
       month={may2024}
@@ -39,15 +46,18 @@ const renderCalendar = (props: Partial<Parameters<typeof JournalCalendar>[0]> = 
       groupId="g1"
       refreshKey={0}
       onDayClick={onDayClick}
+      onPlanClick={onPlanClick}
+      onNewPlan={onNewPlan}
       {...props}
     />
   );
-  return { ...result, onMonthChange, onDayClick };
+  return { ...result, onMonthChange, onDayClick, onPlanClick, onNewPlan };
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 0, total: 0 });
+  mockedGetPlans.mockResolvedValue([]);
 });
 
 it('fetches exactly the month on screen, with the filters', async () => {
@@ -68,7 +78,9 @@ it('fetches exactly the month on screen, with the filters', async () => {
 it('ends February on the right day in a leap year', async () => {
   renderCalendar({ month: { year: 2024, month: 1 } });
   await waitFor(() =>
-    expect(mockedGetDays).toHaveBeenCalledWith(expect.objectContaining({ startDate: '2024-02-01', endDate: '2024-02-29' }))
+    expect(mockedGetDays).toHaveBeenCalledWith(
+      expect.objectContaining({ startDate: '2024-02-01', endDate: '2024-02-29' })
+    )
   );
 });
 
@@ -129,22 +141,100 @@ it('moves between months, and back to this one', async () => {
   expect(onMonthChange).toHaveBeenLastCalledWith(currentMonth());
 });
 
-it('does not let a day after today be opened', async () => {
-  const now = new Date();
-  renderCalendar({ month: currentMonth() });
-  await screen.findByText(/logged this month/);
-  expect(screen.queryByRole('button', { name: 'This month' })).not.toBeInTheDocument();
+const plan = (over: Record<string, unknown> = {}) => ({
+  _id: 'p1',
+  id: 'p1',
+  title: 'Concert',
+  date: '2099-05-16',
+  endDate: null,
+  time: '19:00',
+  timeZone: 'Europe/Tallinn',
+  startsAt: '2099-05-16T16:00:00.000Z',
+  typeId: null,
+  location: { label: 'Saku Arena', lat: 59.4, lng: 24.7 },
+  remindBefore: 60,
+  remindAt: '2099-05-16T15:00:00.000Z',
+  remindedAt: null,
+  loggedActivityId: null,
+  userId: 'u1',
+  ...over
+});
+const may2099 = { year: 2099, month: 4 };
 
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  if (lastDay.getDate() === now.getDate()) return; // nothing after today this month
-  const label = lastDay.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-  expect(screen.getByRole('button', { name: label })).toBeDisabled();
+it('fetches the month’s plans along with its days', async () => {
+  renderCalendar();
+  await waitFor(() =>
+    expect(mockedGetPlans).toHaveBeenCalledWith({ groupId: 'g1', startDate: '2024-05-01', endDate: '2024-05-31' })
+  );
+});
+
+it('starts a plan on a day after today that has none', async () => {
+  const { onNewPlan, onDayClick } = renderCalendar({ month: may2099 });
+  await screen.findByText(/logged this month/);
+  await userEvent.click(screen.getByRole('button', { name: 'Friday, May 15' }));
+  expect(onNewPlan).toHaveBeenCalledWith('2099-05-15');
+  expect(onDayClick).not.toHaveBeenCalled();
+});
+
+it('shows a later day’s plan, opens it from the day, and lists the month’s plans', async () => {
+  mockedGetPlans.mockResolvedValue([plan()]);
+  const { onPlanClick } = renderCalendar({ month: may2099 });
+
+  expect(await screen.findByText('0 days logged this month · 1 plan')).toBeInTheDocument();
+  expect(screen.getByText('Plans this month')).toBeInTheDocument();
+  expect(screen.getByText(/at 19:00 · Saku Arena/)).toBeInTheDocument();
+  expect(screen.getByLabelText('Reminder set')).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: 'Saturday, May 16, 1 planned' }));
+  expect(onPlanClick).toHaveBeenCalledWith(expect.objectContaining({ id: 'p1' }));
+
+  await userEvent.click(screen.getByText('Concert', { selector: 'p' }));
+  expect(onPlanClick).toHaveBeenCalledTimes(2);
+});
+
+it('puts a trip on every one of its days, into the next month', async () => {
+  mockedGetPlans.mockResolvedValue([plan({ title: 'Rome', date: '2099-05-30', endDate: '2099-06-02', time: null })]);
+  const { onPlanClick } = renderCalendar({ month: may2099 });
+  await screen.findByText(/1 plan/);
+  expect(screen.getByText(/to Tue 2 Jun|to Tue, Jun 2/)).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: 'Sunday, May 31, 1 planned' }));
+  expect(onPlanClick).toHaveBeenCalledWith(expect.objectContaining({ title: 'Rome' }));
+  expect(screen.getByRole('button', { name: 'Friday, May 29' })).toBeInTheDocument();
+});
+
+it('starts another plan on a later day that already has two', async () => {
+  mockedGetPlans.mockResolvedValue([plan(), plan({ id: 'p2', _id: 'p2', title: 'Dinner', time: null })]);
+  const { onNewPlan } = renderCalendar({ month: may2099 });
+  await screen.findByText(/2 plans/);
+  expect(screen.getByText(/, all day/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Saturday, May 16, 2 planned' }));
+  expect(onNewPlan).toHaveBeenCalledWith('2099-05-16');
+});
+
+it('opens a past day with a plan in the day editor, so it can be logged', async () => {
+  mockedGetPlans.mockResolvedValue([plan({ date: '2024-05-10', loggedActivityId: 'a1' })]);
+  const { onDayClick } = renderCalendar();
+  await screen.findByText(/1 plan/);
+  expect(screen.getByText(/in the journal/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Friday, May 10, 1 planned' }));
+  expect(onDayClick).toHaveBeenCalledWith('2024-05-10');
 });
 
 it('fetches the month again when the page bumps the refresh key', async () => {
   const { rerender } = renderCalendar();
   await waitFor(() => expect(mockedGetDays).toHaveBeenCalledTimes(1));
-  rerender(<JournalCalendar month={may2024} onMonthChange={vi.fn()} groupId="g1" refreshKey={1} onDayClick={vi.fn()} />);
+  rerender(
+    <JournalCalendar
+      month={may2024}
+      onMonthChange={vi.fn()}
+      groupId="g1"
+      refreshKey={1}
+      onDayClick={vi.fn()}
+      onPlanClick={vi.fn()}
+      onNewPlan={vi.fn()}
+    />
+  );
   await waitFor(() => expect(mockedGetDays).toHaveBeenCalledTimes(2));
 });
 

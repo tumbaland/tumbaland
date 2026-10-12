@@ -82,21 +82,33 @@ export const reorderActivityTypesSchema = z.object({
 /** Minutes before a plan to remind, up to a month; null for none. */
 const remindBeforeSchema = z.number().int().min(0).max(43_200).nullable();
 
-export const createPlanSchema = z.object({
+const planFields = {
   title: z.string().trim().min(1, 'A plan needs a name').max(200),
   date: daySchema,
+  // the last day of a trip; null or absent for one day
+  endDate: daySchema.nullish(),
   // null or absent: all day
   time: z.string().regex(TIME_PATTERN, 'Time must be formatted as HH:mm').nullish(),
   timeZone: z.string().max(64).refine(isValidTimeZone, 'Unknown time zone').optional(),
   notes: z.string().max(1000).optional(),
   typeId: z.string().min(1).nullish(),
   location: locationSchema.nullish(),
-  remindBefore: remindBeforeSchema.optional(),
-  groupId: z.string().optional()
-});
+  remindBefore: remindBeforeSchema.optional()
+};
+
+/** A trip ends on or after the day it starts. */
+const endsAfterStart = (plan: { date?: Date; endDate?: Date | null }) =>
+  !plan.date || !plan.endDate || plan.endDate >= plan.date;
+
+export const createPlanSchema = z
+  .object({ ...planFields, groupId: z.string().optional() })
+  .refine(endsAfterStart, { message: 'A plan ends on or after the day it starts', path: ['endDate'] });
 
 // A plan stays in the scope it was made in.
-export const updatePlanSchema = createPlanSchema.omit({ groupId: true }).partial();
+export const updatePlanSchema = z
+  .object(planFields)
+  .partial()
+  .refine(endsAfterStart, { message: 'A plan ends on or after the day it starts', path: ['endDate'] });
 
 export const logPlanSchema = z.object({
   typeId: z.string().min(1).optional()
