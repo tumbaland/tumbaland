@@ -5,6 +5,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { logger } from '@tumbaland/frontend-core';
 import { Day } from '../services/types';
 import { getDays } from '../services/days';
+import { localDayKey } from '../utils/dates';
 
 /** The first of a month, as the calendar keeps it: { year, month (0-11) }. */
 export interface CalendarMonth {
@@ -97,7 +98,7 @@ const JournalCalendar: React.FC<JournalCalendarProps> = ({
   }, [month.year, month.month, daysInMonth]);
 
   const now = new Date();
-  const today = dateKey(now.getFullYear(), now.getMonth(), now.getDate());
+  const today = localDayKey(now);
   const isCurrentMonth = month.year === now.getFullYear() && month.month === now.getMonth();
   const title = new Date(month.year, month.month, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 

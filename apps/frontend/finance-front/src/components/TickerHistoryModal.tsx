@@ -22,6 +22,7 @@ import {
   fetchAllTickerPriceHistory
 } from '../services/tickerPriceHistoryService';
 import ConfirmationModal from './ConfirmationModal';
+import { localDayKey } from '../utils/dates';
 
 interface TickerHistoryModalProps {
   open: boolean;
@@ -62,10 +63,10 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
     if (open) {
       setQuickRange('1m');
       const now = new Date();
-      const end = now.toISOString().slice(0, 10);
+      const end = localDayKey(now);
       const prevMonth = new Date(now);
       prevMonth.setMonth(prevMonth.getMonth() - 1);
-      const start = prevMonth.toISOString().slice(0, 10);
+      const start = localDayKey(prevMonth);
       setStartDate(start);
       setEndDate(end);
       setPendingStartDate(start);
@@ -78,36 +79,36 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
     setQuickRange(value);
     const now = new Date();
     let start: string;
-    const end = now.toISOString().slice(0, 10);
+    const end = localDayKey(now);
     switch (value) {
       case '1m': {
         const d = new Date(now);
         d.setMonth(d.getMonth() - 1);
-        start = d.toISOString().slice(0, 10);
+        start = localDayKey(d);
         break;
       }
       case '3m': {
         const d = new Date(now);
         d.setMonth(d.getMonth() - 3);
-        start = d.toISOString().slice(0, 10);
+        start = localDayKey(d);
         break;
       }
       case '1y': {
         const d = new Date(now);
         d.setFullYear(d.getFullYear() - 1);
-        start = d.toISOString().slice(0, 10);
+        start = localDayKey(d);
         break;
       }
       case '3y': {
         const d = new Date(now);
         d.setFullYear(d.getFullYear() - 3);
-        start = d.toISOString().slice(0, 10);
+        start = localDayKey(d);
         break;
       }
       case '5y': {
         const d = new Date(now);
         d.setFullYear(d.getFullYear() - 5);
-        start = d.toISOString().slice(0, 10);
+        start = localDayKey(d);
         break;
       }
       case 'all':
@@ -119,7 +120,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
         } else {
           const d = new Date(now);
           d.setFullYear(d.getFullYear() - 10);
-          earliest = d.toISOString().slice(0, 10);
+          earliest = localDayKey(d);
         }
         start = earliest;
         break;

@@ -30,12 +30,11 @@ import { getActivityTypes } from '../services/activityTypes';
 import DayEditorDialog from '../components/DayEditorDialog';
 import ActivityTypesDialog from '../components/ActivityTypesDialog';
 import JournalCalendar, { CalendarMonth, currentMonth } from '../components/JournalCalendar';
+import { todayKey } from '../utils/dates';
 
 const PAGE_SIZE = 30;
 /** Bigger pages for the export, so a long history takes few round trips. */
 const EXPORT_PAGE_SIZE = 200;
-
-const todayKey = () => new Date().toISOString().slice(0, 10);
 
 const dayLabel = (date: string): string => {
   const d = new Date(`${date}T00:00:00`);

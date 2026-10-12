@@ -10,6 +10,7 @@ import { getPlaces } from '../services/places';
 import { getActivityTypes } from '../services/activityTypes';
 import { PLACE_ZOOM, TILE_ATTRIBUTION, TILE_URL, WORLD_CENTER, WORLD_ZOOM, pinIcon } from '../components/map/mapConfig';
 import PlacePopup from '../components/map/PlacePopup';
+import { localDayKey } from '../utils/dates';
 
 // The stylesheet has to reach the shell's document too; see leafletStyles.
 ensureLeafletStyles();
@@ -95,7 +96,7 @@ const rangeOptions: RangeOption[] = [
     range: () => {
       const start = new Date();
       start.setDate(start.getDate() - 90);
-      return { startDate: start.toISOString().slice(0, 10) };
+      return { startDate: localDayKey(start) };
     }
   }
 ];

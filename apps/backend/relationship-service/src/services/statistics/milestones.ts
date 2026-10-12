@@ -1,5 +1,6 @@
 import { Activity } from '../../models/Activity';
 import { StatisticsFilters, accessQueryFor, MS_PER_DAY, dayNumber, dayKeyOf, toDayKey } from './shared';
+import { todayIn } from '../../utils/time';
 
 export type MilestoneKind = 'days-together' | 'anniversary' | 'type-count' | 'total-count';
 
@@ -134,7 +135,7 @@ export const getMilestones = async (
     limit = 6
   } = options;
 
-  const today = dayNumber(now.toISOString().slice(0, 10));
+  const today = dayNumber(todayIn(now));
   const tomorrow = new Date((today + 1) * MS_PER_DAY);
   const windowStart = new Date((today - recentDays) * MS_PER_DAY);
   const scope = accessQueryFor(filters);

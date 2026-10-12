@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { DAY_PATTERN, parseDay } from '../utils/day';
+import { TIME_PATTERN, isValidTimeZone } from '../utils/time';
 
 /** Where an entry happened; only accepted for types with hasLocation. */
 export const locationSchema = z.object({
@@ -76,4 +77,27 @@ export const updateActivityTypeSchema = createActivityTypeSchema.partial();
 export const reorderActivityTypesSchema = z.object({
   typeIds: z.array(z.string()),
   groupId: z.string().optional()
+});
+
+/** Minutes before a plan to remind, up to a month; null for none. */
+const remindBeforeSchema = z.number().int().min(0).max(43_200).nullable();
+
+export const createPlanSchema = z.object({
+  title: z.string().trim().min(1, 'A plan needs a name').max(200),
+  date: daySchema,
+  // null or absent: all day
+  time: z.string().regex(TIME_PATTERN, 'Time must be formatted as HH:mm').nullish(),
+  timeZone: z.string().max(64).refine(isValidTimeZone, 'Unknown time zone').optional(),
+  notes: z.string().max(1000).optional(),
+  typeId: z.string().min(1).nullish(),
+  location: locationSchema.nullish(),
+  remindBefore: remindBeforeSchema.optional(),
+  groupId: z.string().optional()
+});
+
+// A plan stays in the scope it was made in.
+export const updatePlanSchema = createPlanSchema.omit({ groupId: true }).partial();
+
+export const logPlanSchema = z.object({
+  typeId: z.string().min(1).optional()
 });

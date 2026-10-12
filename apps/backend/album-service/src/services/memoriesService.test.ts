@@ -17,7 +17,7 @@ import { Types } from 'mongoose';
 import Album from '../models/Album';
 import Photo from '../models/Photo';
 import photoService from '../services/photoService';
-import memoriesService, { windowMonthDays } from './memoriesService';
+import memoriesService, { localToday, windowMonthDays } from './memoriesService';
 
 const mockedAlbumFind = Album.find as unknown as jest.Mock;
 const mockedPhotoAggregate = Photo.aggregate as unknown as jest.Mock;
@@ -205,5 +205,16 @@ describe('getMemories', () => {
     const result = await memoriesService.getMemories({ now: NOW }, { userId: 'u1', userGroups: [] });
 
     expect(result.years[0].photos[0].albumName).toBe('Unknown album');
+  });
+});
+
+describe('localToday', () => {
+  it('is already tomorrow in Tallinn while UTC is still on today', () => {
+    // 01:30 on 4 September in Tallinn
+    expect(localToday(new Date('2026-09-03T22:30:00Z')).toISOString()).toBe('2026-09-04T00:00:00.000Z');
+  });
+
+  it('is the same day in the afternoon', () => {
+    expect(localToday(new Date('2026-09-03T10:15:00Z')).toISOString()).toBe('2026-09-03T00:00:00.000Z');
   });
 });

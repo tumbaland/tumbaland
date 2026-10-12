@@ -62,7 +62,7 @@ const readingType = {
   userId: 'u1'
 };
 
-const todayKey = () => new Date().toISOString().slice(0, 10);
+import { todayKey } from '../utils/dates';
 
 // The page reads ?date= to deep-link a day from the map, so it needs a Router.
 const renderPage = (initialEntry = '/journal') =>

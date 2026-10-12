@@ -5,6 +5,7 @@ dotenv.config();
 
 import { connectDB, logger, registerShutdown, requireEnv } from '@tumbaland/backend-core';
 import app from './app';
+import { startReminderScheduler } from './services/reminder.service';
 
 // Fail fast if the JWT secret is missing — auth must never run with a default
 requireEnv('JWT_SECRET');
@@ -20,6 +21,9 @@ const start = async (): Promise<void> => {
   const server = app.listen(PORT, () =>
     logger.info('Relationship service started successfully', { port: PORT })
   );
+
+  // Plan reminders: posted into the group's chat when they fall due.
+  startReminderScheduler();
 
   // Graceful shutdown (SIGINT + SIGTERM: drain HTTP, then close the DB)
   registerShutdown({ serviceName: 'relationship-service', server });

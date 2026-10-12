@@ -60,6 +60,19 @@ describe('getStreakStatistics', () => {
     );
   });
 
+  it('counts the Tallinn day just after midnight, while UTC is still on yesterday', async () => {
+    // 01:30 on 11 March in Tallinn is 23:30 UTC on the 10th. An entry for the
+    // 11th was logged a minute ago and has to be today, not the future.
+    mockStreakAggregations(['2026-03-10', '2026-03-11']);
+    const result = await getStreakStatistics({ userId: 'u1' }, new Date('2026-03-10T23:30:00Z'));
+    expect(mockedAggregate).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        { $match: expect.objectContaining({ date: { $lt: new Date('2026-03-12T00:00:00.000Z') } }) }
+      ])
+    );
+    expect(result.currentStreak).toBe(2);
+  });
+
   it('scopes to a group when groupId is provided', async () => {
     mockStreakAggregations([]);
     await getStreakStatistics({ userId: 'u1', groupId: 'g1' }, NOW);

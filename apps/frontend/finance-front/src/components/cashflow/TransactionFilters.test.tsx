@@ -188,7 +188,8 @@ describe('period presets', () => {
 });
 
 describe('periodPresets', () => {
-  const today = new Date('2026-08-07T00:00:00Z');
+  // Local noon, so the day is 7 August in whatever zone the tests run in.
+  const today = new Date(2026, 7, 7, 12);
 
   it('ends a year in progress today rather than in December', () => {
     // A range running to 2026-12-31 reads back as months of empty tail
