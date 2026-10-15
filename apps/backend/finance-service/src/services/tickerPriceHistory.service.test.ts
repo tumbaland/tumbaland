@@ -67,13 +67,18 @@ describe('getTickerPriceHistory', () => {
     expect(mockedFind).toHaveBeenCalledWith(expect.objectContaining({ ticker: { $in: ['AAPL', 'MSFT'] } }));
   });
 
-  it('scopes to group tickers when working in a group context', async () => {
+  it('keeps the personal tickers of a caller who also belongs to groups', async () => {
     mockedTrackedDistinct.mockResolvedValue(['AAPL']);
     mockQuery([]);
 
     await getTickerPriceHistory('u1', ['g1', 'g2']);
 
-    expect(mockedTrackedDistinct).toHaveBeenCalledWith('ticker', { groupId: { $in: ['g1', 'g2'] } });
+    expect(mockedTrackedDistinct).toHaveBeenCalledWith('ticker', {
+      $or: [
+        { userId: 'u1', $or: [{ groupId: { $exists: false } }, { groupId: null }] },
+        { groupId: { $in: ['g1', 'g2'] } }
+      ]
+    });
   });
 
   it('returns nothing, without querying, when the caller tracks no tickers', async () => {
