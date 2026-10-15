@@ -50,17 +50,20 @@ function toUtcDateOnly(date: Date): Date {
 
 /**
  * The tickers the caller is allowed to see price history for: the ones they
- * track personally, or the ones tracked by the group they are working in.
+ * track personally, and the ones tracked by any group they belong to.
  *
  * Price rows themselves carry no owner — they are market data keyed by ticker,
  * shared by every user tracking that instrument — so the tracked-ticker list is
  * what scopes reads and deletes to a tenant.
+ *
+ * Personal tickers count even when the caller is in a group. `userGroups` is
+ * every group the caller belongs to, not the one they are working in, so
+ * reading it as "group context" hid a personal portfolio from anyone who had
+ * joined a group at all.
  */
 async function accessibleTickers(userId: string, userGroups: string[]): Promise<string[]> {
-  const scope =
-    userGroups.length === 0
-      ? { userId, $or: [{ groupId: { $exists: false } }, { groupId: null }] }
-      : { groupId: { $in: userGroups } };
+  const personal = { userId, $or: [{ groupId: { $exists: false } }, { groupId: null }] };
+  const scope = userGroups.length === 0 ? personal : { $or: [personal, { groupId: { $in: userGroups } }] };
 
   return TrackedTicker.distinct('ticker', scope);
 }
