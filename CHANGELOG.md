@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.531](https://github.com/tumbaland/tumbaland/compare/app-v0.0.530...app-v0.0.531) (2026-10-15)
+
+### Bug Fixes
+
+* show price history ([#77](https://github.com/tumbaland/tumbaland/issues/77)) ([e8f5c33](https://github.com/tumbaland/tumbaland/commit/e8f5c331ea7e41ec4e8912cdd59b31da789e92b1))
+
 ## [0.0.530](https://github.com/tumbaland/tumbaland/compare/app-v0.0.529...app-v0.0.530) (2026-10-12)
 
 ### Features
