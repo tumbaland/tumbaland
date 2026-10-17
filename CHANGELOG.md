@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.532](https://github.com/tumbaland/tumbaland/compare/app-v0.0.531...app-v0.0.532) (2026-10-17)
+
+### Features
+
+* **journal:** show the map on the dashboard ([#78](https://github.com/tumbaland/tumbaland/issues/78)) ([335ae10](https://github.com/tumbaland/tumbaland/commit/335ae103e1cba358aca971d83c58dfcc5e7837e3))
+
 ## [0.0.531](https://github.com/tumbaland/tumbaland/compare/app-v0.0.530...app-v0.0.531) (2026-10-15)
 
 ### Bug Fixes
