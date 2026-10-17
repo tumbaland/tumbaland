@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Box, Button, Typography, useMediaQuery, useTheme } from '@mui/material';
 import TuneIcon from '@mui/icons-material/Tune';
 import StatsCards from '../components/StatsCards';
+import MapCard from '../components/MapCard';
 import StreakCards from '../components/StreakCards';
 import MilestonesCard from '../components/MilestonesCard';
 import TrendsCard from '../components/TrendsCard';
@@ -87,9 +88,12 @@ const Dashboard: React.FC = () => {
           <MilestonesCard />
         </Box>
 
-        {/* Which way each activity type is moving */}
-        <Box sx={{ width: '100%' }}>
+        {/* Which way each activity type is moving, beside where you have been */}
+        <Box sx={{ width: { xs: '100%', md: 'calc(50% - 12px)' } }}>
           <TrendsCard />
+        </Box>
+        <Box sx={{ width: { xs: '100%', md: 'calc(50% - 12px)' } }}>
+          <MapCard />
         </Box>
 
         {/* Recent Activities */}

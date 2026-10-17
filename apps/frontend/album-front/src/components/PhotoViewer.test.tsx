@@ -60,6 +60,24 @@ it('renders a video element with controls for a video photo', () => {
   expect(document.querySelector('video')).toBeInTheDocument();
 });
 
+it('plays a video inline and starts it, as the chat viewer does', () => {
+  const video = makePhoto({ _id: 'v1', mimetype: 'video/quicktime', signedUrl: '/clip.mov', posterSignedUrl: '/still.jpg' });
+  renderViewer({ selectedPhoto: video, photos: [video], selectedPhotoIndex: 0 });
+  const element = document.querySelector('video') as HTMLVideoElement;
+  expect(element.playsInline).toBe(true);
+  expect(element.autoplay).toBe(true);
+  expect(element.poster).toContain('/still.jpg');
+});
+
+it('says so, and offers a download, when a video cannot be played', () => {
+  const video = makePhoto({ _id: 'v1', mimetype: 'video/quicktime', signedUrl: '/clip.mov' });
+  renderViewer({ selectedPhoto: video, photos: [video], selectedPhotoIndex: 0 });
+  fireEvent.error(document.querySelector('video') as HTMLVideoElement);
+  expect(document.querySelector('video')).not.toBeInTheDocument();
+  expect(screen.getByText('This video will not play here.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /download it/i })).toBeInTheDocument();
+});
+
 it('hides Previous on the first photo and Next on the last', () => {
   const { rerender } = renderViewer({ selectedPhoto: photos[0], selectedPhotoIndex: 0 });
   expect(screen.queryByRole('button', { name: /previous/i })).not.toBeInTheDocument();
