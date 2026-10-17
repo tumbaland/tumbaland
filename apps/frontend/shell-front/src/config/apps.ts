@@ -14,7 +14,6 @@ import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import TuneIcon from '@mui/icons-material/Tune';
 import TimelineIcon from '@mui/icons-material/Timeline';
-import MapIcon from '@mui/icons-material/Map';
 import DevicesIcon from '@mui/icons-material/Devices';
 import LinkIcon from '@mui/icons-material/Link';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
@@ -103,8 +102,7 @@ export const APPS: AppConfigItem[] = [
     color: moduleAccent.journal,
     menu: [
       { label: 'Dashboard', route: '/relationship/dashboard', icon: DashboardIcon },
-      { label: 'Entries', route: '/relationship/journal', icon: TimelineIcon },
-      { label: 'Map', route: '/relationship/map', icon: MapIcon }
+      { label: 'Entries', route: '/relationship/journal', icon: TimelineIcon }
     ]
   },
   {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Dialog, DialogContent, IconButton, Typography, useTheme, useMediaQuery } from '@mui/material';
+import { Box, Button, Dialog, DialogContent, IconButton, Typography, useTheme, useMediaQuery } from '@mui/material';
 import {
   Close as CloseIcon,
   NavigateBefore as NavigateBeforeIcon,
@@ -79,6 +79,7 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
 }) => {
   const [imgDimensions, setImgDimensions] = useState<{ width: number; height: number } | null>(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isPortrait = window.innerHeight > window.innerWidth;
@@ -90,6 +91,7 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
   // (and, on mobile, rotate a portrait shot as though it were landscape).
   useEffect(() => {
     setImgDimensions(null);
+    setVideoFailed(false);
   }, [selectedPhoto?._id]);
 
   // Keyboard navigation
@@ -338,20 +340,37 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
 
         {/* Photo/Video Display */}
         {selectedPhoto.mimetype.startsWith('video/') ? (
-          <Box
-            component="video"
-            src={selectedPhoto.signedUrl}
-            controls
-            sx={{
-              maxWidth: '90vw',
-              maxHeight: '90vh',
-              objectFit: 'contain',
-              zIndex: 2,
-              boxShadow: 3,
-              borderRadius: 2,
-              background: 'black'
-            }}
-          />
+          videoFailed ? (
+            <Box sx={{ zIndex: 2, color: 'white', textAlign: 'center', px: 3 }}>
+              <Typography sx={{ mb: 2 }}>This video will not play here.</Typography>
+              <Button variant="contained" startIcon={<DownloadIcon />} onClick={handleDownload}>
+                Download it
+              </Button>
+            </Box>
+          ) : (
+            <Box
+              component="video"
+              // A new element per video, so the next one does not inherit a failure.
+              key={selectedPhoto._id}
+              src={selectedPhoto.signedUrl}
+              poster={selectedPhoto.posterSignedUrl}
+              controls
+              autoPlay
+              // Without this a phone may hand the clip to its own full screen
+              // player, or refuse to start it inside the dialog at all.
+              playsInline
+              onError={() => setVideoFailed(true)}
+              sx={{
+                maxWidth: '90vw',
+                maxHeight: '90vh',
+                objectFit: 'contain',
+                zIndex: 2,
+                boxShadow: 3,
+                borderRadius: 2,
+                background: 'black'
+              }}
+            />
+          )
         ) : (
           <Box
             component="img"

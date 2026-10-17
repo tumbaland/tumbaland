@@ -42,7 +42,7 @@ it('lists the Journal sections inside the shell', () => {
 
   expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/relationship/dashboard');
   expect(screen.getByRole('link', { name: 'Entries' })).toHaveAttribute('aria-current', 'page');
-  expect(screen.getByRole('link', { name: 'Map' })).toHaveAttribute('href', '/relationship/map');
+  expect(screen.queryByRole('link', { name: 'Map' })).not.toBeInTheDocument();
 });
 
 describe('the account apps get the same bar as the modules', () => {

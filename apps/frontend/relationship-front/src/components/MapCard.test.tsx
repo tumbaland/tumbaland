@@ -38,7 +38,7 @@ vi.mock('../services/activityTypes', () => ({ getActivityTypes: vi.fn() }));
 
 import { getPlaces, getPlaceVisits } from '../services/places';
 import { getActivityTypes } from '../services/activityTypes';
-import MapPage from './MapPage';
+import MapCard from './MapCard';
 import { Place } from '../services/types';
 
 const mockedGetPlaces = getPlaces as unknown as ReturnType<typeof vi.fn>;
@@ -75,7 +75,7 @@ const place = (over: Partial<Place> = {}): Place => ({
 const renderPage = () =>
   render(
     <MemoryRouter>
-      <MapPage />
+      <MapCard />
     </MemoryRouter>
   );
 

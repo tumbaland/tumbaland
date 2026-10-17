@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Chip, CircularProgress, MenuItem, TextField, Typography } from '@mui/material';
+import { Alert, Box, Card, CardContent, Chip, CircularProgress, MenuItem, TextField, Typography } from '@mui/material';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { ensureLeafletStyles } from '../components/map/leafletStyles';
+import { ensureLeafletStyles } from './map/leafletStyles';
 import { useTenantFilter } from '@tumbaland/frontend-core';
 import { logger } from '@tumbaland/frontend-core';
 import { ActivityType, Place } from '../services/types';
 import { getPlaces } from '../services/places';
 import { getActivityTypes } from '../services/activityTypes';
-import { PLACE_ZOOM, TILE_ATTRIBUTION, TILE_URL, WORLD_CENTER, WORLD_ZOOM, pinIcon } from '../components/map/mapConfig';
-import PlacePopup from '../components/map/PlacePopup';
+import { PLACE_ZOOM, TILE_ATTRIBUTION, TILE_URL, WORLD_CENTER, WORLD_ZOOM, pinIcon } from './map/mapConfig';
+import PlacePopup from './map/PlacePopup';
 import { localDayKey } from '../utils/dates';
 
 // The stylesheet has to reach the shell's document too; see leafletStyles.
@@ -102,11 +102,12 @@ const rangeOptions: RangeOption[] = [
 ];
 
 /**
- * Everywhere you've been together. One pin per place, sized by visit count and
- * coloured by the activity type logged there most often; the popup lists the
- * individual visits and links into that day in the journal.
+ * Everywhere you've been together, as a card among the dashboard's figures.
+ * One pin per place, sized by visit count and coloured by the activity type
+ * logged there most often; the popup lists the individual visits and links
+ * into that day in the journal.
  */
-const MapPage: React.FC = () => {
+const MapCard: React.FC = () => {
   const tenantGroupId = useTenantFilter();
 
   const [places, setPlaces] = useState<Place[]>([]);
@@ -151,18 +152,23 @@ const MapPage: React.FC = () => {
   const initialCenter: [number, number] = places.length > 0 ? [places[0].lat, places[0].lng] : WORLD_CENTER;
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <Box>
       <Box
         sx={{
           display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between',
-          alignItems: { xs: 'stretch', sm: 'center' },
-          gap: 2
+          // Stacked at every width: the card is half a screen on desktop, too
+          // narrow for the title and both filters on one row.
+          flexDirection: 'column',
+          gap: { xs: 1.5, sm: 2 },
+          mb: { xs: 1.5, sm: 3 }
         }}
       >
         <Box>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
+          <Typography
+            variant="h5"
+            component="h2"
+            sx={{ fontWeight: 'bold', color: 'text.primary', fontSize: { xs: '1.1rem', sm: '1.5rem' } }}
+          >
             Map
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
@@ -173,14 +179,14 @@ const MapPage: React.FC = () => {
               : 'Everywhere you have been together'}
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
           <TextField
             select
             size="small"
             label="Activity"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            sx={{ minWidth: 170 }}
+            sx={{ minWidth: 0, flex: 1 }}
           >
             <MenuItem value="">All activities</MenuItem>
             {types.map((type) => (
@@ -198,7 +204,7 @@ const MapPage: React.FC = () => {
             label="When"
             value={rangeFilter}
             onChange={(e) => setRangeFilter(e.target.value)}
-            sx={{ minWidth: 150 }}
+            sx={{ minWidth: 0, flex: 1 }}
           >
             {rangeOptions.map((option) => (
               <MenuItem key={option.value} value={option.value}>
@@ -209,28 +215,36 @@ const MapPage: React.FC = () => {
         </Box>
       </Box>
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
           <CircularProgress />
         </Box>
       ) : places.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
-          <Typography variant="h6" sx={{ color: 'text.secondary' }} gutterBottom>
-            {typeFilter || rangeFilter !== 'all' ? 'No places match these filters' : 'No places logged yet'}
-          </Typography>
-          {!typeFilter && rangeFilter === 'all' && (
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Turn on “Track where it happened” for an activity type, then add a place when you log a day.
+        <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+          <CardContent sx={{ textAlign: 'center', py: 5 }}>
+            <Typography variant="h6" sx={{ color: 'text.secondary' }} gutterBottom>
+              {typeFilter || rangeFilter !== 'all' ? 'No places match these filters' : 'No places logged yet'}
             </Typography>
-          )}
-        </Box>
+            {!typeFilter && rangeFilter === 'all' && (
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Turn on “Track where it happened” for an activity type, then add a place when you log a day.
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
       ) : (
         <>
           <Box
             sx={{
-              height: { xs: '60vh', md: '68vh' },
+              // Shorter than the full page it used to be: it is one card among
+              // several, and a phone has to scroll past it to reach the rest.
+              height: { xs: 320, md: 360 },
               borderRadius: 3,
               overflow: 'hidden',
               border: '1px solid',
@@ -263,7 +277,7 @@ const MapPage: React.FC = () => {
             </MapContainer>
           </Box>
 
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1.5 }}>
             {places.slice(0, 8).map((place) => (
               <Chip
                 key={place.id}
@@ -280,4 +294,4 @@ const MapPage: React.FC = () => {
   );
 };
 
-export default MapPage;
+export default MapCard;
