@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.534](https://github.com/tumbaland/tumbaland/compare/app-v0.0.533...app-v0.0.534) (2026-10-18)
+
+### Features
+
+* **mcp:** let assistants make collages from several albums ([#80](https://github.com/tumbaland/tumbaland/issues/80)) ([f3206e9](https://github.com/tumbaland/tumbaland/commit/f3206e954768fe1cf0c2af2ba4e6819d0cb4f7ef))
+
 ## [0.0.533](https://github.com/tumbaland/tumbaland/compare/app-v0.0.532...app-v0.0.533) (2026-10-18)
 
 ### Bug Fixes
