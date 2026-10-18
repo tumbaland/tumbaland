@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.533](https://github.com/tumbaland/tumbaland/compare/app-v0.0.532...app-v0.0.533) (2026-10-18)
+
+### Bug Fixes
+
+* **auth:** keep group access when an assistant's login refreshes ([#79](https://github.com/tumbaland/tumbaland/issues/79)) ([ed0d7a1](https://github.com/tumbaland/tumbaland/commit/ed0d7a18d1f2cad4f5b466861f81bc73d7ced76a))
+
 ## [0.0.532](https://github.com/tumbaland/tumbaland/compare/app-v0.0.531...app-v0.0.532) (2026-10-17)
 
 ### Features
