@@ -4,7 +4,14 @@ import { applyChanges, CollageChange, StoredConfig } from './collageChanges';
 import Album from '../models/Album';
 import { getSignedUrlsBatch } from '../services/fileServiceClient';
 import mongoose, { PipelineStage } from 'mongoose';
-import { canAccessResource, ConflictError, ForbiddenError, logger, NotFoundError } from '@tumbaland/backend-core';
+import {
+  BadRequestError,
+  canAccessResource,
+  ConflictError,
+  ForbiddenError,
+  logger,
+  NotFoundError
+} from '@tumbaland/backend-core';
 
 interface AggregatedPhoto {
   _id: unknown;
@@ -164,6 +171,67 @@ export const applyCollageChanges = async (
 
   logger.warn('Collage changes kept losing the race', { collageId: id });
   throw new ConflictError('The collage is being changed too quickly. Try again.');
+};
+
+/**
+ * Let a collage use the photos of more albums.
+ *
+ * Its own route rather than a change in a batch: which albums a collage draws
+ * on is not part of its config, and a batch is applied again whenever another
+ * write lands first, which is not something to do with an access check.
+ *
+ * Each album has to be one the caller can reach and in the same journal as the
+ * collage. A personal album added to a group collage would make the collage
+ * unreadable for the other person, since a read is refused when any of its
+ * albums is out of reach. An assistant is held to the collages it made, as it
+ * is for changes.
+ */
+export const addCollageAlbums = async (
+  id: string,
+  albumIds: string[],
+  userId: string,
+  userGroups: string[] = [],
+  author: ChangeAuthor = { assistant: false }
+): Promise<{ albumIds: string[]; revision: number }> => {
+  const current = await CollageModel.findById(id).select('userId groupId madeBy').lean();
+  if (!current || !canAccessResource(userId, current.userId || '', current.groupId, userGroups, false)) {
+    throw new NotFoundError('Collage not found');
+  }
+  if (author.assistant && current.madeBy?.kind !== 'assistant') {
+    throw new ForbiddenError(
+      'This collage was made by a person, so an assistant cannot change it. Make a new collage like it instead.'
+    );
+  }
+
+  const wanted = [...new Set(albumIds)];
+  const albums = await Album.find({ _id: { $in: wanted } })
+    .select('_id name userId groupId')
+    .lean();
+  const collageGroup = current.groupId || null;
+  for (const albumId of wanted) {
+    const album = albums.find((candidate) => String(candidate._id) === albumId);
+    // Same answer for one that is not there and one that is not theirs, as
+    // everywhere else an id is looked up.
+    if (!album || !canAccessResource(userId, album.userId, album.groupId, userGroups, false)) {
+      throw new NotFoundError('Album not found');
+    }
+    const sameJournal = collageGroup
+      ? album.groupId === collageGroup
+      : !album.groupId && album.userId === current.userId;
+    if (!sameJournal) {
+      throw new BadRequestError(`"${album.name}" is in a different journal from this collage, so it cannot be added.`);
+    }
+  }
+
+  // Counted as a write, so a batch of changes read before this one is
+  // retried against it rather than stored over it.
+  const stored = await CollageModel.findByIdAndUpdate(
+    id,
+    { $addToSet: { albumIds: { $each: wanted } }, $inc: { revision: 1 } },
+    { returnDocument: 'after', projection: { albumIds: 1, revision: 1 } }
+  ).lean();
+  if (!stored) throw new NotFoundError('Collage not found');
+  return { albumIds: stored.albumIds, revision: stored.revision ?? 0 };
 };
 
 export const getCollageById = async (

@@ -5,11 +5,21 @@ jest.mock('./collage.service', () => ({
   updateCollage: jest.fn(),
   getCollageWithPhotos: jest.fn(),
   getCollageList: jest.fn(),
-  deleteCollage: jest.fn()
+  deleteCollage: jest.fn(),
+  addCollageAlbums: jest.fn()
 }));
+jest.mock('./collageLive', () => ({ publish: jest.fn() }));
 
 import * as collageService from './collage.service';
-import { createCollage, updateCollage, getCollageById, getCollageList, deleteCollage } from './collage.controller';
+import * as live from './collageLive';
+import {
+  addCollageAlbums,
+  createCollage,
+  updateCollage,
+  getCollageById,
+  getCollageList,
+  deleteCollage
+} from './collage.controller';
 
 const mocked = collageService as jest.Mocked<typeof collageService>;
 
@@ -101,5 +111,21 @@ describe('deleteCollage', () => {
 
     expect(mocked.deleteCollage).toHaveBeenCalledWith('c1', 'user-1', []);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+  });
+});
+
+describe('addCollageAlbums', () => {
+  it('adds the albums as the assistant and tells open editors to fetch the photos again', async () => {
+    mocked.addCollageAlbums.mockResolvedValue({ albumIds: ['a1', 'a2'], revision: 3 });
+    const res = mockRes();
+
+    await addCollageAlbums(
+      baseReq({ params: { id: 'c1' }, body: { add: ['a2'] }, apiKey: { label: 'Claude' } } as unknown as Partial<Request>),
+      res
+    );
+
+    expect(mocked.addCollageAlbums).toHaveBeenCalledWith('c1', ['a2'], 'user-1', [], { assistant: true });
+    expect(live.publish).toHaveBeenCalledWith('c1', 'photos', {});
+    expect(res.json).toHaveBeenCalledWith({ success: true, data: { albumIds: ['a1', 'a2'], revision: 3 } });
   });
 });

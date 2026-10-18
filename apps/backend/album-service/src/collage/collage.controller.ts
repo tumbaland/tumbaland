@@ -63,6 +63,25 @@ export const applyCollageChanges = async (req: Request, res: Response): Promise<
 };
 
 /**
+ * POST /api/collages/:id/albums
+ *
+ * Add albums to the ones a collage takes its photos from.
+ */
+export const addCollageAlbums = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const { id } = req.params as { id: string };
+  const { add } = req.body as { add: string[] };
+
+  const result = await collageService.addCollageAlbums(id, add, user.id, req.userGroups || [], {
+    assistant: Boolean(req.apiKey)
+  });
+  // An open editor fetches the collage's photos again on this, so the new
+  // albums show up in its tray.
+  live.publish(id, 'photos', {});
+  res.json({ success: true, data: result });
+};
+
+/**
  * GET /api/collages/:id/live?session=...
  *
  * A Server-Sent Events stream of what the other people with this collage open

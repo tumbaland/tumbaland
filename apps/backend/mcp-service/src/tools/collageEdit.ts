@@ -46,6 +46,10 @@ interface TextStyle {
   shadow?: boolean;
 }
 
+/** A box tall enough for every line of a text at its size. */
+const fittedHeight = (text: string, size: number): number =>
+  Math.round(text.split('\n').length * size * TEXT_LINE_HEIGHT + size * 0.4);
+
 export type EditOp =
   | ({ op: 'place_photo'; photo: string; fit?: 'fill' | 'whole'; focus?: CropFocus; frame?: boolean; caption?: string } & Box)
   | ({
@@ -136,7 +140,10 @@ export function planChanges(start: CollageDoc, ops: EditOp[], photos: Map<string
   const photoIdOf = (ref: string): string =>
     photos.has(ref)
       ? ref
-      : fail(`Photo ${ref} is not in this collage's albums. Use view_photos to see the photos it can use, and their ids.`);
+      : fail(
+          `Photo ${ref} is not in this collage's albums. Add its album with an add_albums edit, ` +
+            'or use view_photos to see the photos it can use, and their ids.'
+        );
 
   let doc: CollageDoc = { ...start, photos: start.photos.slice(), texts: start.texts.slice() };
   const changes: CollageChange[] = [];
@@ -201,9 +208,17 @@ export function planChanges(start: CollageDoc, ops: EditOp[], photos: Map<string
         }
         const text = findText(id);
         if (!text) return fail(`${op.item} was removed earlier in this batch.`);
+        // New words or a new size keep the box's top and width but not its
+        // height, which was measured for the old text: a second line would
+        // otherwise spill out of it and over whatever sits below.
+        const refit =
+          !text.kind && op.height === undefined && (op.text !== undefined || op.size !== undefined)
+            ? { height: fittedHeight(op.text ?? text.text, op.size ?? text.fontSize) }
+            : {};
         putText({
           ...text,
           ...box,
+          ...refit,
           ...defined({ text: op.text, shape: op.shape !== undefined ? shapeOf(op.shape) : undefined }),
           ...styleOf(op)
         });
@@ -232,7 +247,7 @@ export function planChanges(start: CollageDoc, ops: EditOp[], photos: Map<string
           // A box the text fits, when none was given: wide enough for its
           // longest line at an average character width, tall enough for its lines.
           width: op.width ?? Math.min(doc.canvas.width, Math.round(longest * size * 0.6 + size)),
-          height: op.height ?? Math.round(lines.length * size * TEXT_LINE_HEIGHT + size * 0.4),
+          height: op.height ?? fittedHeight(op.text, size),
           fontSize: size,
           color: op.color ?? DEFAULT_TEXT_COLOR,
           ...(op.rotation ? { rotation: op.rotation } : {}),
