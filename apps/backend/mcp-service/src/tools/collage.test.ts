@@ -15,10 +15,19 @@ jest.mock('../album', () => ({
 
 jest.mock('../collage', () => ({
   ...jest.requireActual('../collage'),
-  collages: { list: jest.fn(), get: jest.fn(), preview: jest.fn(), sheet: jest.fn(), create: jest.fn(), change: jest.fn() }
+  collages: {
+    list: jest.fn(),
+    get: jest.fn(),
+    preview: jest.fn(),
+    sheet: jest.fn(),
+    create: jest.fn(),
+    change: jest.fn(),
+    addAlbums: jest.fn()
+  }
 }));
 
 import request from 'supertest';
+import { TEXT_LINE_HEIGHT } from '@tumbaland/collage-core';
 import { verifyApiKey } from '@tumbaland/backend-core';
 import fixtures from '../__fixtures__/album-api.json';
 import { album } from '../album';
@@ -31,6 +40,7 @@ const api = collages as jest.Mocked<typeof collages>;
 const app = createApp();
 const KEY = 'tmb_live_abcdef123456_aaaaaaaaaaaaaaaaaaaaaaaa';
 const FINLAND = '685a7b72414b3995b5f1f872';
+const TARTU = '685a9943d1beadd96f037d6b';
 
 interface Part {
   type: string;
@@ -195,6 +205,68 @@ describe('create_collage', () => {
   });
 });
 
+describe('a collage over several albums', () => {
+  it('makes one that draws on every album named, each once', async () => {
+    api.create.mockResolvedValue({ ...ours, title: '1000 days' } as never);
+
+    const { text } = await callTool('create_collage', {
+      title: '1000 days',
+      albumName: 'Finland',
+      alsoFrom: ['Tartu', 'Finland 2025']
+    });
+
+    const [, input] = api.create.mock.calls[0]!;
+    expect(input.albumIds).toEqual([FINLAND, TARTU]);
+    expect(text).toContain('drawing on Finland 2025 (16 photos), Tartu 2024 (35 photos)');
+    expect(text).toContain('Next: view_photos on Finland 2025, Tartu 2024');
+  });
+
+  it('adds an album and places a photo from it in the same batch', async () => {
+    const tartuPhoto = { _id: 'ph3', filename: 'f3', originalName: 'castle.jpg', mimetype: 'image/jpeg', width: 400, height: 300, tags: [] };
+    let added = false;
+    api.addAlbums.mockImplementation(async () => {
+      added = true;
+      return { albumIds: [FINLAND, TARTU], revision: 3 };
+    });
+    api.get.mockImplementation(
+      async () => ({ collage: added ? { ...ours, albumIds: [FINLAND, TARTU] } : ours, photos: added ? [...photos, tartuPhoto] : photos }) as never
+    );
+
+    const { isError, text } = await callTool('update_collage', {
+      collage: 'Saaremaa',
+      changes: [
+        { op: 'place_photo', photo: 'ph3', x: 0, y: 0, width: 400, height: 300 },
+        { op: 'add_albums', albums: ['Tartu'] }
+      ]
+    });
+
+    expect(isError).toBe(false);
+    expect(api.addAlbums).toHaveBeenCalledWith(KEY, ours._id, [TARTU]);
+    const [, , changes] = api.change.mock.calls[0]!;
+    expect(changes[0]).toMatchObject({ type: 'put', layer: 'photos', item: { photoId: 'ph3' } });
+    expect(text).toContain('Done: added Tartu 2024 (35 photos); placed castle.jpg as p2.');
+  });
+
+  it('sends no changes when the batch only adds albums', async () => {
+    api.addAlbums.mockResolvedValue({ albumIds: [FINLAND, TARTU], revision: 3 });
+
+    const { text } = await callTool('update_collage', { collage: 'Saaremaa', changes: [{ op: 'add_albums', albums: ['Tartu'] }] });
+
+    expect(api.change).not.toHaveBeenCalled();
+    expect(text).toContain('Done: added Tartu 2024 (35 photos).');
+  });
+
+  it('points at add_albums when a photo is from an album the collage does not use', async () => {
+    const { isError, text } = await callTool('update_collage', {
+      collage: 'Saaremaa',
+      changes: [{ op: 'place_photo', photo: 'elsewhere', x: 0, y: 0, width: 10, height: 10 }]
+    });
+
+    expect(isError).toBe(true);
+    expect(text).toContain('add_albums');
+  });
+});
+
 describe('update_collage', () => {
   it('applies the edits to a collage it made, and answers with how it is now', async () => {
     const { text, images } = await callTool('update_collage', {
@@ -212,6 +284,24 @@ describe('update_collage', () => {
     expect(text).toContain('Done: changed t1; placed harbour.jpg as p2.');
     expect(text).toContain('"Saaremaa"');
     expect(images).toHaveLength(0);
+  });
+
+  it('makes a text’s box tall enough for its new lines', async () => {
+    await callTool('update_collage', { collage: 'Saaremaa', changes: [{ op: 'edit', item: 't1', text: 'Saaremaa\n2025' }] });
+
+    const [, , changes] = api.change.mock.calls[0]!;
+    // Two lines at the text's 64: the old box was measured for one.
+    expect(changes[0]).toMatchObject({ type: 'put', layer: 'texts', item: { height: Math.round(2 * 64 * TEXT_LINE_HEIGHT + 64 * 0.4) } });
+  });
+
+  it('keeps a height it was given', async () => {
+    await callTool('update_collage', {
+      collage: 'Saaremaa',
+      changes: [{ op: 'edit', item: 't1', text: 'Saaremaa\n2025', height: 300 }]
+    });
+
+    const [, , changes] = api.change.mock.calls[0]!;
+    expect(changes[0]).toMatchObject({ item: { height: 300 } });
   });
 
   it('attaches a picture when asked to look', async () => {

@@ -2,14 +2,22 @@ import { Router } from 'express';
 import { authenticateAgent, authenticateToken, requireScope, validate } from '@tumbaland/backend-core';
 import * as collageController from './collage.controller';
 import { getCollagePreview } from './preview/preview.controller';
-import { createCollageSchema, updateCollageSchema } from '../validation/schemas';
+import { collageAlbumsSchema, createCollageSchema, updateCollageSchema } from '../validation/schemas';
 
 const router = Router();
 
-// A connected assistant can list, read, look at and make collages. Changing
-// one goes through the changes route (collageLiveRoutes), where it is held to
-// the collages it made.
+// A connected assistant can list, read, look at and make collages, and add
+// albums to one it made. Changing one goes through the changes route
+// (collageLiveRoutes), where it is held to the collages it made.
 router.post('/', authenticateAgent(), requireScope('album:write'), validate(createCollageSchema), collageController.createCollage);
+// Held to the collages an assistant made, like the changes route.
+router.post(
+  '/:id/albums',
+  authenticateAgent(),
+  requireScope('album:write'),
+  validate(collageAlbumsSchema),
+  collageController.addCollageAlbums
+);
 router.get('/:id/preview', authenticateAgent(), requireScope('album:read'), getCollagePreview);
 router.get('/:id', authenticateAgent(), requireScope('album:read'), collageController.getCollageById);
 // GET /collages?albumId=... to filter by album

@@ -132,6 +132,14 @@ export const updateCollageSchema = z.object({
   groupId: z.string().optional()
 });
 
+/** Albums to add to a collage, so it can use their photos too. */
+export const collageAlbumsSchema = z.object({
+  add: z
+    .array(z.string().regex(/^[a-f0-9]{24}$/i, 'not an album id'))
+    .min(1)
+    .max(50)
+});
+
 const collageLayer = z.enum(['photos', 'texts']);
 const collageItemId = z.string().min(1).max(100);
 

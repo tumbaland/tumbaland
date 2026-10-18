@@ -64,6 +64,15 @@ async function albumNames(caller: Caller, collage: Collage, groupId?: string): P
   return collage.albumIds.map((id) => albums.find((entry) => entry._id === id)?.name).filter((name): name is string => !!name);
 }
 
+type AlbumEntry = ReturnType<typeof resolveAlbum>;
+
+/** Each album once, in the order first named. */
+const uniqueAlbums = (list: AlbumEntry[]): AlbumEntry[] =>
+  list.filter((entry, index) => list.findIndex((other) => other._id === entry._id) === index);
+
+const describeSources = (sources: AlbumEntry[]): string =>
+  sources.map((entry) => `${entry.name} (${entry.photoCount} photos)`).join(', ');
+
 const describe = async (caller: Caller, loaded: Loaded) =>
   describeCollage(loaded.collage, loaded.doc, loaded.photos, await albumNames(caller, loaded.collage, loaded.groupId));
 
@@ -153,6 +162,14 @@ const editSchema = z.discriminatedUnion('op', [
     outline: z.string().max(40).optional(),
     shadow: z.boolean().optional(),
     rotation
+  }),
+  z.object({
+    op: z.literal('add_albums'),
+    albums: z
+      .array(z.string())
+      .min(1)
+      .max(20)
+      .describe('Albums, by name, whose photos this collage may also use. Applied before the rest of the batch')
   }),
   z.object({ op: z.literal('to_front'), items: z.array(z.string()).min(1) }),
   z.object({ op: z.literal('to_back'), items: z.array(z.string()).min(1) }),
@@ -318,9 +335,10 @@ export const COLLAGE_LAYOUT_RULES = [
 
 const MAKE_COLLAGE_STEPS = [
   '1. If there is a collage to follow, read it with get_collage and look at it with view_collage.',
-  '2. Look through the album with view_photos, every page. Choose photos that fit the layout:',
+  '2. Look through the albums with view_photos, every page. Choose photos that fit the layout:',
   '   the best of each moment, a mix of moments, no two alike, people’s faces whole.',
-  '3. create_collage, with `like` naming the collage to follow.',
+  '3. create_collage, with `like` naming the collage to follow. A collage that spans more than',
+  '   one album (a year, an anniversary) names the others in `alsoFrom`.',
   '4. update_collage with a place_photo for each photo (with its caption), plus the title,',
   '   and view: true. Follow the layout rules below.',
   '5. Look at the picture and the list of what looks wrong. Fix what is off with another',
@@ -337,21 +355,28 @@ function registerWriteTools(server: McpServer, caller: Caller): void {
     {
       title: 'Make a collage',
       description:
-        'Make a new, empty collage drawing on one album. With `like`, it takes the size, colours ' +
+        'Make a new, empty collage drawing on one album, or several with `alsoFrom`. With `like`, it takes the size, colours ' +
         'and frames of an existing collage, and answers with that collage’s layout to follow. ' +
         'Then place photos with update_collage. The steps:\n' +
         MAKE_COLLAGE_STEPS,
       inputSchema: {
         title: z.string().min(1).max(200),
         albumName: z.string().describe('The album its photos come from'),
+        alsoFrom: z
+          .array(z.string())
+          .max(20)
+          .optional()
+          .describe('More albums it may use photos from, by name, e.g. every monthly album of a year'),
         like: z.string().optional().describe('An existing collage to follow, by title'),
         ...journalSchema(caller)
       }
     },
-    async ({ title, albumName, like, journal }) => {
+    async ({ title, albumName, alsoFrom, like, journal }) => {
       try {
         const groupId = tenantFor(caller, journal);
-        const source = resolveAlbum((await album.listAlbums(caller.token, { groupId, limit: 100 })).albums, albumName);
+        const { albums } = await album.listAlbums(caller.token, { groupId, limit: 100 });
+        const source = resolveAlbum(albums, albumName);
+        const sources = uniqueAlbums([source, ...(alsoFrom ?? []).map((name) => resolveAlbum(albums, name))]);
         const reference = like ? await load(caller, like, journal) : undefined;
 
         const blank = normalizeCollageConfig(null);
@@ -360,17 +385,23 @@ function registerWriteTools(server: McpServer, caller: Caller): void {
           ...serializeCollageDoc({ ...settings, photos: [], texts: [] }),
           title: { text: title, subtitle: '' }
         };
-        const made = await collages.create(caller.token, { title, albumIds: [source._id], config, groupId });
+        const made = await collages.create(caller.token, {
+          title,
+          albumIds: sources.map((entry) => entry._id),
+          config,
+          groupId
+        });
 
         const lines = [
-          `Made "${made.title}" (id ${made._id}), empty, drawing on ${source.name} (${source.photoCount} photos): ` +
+          `Made "${made.title}" (id ${made._id}), empty, drawing on ${describeSources(sources)}: ` +
             `${describeSettings(settings)}.`
         ];
         if (reference) {
           lines.push('', `"${reference.collage.title}" is laid out like this; follow it with your own photos:`);
           lines.push(...describeLayout(reference.doc, reference.photos));
         }
-        lines.push('', `Next: view_photos on ${source.name}, then update_collage with a place_photo for each photo.`);
+        const names = sources.map((entry) => entry.name).join(', ');
+        lines.push('', `Next: view_photos on ${names}, then update_collage with a place_photo for each photo.`);
         return ok(lines.join('\n'));
       } catch (error) {
         return explain(error);
@@ -387,6 +418,7 @@ function registerWriteTools(server: McpServer, caller: Caller): void {
         'turn, crop or swap them, add or change texts, stickers and shapes, restack, change ' +
         'the colours. Items are named as get_collage names them (p1, t2), as they were before ' +
         'this batch. Positions and sizes are in canvas units, from the top-left corner. ' +
+        'add_albums lets it use photos from more albums, and the same batch can place them. ' +
         'Answers with the collage as it now is and what looks wrong; set view to also get a ' +
         'picture of it. Collages people made cannot be changed: make a new one like it.',
       inputSchema: {
@@ -408,13 +440,30 @@ function registerWriteTools(server: McpServer, caller: Caller): void {
           );
         }
 
-        const plan = planChanges(loaded.doc, changes as EditOp[], loaded.photos);
-        await collages.change(caller.token, loaded.collage._id, plan.changes);
+        // Albums first, so a photo from one of them can be placed in the same
+        // batch: the photos the rest is checked against are read again after.
+        const albumNamesToAdd = changes.flatMap((change) => (change.op === 'add_albums' ? change.albums : []));
+        const edits = changes.filter((change) => change.op !== 'add_albums') as EditOp[];
+        const done: string[] = [];
+        let current = loaded;
+        if (albumNamesToAdd.length > 0) {
+          const { albums } = await album.listAlbums(caller.token, { groupId: loaded.groupId, limit: 100 });
+          const adding = uniqueAlbums(albumNamesToAdd.map((name) => resolveAlbum(albums, name)));
+          await collages.addAlbums(caller.token, loaded.collage._id, adding.map((entry) => entry._id));
+          done.push(`added ${describeSources(adding)}`);
+          current = await fetchCollage(caller, loaded.collage._id, loaded.groupId);
+        }
+
+        if (edits.length > 0) {
+          const plan = planChanges(current.doc, edits, current.photos);
+          await collages.change(caller.token, current.collage._id, plan.changes);
+          done.push(...plan.done);
+        }
 
         // Read back rather than trusting the plan: someone in the editor may
         // have changed other items at the same moment, and both landed.
         const now = await fetchCollage(caller, loaded.collage._id, loaded.groupId);
-        const summary = `Done: ${plan.done.join('; ')}.\n\n${await describe(caller, now)}`;
+        const summary = `Done: ${done.join('; ')}.\n\n${await describe(caller, now)}`;
         if (!view) return ok(summary);
 
         const picture = await collages.preview(caller.token, now.collage._id, { outline: true });

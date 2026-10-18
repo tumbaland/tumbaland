@@ -145,7 +145,11 @@ export const collages = {
   },
 
   change: (apiKey: string, id: string, changes: CollageChange[]): Promise<{ revision: number }> =>
-    call<{ revision: number }>(apiKey, 'POST', `/collages/${id}/changes`, { changes })
+    call<{ revision: number }>(apiKey, 'POST', `/collages/${id}/changes`, { changes }),
+
+  /** Let the collage use the photos of more albums, from the same journal. */
+  addAlbums: (apiKey: string, id: string, albumIds: string[]): Promise<{ albumIds: string[]; revision: number }> =>
+    call<{ albumIds: string[]; revision: number }>(apiKey, 'POST', `/collages/${id}/albums`, { add: albumIds })
 };
 
 const OBJECT_ID = /^[a-f0-9]{24}$/i;

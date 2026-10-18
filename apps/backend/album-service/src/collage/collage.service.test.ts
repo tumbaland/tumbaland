@@ -10,13 +10,14 @@ jest.mock('./collage.model', () => {
   return { CollageModel };
 });
 
-jest.mock('../models/Album', () => ({ __esModule: true, default: { aggregate: jest.fn() } }));
+jest.mock('../models/Album', () => ({ __esModule: true, default: { aggregate: jest.fn(), find: jest.fn() } }));
 jest.mock('../services/fileServiceClient', () => ({ getSignedUrlsBatch: jest.fn() }));
 
 import { CollageModel } from './collage.model';
 import Album from '../models/Album';
 import { getSignedUrlsBatch } from '../services/fileServiceClient';
 import {
+  addCollageAlbums,
   createCollage,
   updateCollage,
   getCollageById,
@@ -251,5 +252,69 @@ describe('collage.service', () => {
       expect(result.photos[0]).toMatchObject({ _id: 'p1' });
       expect(result.photos[0].signedUrl).toBeUndefined();
     });
+  });
+});
+
+describe('addCollageAlbums', () => {
+  const GROUP = 'group-1';
+  const ALBUM_A = 'a'.repeat(24);
+  const ALBUM_B = 'b'.repeat(24);
+  const mockedAlbumFind = Album.find as unknown as jest.Mock;
+
+  const collageIs = (collage: Record<string, unknown> | null) =>
+    mockedFindById.mockReturnValue({ select: () => ({ lean: () => Promise.resolve(collage) }) });
+  const albumsAre = (albums: Array<Record<string, unknown>>) =>
+    mockedAlbumFind.mockReturnValue({ select: () => ({ lean: () => Promise.resolve(albums) }) });
+  const storedAs = (stored: Record<string, unknown>) =>
+    mockedFindByIdAndUpdate.mockReturnValue({ lean: () => Promise.resolve(stored) });
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('adds albums from the same group to a group collage', async () => {
+    collageIs({ userId: OWNER, groupId: GROUP, madeBy: { kind: 'assistant' } });
+    albumsAre([
+      { _id: ALBUM_A, name: 'Months 25', userId: OTHER, groupId: GROUP },
+      { _id: ALBUM_B, name: 'Rome', userId: OWNER, groupId: GROUP }
+    ]);
+    storedAs({ albumIds: ['first', ALBUM_A, ALBUM_B], revision: 4 });
+
+    const result = await addCollageAlbums('c1', [ALBUM_A, ALBUM_B, ALBUM_A], OWNER, [GROUP], { assistant: true });
+
+    expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith(
+      'c1',
+      { $addToSet: { albumIds: { $each: [ALBUM_A, ALBUM_B] } }, $inc: { revision: 1 } },
+      expect.anything()
+    );
+    expect(result).toEqual({ albumIds: ['first', ALBUM_A, ALBUM_B], revision: 4 });
+  });
+
+  it('refuses a personal album on a group collage, which would lock the other person out of it', async () => {
+    collageIs({ userId: OWNER, groupId: GROUP, madeBy: { kind: 'assistant' } });
+    albumsAre([{ _id: ALBUM_A, name: 'Mine', userId: OWNER }]);
+
+    await expect(addCollageAlbums('c1', [ALBUM_A], OWNER, [GROUP])).rejects.toThrow('different journal');
+    expect(mockedFindByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('answers an album the caller cannot reach as not found', async () => {
+    collageIs({ userId: OWNER, groupId: GROUP, madeBy: { kind: 'assistant' } });
+    albumsAre([{ _id: ALBUM_A, name: 'Theirs', userId: OTHER, groupId: 'group-2' }]);
+
+    await expect(addCollageAlbums('c1', [ALBUM_A], OWNER, [GROUP])).rejects.toThrow('Album not found');
+  });
+
+  it('holds an assistant to the collages it made', async () => {
+    collageIs({ userId: OWNER, groupId: GROUP });
+
+    await expect(addCollageAlbums('c1', [ALBUM_A], OWNER, [GROUP], { assistant: true })).rejects.toThrow(
+      'made by a person'
+    );
+    expect(mockedAlbumFind).not.toHaveBeenCalled();
+  });
+
+  it('answers a collage outside the caller’s reach as not found', async () => {
+    collageIs({ userId: OTHER, groupId: 'group-2', madeBy: { kind: 'assistant' } });
+
+    await expect(addCollageAlbums('c1', [ALBUM_A], OWNER, [GROUP])).rejects.toThrow('Collage not found');
   });
 });
