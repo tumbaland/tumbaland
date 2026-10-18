@@ -8,6 +8,8 @@ import {
   redeemRefreshToken
 } from '@tumbaland/backend-core';
 import type { ApiKeyScope } from '@tumbaland/backend-core';
+import { User } from '../models/User';
+import { effectiveName } from '../services/nameService';
 import { issuer } from '../services/oauthConsent';
 
 const tokenError = (res: Response, error: string, description: string): void => {
@@ -96,12 +98,16 @@ export const token = async (req: Request, res: Response): Promise<void> => {
       return tokenError(res, 'invalid_grant', 'The refresh token is not valid');
     }
 
+    // The refresh token carries no email, and the email is what group
+    // membership is looked up by: a token minted without one keeps the shared
+    // journal on its list but is refused in it, an hour after every sign-in.
+    const user = await User.findById(result.userId).select('email firstName lastName googleName');
+    if (!user) return tokenError(res, 'invalid_grant', 'The refresh token is not valid');
+
     const minted = mintAccessToken({
       userId: result.userId,
-      // The snapshot lives on the code, not the refresh token; the access token
-      // only needs these for display, and the id is what authorizes anything.
-      email: '',
-      name: '',
+      email: user.email,
+      name: effectiveName(user) ?? '',
       resource: result.resource!,
       issuer: issuer(),
       scopes: result.scopes ?? [],

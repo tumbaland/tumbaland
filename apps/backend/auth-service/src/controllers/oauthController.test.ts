@@ -6,6 +6,14 @@ const decodeJwt = (token: string): Record<string, unknown> =>
 
 import { Request, Response } from 'express';
 
+jest.mock('../models/User', () => ({
+  User: {
+    findById: jest.fn(() => ({
+      select: jest.fn().mockResolvedValue({ email: 'tom@example.com', firstName: 'Tom' })
+    }))
+  }
+}));
+
 jest.mock('@tumbaland/backend-core', () => {
   const actual = jest.requireActual('@tumbaland/backend-core');
   return {
@@ -39,6 +47,7 @@ import {
   authorizeDecision
 } from './oauthController';
 import { token } from './oauthTokenController';
+import { User } from '../models/User';
 import { getConnections, revokeConnection } from './oauthConnectionController';
 
 const mockedFindClient = findClient as jest.Mock;
@@ -515,6 +524,43 @@ describe('token — refresh_token', () => {
     const claims = decodeJwt((res.json as jest.Mock).mock.calls[0][0].access_token);
     expect(claims.tenants).toEqual(['personal', 'g1']);
     expect(claims.defaultTenant).toBe('g1');
+  });
+
+  it('mints the refreshed token with the user\'s email, which group access is looked up by', async () => {
+    mockedRedeemRefresh.mockResolvedValue({
+      ok: true,
+      userId: 'u1',
+      scopes: ['relationship:read'],
+      tenants: { allowed: ['personal', 'g1'], default: 'g1' },
+      tenantNames: {},
+      resource: RESOURCE,
+      rotatedToken: 'refresh-2'
+    });
+    const res = mockRes();
+
+    await token({ body: refreshBody } as Request, res);
+
+    const claims = decodeJwt((res.json as jest.Mock).mock.calls[0][0].access_token);
+    expect(claims.email).toBe('tom@example.com');
+    expect(claims.name).toBe('Tom');
+  });
+
+  it('rejects a refresh for a user who no longer exists', async () => {
+    mockedRedeemRefresh.mockResolvedValue({
+      ok: true,
+      userId: 'gone',
+      scopes: [],
+      tenants: { allowed: ['personal'], default: 'personal' },
+      tenantNames: {},
+      resource: RESOURCE,
+      rotatedToken: 'refresh-2'
+    });
+    (User.findById as jest.Mock).mockReturnValueOnce({ select: jest.fn().mockResolvedValue(null) });
+    const res = mockRes();
+
+    await token({ body: refreshBody } as Request, res);
+
+    expect((res.json as jest.Mock).mock.calls[0][0].error).toBe('invalid_grant');
   });
 
   it('rejects a refused refresh token', async () => {
