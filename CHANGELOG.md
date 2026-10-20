@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.535](https://github.com/tumbaland/tumbaland/compare/app-v0.0.534...app-v0.0.535) (2026-10-20)
+
+### Features
+
+* **mcp:** let assistants create albums and upload pictures ([#81](https://github.com/tumbaland/tumbaland/issues/81)) ([d19d254](https://github.com/tumbaland/tumbaland/commit/d19d2540604ed2aff446316a079f32fb67d188ef))
+
 ## [0.0.534](https://github.com/tumbaland/tumbaland/compare/app-v0.0.533...app-v0.0.534) (2026-10-18)
 
 ### Features
