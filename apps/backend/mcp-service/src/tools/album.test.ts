@@ -19,7 +19,10 @@ jest.mock('../album', () => {
       albumTags: jest.fn(),
       tagPhotos: jest.fn(),
       describePhoto: jest.fn(),
-      getStatistics: jest.fn()
+      getStatistics: jest.fn(),
+      createAlbum: jest.fn(),
+      uploadUrl: jest.fn(),
+      createPhoto: jest.fn()
     }
   };
 });
@@ -199,6 +202,105 @@ describe('describe_photo', () => {
     const { text } = await callTool('describe_photo', { id: 'p1' });
     expect(text).toContain('Give a title or a description');
     expect(api.describePhoto).not.toHaveBeenCalled();
+  });
+});
+
+describe('create_album', () => {
+  it('makes the album in the journal the call acts in', async () => {
+    api.createAlbum.mockResolvedValue({ _id: 'a9', name: '1000 days in numbers', photoCount: 0, totalSize: 0 });
+
+    const { text } = await callTool('create_album', { name: '1000 days in numbers' });
+
+    expect(api.createAlbum).toHaveBeenCalledWith(KEY, {
+      name: '1000 days in numbers',
+      description: undefined,
+      groupId: 'personal'
+    });
+    expect(text).toContain('Made the album "1000 days in numbers"');
+  });
+
+  it('uses an album that already has the name rather than making a second', async () => {
+    const { text } = await callTool('create_album', { name: 'finland 2025' });
+
+    expect(text).toContain('already an album called "Finland 2025"');
+    expect(api.createAlbum).not.toHaveBeenCalled();
+  });
+});
+
+describe('start_photo_upload', () => {
+  it('hands back the link and what to pass to finish_photo_upload', async () => {
+    api.uploadUrl.mockResolvedValue({
+      uploadUrl: 'https://files.example/files/upload/u1/a1/chart.png?token=t',
+      minioFileId: 'u1/a1/chart.png',
+      expiresInMinutes: 15
+    });
+
+    const { text } = await callTool('start_photo_upload', {
+      albumName: 'Finland',
+      filename: 'chart.png',
+      contentType: 'image/png',
+      sizeBytes: 12345
+    });
+
+    const albumId = fixtures.albums.albums[0]._id;
+    expect(api.uploadUrl).toHaveBeenCalledWith(KEY, {
+      albumId,
+      filename: 'chart.png',
+      mimetype: 'image/png',
+      sizeBytes: 12345
+    });
+    expect(text).toContain("curl --fail -X PUT -H 'Content-Type: image/png'");
+    expect(text).toContain("'https://files.example/files/upload/u1/a1/chart.png?token=t'");
+    expect(text).toContain('uploadId "u1/a1/chart.png"');
+  });
+
+  it('refuses anything that is not a picture', async () => {
+    const { isError } = await callTool('start_photo_upload', {
+      albumName: 'Finland',
+      filename: 'notes.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 10
+    });
+
+    expect(isError).toBe(true);
+    expect(api.uploadUrl).not.toHaveBeenCalled();
+  });
+});
+
+describe('finish_photo_upload', () => {
+  it('records the uploaded file as a photo in the album', async () => {
+    api.createPhoto.mockResolvedValue({
+      _id: 'p9',
+      originalName: 'chart.png',
+      title: 'Hours together',
+      tags: [],
+      size: 12345
+    });
+
+    const { text } = await callTool('finish_photo_upload', {
+      albumName: 'Finland 2025',
+      uploadId: 'u1/a1/chart.png',
+      filename: 'chart.png',
+      contentType: 'image/png',
+      sizeBytes: 12345,
+      width: 2000,
+      height: 1250,
+      title: 'Hours together'
+    });
+
+    expect(api.createPhoto).toHaveBeenCalledWith(KEY, {
+      albumId: fixtures.albums.albums[0]._id,
+      minioFileId: 'u1/a1/chart.png',
+      filename: 'chart.png',
+      originalName: 'chart.png',
+      mimetype: 'image/png',
+      size: 12345,
+      width: 2000,
+      height: 1250,
+      title: 'Hours together',
+      description: undefined
+    });
+    expect(text).toBe('Added Hours together to Finland 2025  [photo p9]');
   });
 });
 
