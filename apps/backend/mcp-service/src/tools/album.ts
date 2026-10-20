@@ -15,9 +15,11 @@ import { Caller, ToolModule, explain, journalSchema, ok, tenantFor } from './mod
  * searched.
  *
  * What can be answered is where a photo lives, when it was taken, and what it
- * is called. The one write that earns its place follows from the same fact:
+ * is called. The first write that earns its place follows from the same fact:
  * tags are unused, so helping put them there is the most useful thing an
- * assistant can do with this library.
+ * assistant can do with this library. The other is adding pictures an
+ * assistant made, such as charts, which go up through a signed link as the
+ * app's own uploads do.
  */
 
 const megabytes = (bytes: number): string =>
@@ -34,6 +36,9 @@ const describePhoto = (photo: Photo): string => {
   const tags = photo.tags.length > 0 ? ` [${photo.tags.join(', ')}]` : '';
   return `-${taken} ${name}${tags}  [id ${photo._id}]`;
 };
+
+/** What start_photo_upload takes: pictures the album makes thumbnails of. */
+const UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
 
 /** Albums in the acting tenant, for both listing and name resolution. */
 const albumsFor = (caller: Caller, journal?: string) => {
@@ -235,6 +240,129 @@ function registerWriteTools(server: McpServer, caller: Caller): void {
 
         await album.describePhoto(apiKey, id, { title, description });
         return ok(`Updated ${title ? `"${title}"` : 'the photo'}.`);
+      } catch (error) {
+        return explain(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'create_album',
+    {
+      title: 'Create an album',
+      description:
+        'Make a new, empty album, for pictures you are about to upload with start_photo_upload. ' +
+        'If an album by that name already exists, that one is used instead of a second.',
+      inputSchema: {
+        name: z.string().trim().min(1).max(100).describe('What to call it, e.g. "1000 days in numbers"'),
+        description: z.string().max(500).optional().describe('What is in it'),
+        ...journalSchema(caller)
+      }
+    },
+    async ({ name, description, journal }) => {
+      try {
+        const { groupId, load } = albumsFor(caller, journal);
+        const existing = (await load()).albums.find((entry) => entry.name.toLowerCase() === name.toLowerCase());
+        if (existing) {
+          return ok(`There is already an album called "${existing.name}", so use that one.`);
+        }
+
+        const created = await album.createAlbum(apiKey, { name, description, groupId });
+        return ok(`Made the album "${created.name}". It is empty; add pictures with start_photo_upload.`);
+      } catch (error) {
+        return explain(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'start_photo_upload',
+    {
+      title: 'Start uploading a picture',
+      description:
+        'Get a link to upload one picture into an album. The bytes do not go through this tool: ' +
+        'PUT the file to the link it gives (it shows the curl command), then call ' +
+        'finish_photo_upload so the picture shows in the album. The link lasts 15 minutes and ' +
+        'takes one file, no bigger than the size given here. Only for a file you have on disk, ' +
+        'such as a chart you made or a picture the user gave you.',
+      inputSchema: {
+        albumName: z.string().describe('The album to add it to, by name'),
+        filename: z.string().trim().min(1).max(200).describe('The file’s name, e.g. "hours-by-month.png"'),
+        contentType: z.enum(UPLOAD_TYPES).describe('What kind of picture it is'),
+        sizeBytes: z
+          .number()
+          .int()
+          .positive()
+          .max(95 * 1024 * 1024)
+          .describe('The file’s exact size in bytes'),
+        ...journalSchema(caller)
+      }
+    },
+    async ({ albumName, filename, contentType, sizeBytes, journal }) => {
+      try {
+        const { load } = albumsFor(caller, journal);
+        const target = resolveAlbum((await load()).albums, albumName);
+        const upload = await album.uploadUrl(apiKey, {
+          albumId: target._id,
+          filename,
+          mimetype: contentType,
+          sizeBytes
+        });
+
+        return ok(
+          [
+            `Upload ${filename} into ${target.name} within ${upload.expiresInMinutes} minutes:`,
+            '',
+            `curl --fail -X PUT -H 'Content-Type: ${contentType}' --data-binary @<path to ${filename}> '${upload.uploadUrl}'`,
+            '',
+            `Then call finish_photo_upload with albumName "${target.name}", uploadId "${upload.minioFileId}", ` +
+              `filename "${filename}", contentType "${contentType}" and sizeBytes ${sizeBytes}.`
+          ].join('\n')
+        );
+      } catch (error) {
+        return explain(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'finish_photo_upload',
+    {
+      title: 'Finish uploading a picture',
+      description:
+        'After the file has been PUT to the link from start_photo_upload, add it to the album ' +
+        'so it shows there and can be used in collages. Pass what start_photo_upload gave back.',
+      inputSchema: {
+        albumName: z.string().describe('The same album as start_photo_upload'),
+        uploadId: z.string().min(1).describe('The uploadId start_photo_upload gave'),
+        filename: z.string().trim().min(1).max(200).describe('The same filename'),
+        contentType: z.enum(UPLOAD_TYPES).describe('The same kind of picture'),
+        sizeBytes: z.number().int().positive().describe('The same size in bytes'),
+        width: z.number().int().positive().optional().describe('Width in pixels, if known'),
+        height: z.number().int().positive().optional().describe('Height in pixels, if known'),
+        title: z.string().max(200).optional().describe('A short name for it, shown instead of the filename'),
+        description: z.string().max(1000).optional().describe('Anything worth remembering about it'),
+        ...journalSchema(caller)
+      }
+    },
+    async ({ albumName, uploadId, filename, contentType, sizeBytes, width, height, title, description, journal }) => {
+      try {
+        const { load } = albumsFor(caller, journal);
+        const target = resolveAlbum((await load()).albums, albumName);
+        const photo = await album.createPhoto(apiKey, {
+          albumId: target._id,
+          minioFileId: uploadId,
+          filename,
+          originalName: filename,
+          mimetype: contentType,
+          size: sizeBytes,
+          width,
+          height,
+          title,
+          description
+        });
+
+        return ok(`Added ${photo.title || photo.originalName} to ${target.name}  [photo ${photo._id}]`);
       } catch (error) {
         return explain(error);
       }

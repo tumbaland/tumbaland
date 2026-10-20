@@ -98,6 +98,14 @@ export const memoriesSchema = z
   })
   .loose();
 
+export const uploadUrlSchema = z
+  .object({
+    uploadUrl: z.string(),
+    minioFileId: z.string(),
+    expiresInMinutes: z.number().catch(15)
+  })
+  .loose();
+
 export type Album = z.infer<typeof albumSchema>;
 export type Photo = z.infer<typeof photoSchema>;
 export type Memories = z.infer<typeof memoriesSchema>;
@@ -150,7 +158,51 @@ export const album = {
   ): Promise<unknown> => call(apiKey, 'PUT', `/photos/${id}`, fields),
 
   getStatistics: (apiKey: string, groupId?: string): Promise<unknown> =>
-    call(apiKey, 'GET', '/statistics', undefined, { groupId })
+    call(apiKey, 'GET', '/statistics', undefined, { groupId }),
+
+  createAlbum: async (
+    apiKey: string,
+    fields: { name: string; description?: string; groupId: string }
+  ): Promise<Album> => {
+    const body = await call<unknown>(apiKey, 'POST', '/albums', fields);
+    return parseResponse(albumSchema, '/albums', body);
+  },
+
+  /**
+   * A signed link to PUT one file's bytes to, straight into storage.
+   *
+   * The same two steps the app's upload takes. The bytes never pass through
+   * this server or the model: a picture as base64 in a tool call costs tens of
+   * thousands of tokens and is capped by whatever the client allows, while a
+   * link lets the client send the file the way a browser does.
+   */
+  uploadUrl: async (
+    apiKey: string,
+    fields: { albumId: string; filename: string; mimetype: string; sizeBytes: number }
+  ) => {
+    const body = await call<unknown>(apiKey, 'POST', '/photos/upload-url', fields);
+    return parseResponse(uploadUrlSchema, '/photos/upload-url', body);
+  },
+
+  /** Record a file already PUT to its upload link as a photo in the album. */
+  createPhoto: async (
+    apiKey: string,
+    fields: {
+      albumId: string;
+      minioFileId: string;
+      filename: string;
+      originalName: string;
+      mimetype: string;
+      size: number;
+      width?: number;
+      height?: number;
+      title?: string;
+      description?: string;
+    }
+  ): Promise<Photo> => {
+    const body = await call<unknown>(apiKey, 'POST', '/photos', fields);
+    return parseResponse(photoSchema, '/photos', body);
+  }
 };
 
 /**
