@@ -60,6 +60,12 @@ describe('a whole photo', () => {
     expect(whole!.args).toEqual(['img', 0, 0, 800, 600, -200, -150, 400, 300]);
   });
 
+  it('blurs by the same share of the box when the drawing is scaled down', () => {
+    const ctx = Object.assign(recordingContext(), { getTransform: () => ({ a: 0.5, b: 0 }) });
+    renderScene(ctx, doc({ photos: [photo({ width: 400, height: 400, fit: 'contain' })] }), () => picture);
+    expect(named(ctx.calls, 'drawImage')[0]!.filter).toBe(`blur(${wholePhotoBlur(400, 400) / 2}px)`);
+  });
+
   it('shows all of it even when it has a crop', () => {
     const ctx = recordingContext();
     renderScene(

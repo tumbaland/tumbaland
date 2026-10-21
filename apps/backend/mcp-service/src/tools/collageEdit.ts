@@ -211,6 +211,7 @@ export function planChanges(start: CollageDoc, ops: EditOp[], photos: Map<string
       return { ...item, fit: 'contain', crop: undefined };
     }
     if (fit === 'whole') {
+      if (crop !== undefined) fail('A photo fitted whole shows all of it, so it takes no crop.');
       // Keep the width and the top-left corner; the height follows the picture.
       const inset = photoHasFrame(doc, item) ? FRAME_PADDING * 2 : 0;
       const aspect = shownAspect(aspectOf(item.photoId, 'be fitted whole'), item);

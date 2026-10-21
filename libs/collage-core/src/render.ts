@@ -78,7 +78,12 @@ export const drawContain = (ctx: Canvas2D, frame: Frame, x: number, y: number, w
   ctx.rect(x, y, w, h);
   ctx.clip();
   const blur = wholePhotoBlur(w, h);
-  ctx.filter = `blur(${blur}px)`;
+  // A filter's blur is in device pixels, whatever the transform: scale it the
+  // way the drawing is scaled, so a preview or an export at any size blurs the
+  // same share of the box as the editor does.
+  const transform = ctx.getTransform?.();
+  const pixels = transform ? Math.hypot(transform.a, transform.b) : 1;
+  ctx.filter = `blur(${Math.round(blur * pixels * 100) / 100}px)`;
   // Drawn a little past the box, so the blur does not fade in from its edges.
   drawCover(ctx, frame, x - blur, y - blur, w + blur * 2, h + blur * 2);
   ctx.filter = 'none';

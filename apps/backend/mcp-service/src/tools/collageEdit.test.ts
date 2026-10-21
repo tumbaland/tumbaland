@@ -169,6 +169,10 @@ describe('editing what is there', () => {
     expect(result.changes[0]).toMatchObject({ item: { width: 800, height: 1067 } });
   });
 
+  it('refuses a crop on a photo fitted whole', () => {
+    expect(() => plan([{ op: 'edit', item: 'p1', fit: 'whole', crop: { x: 0, y: 0, width: 0.5, height: 0.5 } }])).toThrow(/takes no crop/);
+  });
+
   it('places a photo shown whole', () => {
     const result = plan([{ op: 'place_photo', photo: 'ph3', x: 0, y: 0, width: 300, height: 300, fit: 'inside' }]);
     expect(result.changes[0]).toMatchObject({ item: { photoId: 'ph3', fit: 'contain' } });
