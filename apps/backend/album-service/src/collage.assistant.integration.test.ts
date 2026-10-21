@@ -289,6 +289,31 @@ describe('looking at collages and albums', () => {
     expect(getFile).not.toHaveBeenCalled();
   });
 
+  it('measures the shape of a photo that has no size recorded, from its picture', async () => {
+    const { _id: albumId } = await album();
+    const old = await photo(albumId, { minioThumbnailFileId: 'thumb-old' });
+    const elsewhere = await photo(new mongoose.Types.ObjectId(), { minioThumbnailFileId: 'thumb' });
+    jest.mocked(getFile).mockResolvedValue(await jpeg(300, 400, '#ff0000'));
+    const id = (await create(TOM, { albumIds: [String(albumId)] })).body.data._id;
+
+    const res = await request(app)
+      .get(`/api/collages/${id}/shapes?photos=${String(old._id)},${String(elsewhere._id)},not-an-id`)
+      .set('Authorization', assistant(['album:read']));
+
+    expect(res.status).toBe(200);
+    // Only the collage's own photo: one from another album is not its to measure.
+    expect(res.body.data).toEqual({ [String(old._id)]: 0.75 });
+  });
+
+  it('refuses to measure more photos than a batch of edits could use', async () => {
+    const id = (await create(TOM)).body.data._id;
+    const many = Array.from({ length: 61 }, () => String(new mongoose.Types.ObjectId())).join(',');
+
+    const res = await request(app).get(`/api/collages/${id}/shapes?photos=${many}`).set('Authorization', assistant(['album:read']));
+
+    expect(res.status).toBe(400);
+  });
+
   it('lays an album out as a numbered sheet, in the order the photos were taken', async () => {
     const { _id: albumId } = await album();
     await photo(albumId, { originalName: 'later.jpg', minioThumbnailFileId: 't2', metadata: { dateTaken: new Date('2025-07-02') } });

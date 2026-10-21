@@ -20,6 +20,7 @@ jest.mock('../collage', () => ({
     get: jest.fn(),
     preview: jest.fn(),
     sheet: jest.fn(),
+    shapes: jest.fn(),
     create: jest.fn(),
     change: jest.fn(),
     addAlbums: jest.fn()
@@ -83,7 +84,9 @@ const ours = { ...theirs, _id: '66a000000000000000000002', title: 'Saaremaa', ma
 
 const photos = [
   { _id: 'ph1', filename: 'f1', originalName: 'beach.jpg', mimetype: 'image/jpeg', width: 400, height: 300, tags: [] },
-  { _id: 'ph2', filename: 'f2', originalName: 'harbour.jpg', mimetype: 'image/jpeg', width: 300, height: 400, tags: [] }
+  { _id: 'ph2', filename: 'f2', originalName: 'harbour.jpg', mimetype: 'image/jpeg', width: 300, height: 400, tags: [] },
+  // An older upload: no size was recorded for it.
+  { _id: 'ph3', filename: 'f3', originalName: 'sauna.jpg', mimetype: 'image/jpeg', tags: [] }
 ];
 
 const picture = { image: 'AAAA', mimeType: 'image/jpeg', width: 1024, height: 576 };
@@ -124,7 +127,7 @@ describe('reading collages', () => {
 
     expect(api.get).toHaveBeenCalledWith(KEY, theirs._id);
     expect(text).toContain('"Rome" (id 66a000000000000000000001): 1600×900, background #fce4ec, frames on, in #fafafa.');
-    expect(text).toContain('Photos come from Finland 2025; 2 to choose from.');
+    expect(text).toContain('Photos come from Finland 2025; 3 to choose from.');
     expect(text).toContain('p1  beach.jpg');
     expect(text).toContain('t1  text "Rome 2024" in Handwritten');
   });
@@ -268,6 +271,44 @@ describe('a collage over several albums', () => {
 });
 
 describe('update_collage', () => {
+  it('measures a photo with no size recorded before keeping its top', async () => {
+    api.shapes.mockResolvedValue({ ph3: 0.75 });
+
+    await callTool('update_collage', {
+      collage: 'Saaremaa',
+      changes: [{ op: 'place_photo', photo: 'ph3', x: 0, y: 0, width: 300, height: 300, focus: 'top' }]
+    });
+
+    expect(api.shapes).toHaveBeenCalledWith(KEY, ours._id, ['ph3']);
+    const [, , changes] = api.change.mock.calls[0]!;
+    expect(changes[0]).toMatchObject({ item: { photoId: 'ph3', crop: { x: 0, y: 0, width: 1, height: 0.75 } } });
+  });
+
+  it('says so, and changes nothing, when a photo cannot be measured', async () => {
+    api.shapes.mockResolvedValue({});
+
+    const { isError, text } = await callTool('update_collage', {
+      collage: 'Saaremaa',
+      changes: [{ op: 'place_photo', photo: 'ph3', x: 0, y: 0, width: 300, height: 300, focus: 'top' }]
+    });
+
+    expect(isError).toBe(true);
+    expect(text).toContain('The shape of sauna.jpg is not known');
+    expect(api.change).not.toHaveBeenCalled();
+  });
+
+  it('does not measure photos whose size it has, or that are not being cropped', async () => {
+    await callTool('update_collage', {
+      collage: 'Saaremaa',
+      changes: [
+        { op: 'edit', item: 'p1', focus: 'top' },
+        { op: 'place_photo', photo: 'ph3', x: 0, y: 0, width: 300, height: 300 }
+      ]
+    });
+
+    expect(api.shapes).not.toHaveBeenCalled();
+  });
+
   it('applies the edits to a collage it made, and answers with how it is now', async () => {
     const { text, images } = await callTool('update_collage', {
       collage: 'Saaremaa',

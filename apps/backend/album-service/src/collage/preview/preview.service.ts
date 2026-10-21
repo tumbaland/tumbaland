@@ -52,6 +52,43 @@ export const collagePreview = async (
   return encoded(await drawCollagePreview(doc, await loadPictures(photos), options));
 };
 
+/** The most photos one shapes request measures, about one batch of edits' worth. */
+export const MAX_SHAPES = 60;
+
+/**
+ * Each photo's shape, width over height as the editor shows it, by photo id.
+ *
+ * Measured from the picture, as the sheet does, because older uploads have no
+ * size recorded, and an assistant that keeps a photo's top has to know how tall
+ * it is. Only photos from the collage's albums that the caller can reach; one
+ * that cannot be measured is left out.
+ */
+export const collagePhotoShapes = async (
+  id: string,
+  photoIds: string[],
+  context: PhotoAccessContext
+): Promise<Record<string, number>> => {
+  const collage = await getCollageById(id, context.userId, context.userGroups);
+  if (!collage) throw new NotFoundError('Collage not found');
+
+  const albums = await reachableAlbumIds(collage.albumIds, context, 'read');
+  const wanted = [...new Set(photoIds)].filter((photoId) => isValidObjectId(photoId)).slice(0, MAX_SHAPES);
+  if (wanted.length === 0 || albums.size === 0) return {};
+
+  const rows = await Photo.find({ _id: { $in: wanted }, albumId: { $in: [...albums] } })
+    .select(PICTURE_FIELDS)
+    .lean<PicturedPhoto[]>();
+  const pictures = await loadPictures(rows);
+
+  const shapes: Record<string, number> = {};
+  for (const row of rows) {
+    const picture = pictures.get(String(row._id));
+    const aspect = picture ? picture.width / picture.height : row.width && row.height ? row.width / row.height : undefined;
+    if (aspect) shapes[String(row._id)] = aspect;
+  }
+  return shapes;
+};
+
 export interface SheetFilter {
   page: number;
   size: number;

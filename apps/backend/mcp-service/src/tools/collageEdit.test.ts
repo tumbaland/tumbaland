@@ -113,6 +113,32 @@ describe('editing what is there', () => {
     expect((result.changes[0] as { item: { crop?: unknown } }).item.crop).toBeUndefined();
   });
 
+  it('shows the part of the photo it is given', () => {
+    const result = plan([{ op: 'edit', item: 'p1', crop: { x: 0.1, y: 0, width: 0.5, height: 0.6 } }]);
+    expect(result.changes[0]).toMatchObject({ item: { crop: { x: 0.1, y: 0, width: 0.5, height: 0.6 } } });
+  });
+
+  it('takes a crop of the whole photo as no crop', () => {
+    const start = doc({ photos: [photo({ crop: { x: 0.1, y: 0.1, width: 0.5, height: 0.5 } })] });
+    const result = plan([{ op: 'edit', item: 'p1', crop: { x: 0, y: 0, width: 1, height: 1 } }], start);
+    expect((result.changes[0] as { item: { crop?: unknown } }).item.crop).toBeUndefined();
+  });
+
+  it('refuses a crop that runs off the photo, or one given with a focus', () => {
+    expect(() => plan([{ op: 'edit', item: 'p1', crop: { x: 0.6, y: 0, width: 0.5, height: 1 } }])).toThrow(/inside the photo/);
+    expect(() => plan([{ op: 'edit', item: 'p1', focus: 'top', crop: { x: 0, y: 0, width: 0.5, height: 0.5 } }])).toThrow(
+      /not both/
+    );
+  });
+
+  it('says it cannot keep the top of a photo whose shape it does not know, rather than doing nothing', () => {
+    const start = doc({ photos: [photo({ photoId: 'ph3' })] });
+    expect(() => plan([{ op: 'edit', item: 'p1', focus: 'top' }], start)).toThrow(/shape of sauna.jpg is not known/);
+    expect(() => plan([{ op: 'place_photo', photo: 'ph3', x: 0, y: 0, width: 400, height: 1, fit: 'whole' }])).toThrow(
+      /cannot be fitted whole/
+    );
+  });
+
   it('restyles a text, writing defaults as nothing', () => {
     const result = plan([{ op: 'edit', item: 't1', text: 'Suvi', font: 'Handwritten', size: 80, bold: true, align: 'center', outline: '' }]);
     const item = (result.changes[0] as { item: Record<string, unknown> }).item;

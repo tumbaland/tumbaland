@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { BadRequestError, sendSuccess } from '@tumbaland/backend-core';
 import { MAX_PREVIEW_WIDTH, MIN_PREVIEW_WIDTH } from './draw';
-import { albumContactSheet, collagePreview } from './preview.service';
+import { albumContactSheet, collagePhotoShapes, collagePreview, MAX_SHAPES } from './preview.service';
 
 /** The default preview width: enough to judge a layout, a few hundred kilobytes at most. */
 const DEFAULT_PREVIEW_WIDTH = 1024;
@@ -45,6 +45,23 @@ export const getCollagePreview = async (req: Request, res: Response): Promise<vo
     }
   );
   sendSuccess(res, preview);
+};
+
+/**
+ * GET /api/collages/:id/shapes?photos=id,id
+ *
+ * Each named photo's width over height, by id, for photos the collage can use.
+ */
+export const getCollagePhotoShapes = async (req: Request, res: Response): Promise<void> => {
+  const raw = typeof req.query.photos === 'string' ? req.query.photos : '';
+  const photoIds = raw.split(',').map((photoId) => photoId.trim()).filter(Boolean);
+  if (photoIds.length > MAX_SHAPES) throw new BadRequestError(`At most ${MAX_SHAPES} photos at a time`);
+
+  const shapes = await collagePhotoShapes(req.params.id as string, photoIds, {
+    userId: req.user!.id,
+    userGroups: req.userGroups || []
+  });
+  sendSuccess(res, shapes);
 };
 
 /**

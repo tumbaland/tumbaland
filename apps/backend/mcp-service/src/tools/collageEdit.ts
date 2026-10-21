@@ -3,6 +3,7 @@ import {
   cleanTextPatch,
   COLLAGE_FONTS,
   COLLAGE_SHAPES,
+  CollageCrop,
   CollageDoc,
   CollagePhotoItem,
   CollageShape,
@@ -14,6 +15,7 @@ import {
   FRAME_PADDING,
   isQuarterTurned,
   newItemId,
+  normalizeCrop,
   photoHasFrame,
   serializePhoto,
   serializeSettings,
@@ -51,12 +53,21 @@ const fittedHeight = (text: string, size: number): number =>
   Math.round(text.split('\n').length * size * TEXT_LINE_HEIGHT + size * 0.4);
 
 export type EditOp =
-  | ({ op: 'place_photo'; photo: string; fit?: 'fill' | 'whole'; focus?: CropFocus; frame?: boolean; caption?: string } & Box)
+  | ({
+      op: 'place_photo';
+      photo: string;
+      fit?: 'fill' | 'whole';
+      focus?: CropFocus;
+      crop?: CollageCrop;
+      frame?: boolean;
+      caption?: string;
+    } & Box)
   | ({
       op: 'edit';
       item: string;
       photo?: string;
       focus?: CropFocus;
+      crop?: CollageCrop;
       frame?: boolean;
       caption?: string;
       text?: string;
@@ -162,16 +173,28 @@ export function planChanges(start: CollageDoc, ops: EditOp[], photos: Map<string
     doc = { ...doc, texts: at === -1 ? [...doc.texts, item] : doc.texts.map((entry) => (entry.id === item.id ? item : entry)) };
     changes.push({ type: 'put', layer: 'texts', item: serializeText(item) as never });
   };
-  const cropFor = (item: CollagePhotoItem, focus: CropFocus | undefined) => {
-    const aspect = photos.get(item.photoId)?.aspect;
-    return focus && aspect ? focusCrop(shownAspect(aspect, item), pictureAspect(doc, item), focus) : undefined;
+  // Without its shape a photo cannot be cropped to an edge or fitted to its
+  // box, so say so rather than leave it as it was and report it changed.
+  const aspectOf = (photoId: string, purpose: string): number =>
+    photos.get(photoId)?.aspect ??
+    fail(`The shape of ${photos.get(photoId)?.name ?? photoId} is not known, so it cannot ${purpose}. Give it a crop instead.`);
+  const cropFor = (item: CollagePhotoItem, focus: CropFocus | undefined) =>
+    !focus || focus === 'center'
+      ? undefined
+      : focusCrop(shownAspect(aspectOf(item.photoId, `keep its ${focus}`), item), pictureAspect(doc, item), focus);
+  // The part to show, as the model chose it. A whole-photo crop is no crop.
+  const chosenCrop = (crop: CollageCrop | undefined, focus: CropFocus | undefined) => {
+    if (crop && focus) fail('Give a photo a crop or a focus, not both.');
+    if (crop && (crop.x + crop.width > 1.001 || crop.y + crop.height > 1.001)) {
+      fail('A crop has to stay inside the photo: x + width and y + height are at most 1.');
+    }
+    return crop ? normalizeCrop(crop) : undefined;
   };
 
   for (const op of ops) {
     switch (op.op) {
       case 'place_photo': {
         const photoId = photoIdOf(op.photo);
-        const aspect = photos.get(photoId)?.aspect;
         let item: CollagePhotoItem = {
           id: newItemId(),
           photoId,
@@ -183,12 +206,13 @@ export function planChanges(start: CollageDoc, ops: EditOp[], photos: Map<string
           caption: op.caption ?? '',
           frame: op.frame
         };
-        if (op.fit === 'whole' && aspect) {
+        if (op.fit === 'whole') {
           // Keep the width and the top-left corner; the height follows the picture.
           const inset = photoHasFrame(doc, item) ? FRAME_PADDING * 2 : 0;
-          item = { ...item, height: Math.round((op.width - inset) / aspect + inset) };
+          item = { ...item, height: Math.round((op.width - inset) / aspectOf(photoId, 'be fitted whole') + inset) };
         }
-        item = { ...item, crop: op.fit === 'whole' ? undefined : cropFor(item, op.focus) };
+        const crop = chosenCrop(op.crop, op.focus);
+        item = { ...item, crop: op.fit === 'whole' ? undefined : (crop ?? cropFor(item, op.focus)) };
         putPhoto(item);
         added.push({ id: item.id, what: `placed ${photos.get(photoId)!.name}` });
         break;
@@ -201,7 +225,8 @@ export function planChanges(start: CollageDoc, ops: EditOp[], photos: Map<string
         if (photo) {
           let item: CollagePhotoItem = { ...photo, ...box, ...defined({ frame: op.frame, caption: op.caption }) };
           if (op.photo !== undefined) item = { ...item, photoId: photoIdOf(op.photo), crop: undefined, orientation: undefined };
-          if (op.focus !== undefined) item = { ...item, crop: cropFor(item, op.focus) };
+          if (op.crop !== undefined) item = { ...item, crop: chosenCrop(op.crop, op.focus) };
+          else if (op.focus !== undefined) item = { ...item, crop: cropFor(item, op.focus) };
           putPhoto(item);
           done.push(`changed ${op.item}`);
           break;
