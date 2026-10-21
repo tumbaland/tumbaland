@@ -1,4 +1,14 @@
 # Tumbalog
+## [0.0.536](https://github.com/tumbaland/tumbaland/compare/app-v0.0.535...app-v0.0.536) (2026-10-21)
+
+### Features
+
+* **collage:** show the whole photo in its box ([#82](https://github.com/tumbaland/tumbaland/issues/82)) ([8c2eb5e](https://github.com/tumbaland/tumbaland/commit/8c2eb5e306b10137b4dedd8945b89d3dfe6685ba))
+
+### Chores
+
+* **release:** @tumbaland/collage-core 1.1.0 ([72025dc](https://github.com/tumbaland/tumbaland/commit/72025dc191b87666412c9438db24d1ef3f9df8dd))
+
 ## [0.0.535](https://github.com/tumbaland/tumbaland/compare/app-v0.0.534...app-v0.0.535) (2026-10-20)
 
 ### Features
