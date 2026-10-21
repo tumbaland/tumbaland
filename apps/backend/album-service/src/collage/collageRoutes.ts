@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticateAgent, authenticateToken, requireScope, validate } from '@tumbaland/backend-core';
 import * as collageController from './collage.controller';
-import { getCollagePreview } from './preview/preview.controller';
+import { getCollagePhotoShapes, getCollagePreview } from './preview/preview.controller';
 import { collageAlbumsSchema, createCollageSchema, updateCollageSchema } from '../validation/schemas';
 
 const router = Router();
@@ -19,6 +19,7 @@ router.post(
   collageController.addCollageAlbums
 );
 router.get('/:id/preview', authenticateAgent(), requireScope('album:read'), getCollagePreview);
+router.get('/:id/shapes', authenticateAgent(), requireScope('album:read'), getCollagePhotoShapes);
 router.get('/:id', authenticateAgent(), requireScope('album:read'), collageController.getCollageById);
 // GET /collages?albumId=... to filter by album
 router.get('/', authenticateAgent(), requireScope('album:read'), collageController.getCollageList);

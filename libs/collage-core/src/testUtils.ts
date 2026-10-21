@@ -6,6 +6,7 @@ export interface Call {
   args: unknown[];
   fillStyle: unknown;
   font: string;
+  filter?: string;
 }
 
 /**
@@ -32,7 +33,7 @@ export const recordingContext = (): Canvas2D & { calls: Call[] } => {
   const record =
     (name: string) =>
     (...args: unknown[]) => {
-      calls.push({ name, args, fillStyle: ctx.fillStyle, font: ctx.font });
+      calls.push({ name, args, fillStyle: ctx.fillStyle, font: ctx.font, filter: ctx.filter });
     };
   for (const name of [
     'save',
@@ -42,6 +43,7 @@ export const recordingContext = (): Canvas2D & { calls: Call[] } => {
     'scale',
     'beginPath',
     'rect',
+    'clip',
     'roundRect',
     'fillRect',
     'strokeRect',

@@ -339,6 +339,20 @@ it('fills the box with the whole image when the photo has no crop', () => {
   expect(img).toHaveStyle({ width: '100%', height: '100%' });
 });
 
+it('shows all of a whole photo inside its box, on a blurred copy of itself', () => {
+  const doc: CollageDoc = {
+    ...baseDoc,
+    photos: [{ ...baseDoc.photos[0], fit: 'contain', crop: { x: 0.25, y: 0.5, width: 0.5, height: 0.25 } }]
+  };
+  const { container } = render(<Harness doc={doc} />);
+
+  // The crop is not used: the point is all of the photo.
+  expect(screen.getByRole('img', { name: 'Beach day' })).toHaveStyle({ width: '100%', height: '100%', objectFit: 'contain' });
+  const backdrop = container.querySelector('img[aria-hidden]') as HTMLImageElement;
+  expect(backdrop.style.filter).toMatch(/^blur\(\d+px\)$/);
+  expect(backdrop).toHaveStyle({ objectFit: 'cover' });
+});
+
 it('turns a sideways photo upright inside its box', () => {
   const doc: CollageDoc = {
     ...baseDoc,

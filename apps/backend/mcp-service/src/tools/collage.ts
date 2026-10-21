@@ -8,6 +8,7 @@ import {
   CROP_FOCUSES,
   normalizeCollageConfig,
   serializeCollageDoc,
+  shortIdsOf,
   STICKERS
 } from '@tumbaland/collage-core';
 import { album, resolveAlbum } from '../album';
@@ -64,6 +65,34 @@ async function albumNames(caller: Caller, collage: Collage, groupId?: string): P
   return collage.albumIds.map((id) => albums.find((entry) => entry._id === id)?.name).filter((name): name is string => !!name);
 }
 
+/**
+ * The collage's photos, with the shape of each one an edit needs to crop or
+ * fit measured when no size was recorded for it. Older uploads have none, and
+ * a focus on one of them would otherwise do nothing.
+ */
+async function withShapes(caller: Caller, loaded: Loaded, edits: EditOp[]): Promise<Map<string, PhotoInfo>> {
+  const itemIds = new Map([...shortIdsOf(loaded.doc)].map(([id, short]) => [short, id]));
+  const photoOfItem = (ref: string) => {
+    const id = itemIds.get(ref.trim()) ?? ref.trim();
+    return loaded.doc.photos.find((item) => item.id === id)?.photoId;
+  };
+  const needed = edits.flatMap((edit) => {
+    if (edit.op === 'place_photo') return edit.focus || edit.fit === 'whole' ? [edit.photo] : [];
+    if (edit.op === 'edit' && (edit.focus || edit.fit === 'whole')) return [edit.photo ?? photoOfItem(edit.item)];
+    return [];
+  });
+  const missing = [...new Set(needed)].filter((id): id is string => !!id && loaded.photos.has(id) && !loaded.photos.get(id)!.aspect);
+  if (missing.length === 0) return loaded.photos;
+
+  const shapes = await collages.shapes(caller.token, loaded.collage._id, missing);
+  const photos = new Map(loaded.photos);
+  for (const [id, aspect] of Object.entries(shapes)) {
+    const info = photos.get(id);
+    if (info) photos.set(id, { ...info, aspect });
+  }
+  return photos;
+}
+
 type AlbumEntry = ReturnType<typeof resolveAlbum>;
 
 /** Each album once, in the order first named. */
@@ -86,6 +115,26 @@ const focus = z
   .enum(CROP_FOCUSES as [string, ...string[]])
   .optional()
   .describe('Which part of the photo to keep when the box is a different shape (default center)');
+const fit = z
+  .enum(['fill', 'whole', 'inside'])
+  .optional()
+  .describe(
+    'fill (default): the photo fills the box, cropped to fit. whole: the box takes the photo’s shape, keeping its width. ' +
+      'inside: the box keeps its size and all of the photo shows inside it, on a blurred copy of itself; for a photo whose ' +
+      'own edge cuts a face, or one that should not lose anything'
+  );
+const crop = z
+  .object({
+    x: z.number().min(0).max(1),
+    y: z.number().min(0).max(1),
+    width: z.number().gt(0).max(1),
+    height: z.number().gt(0).max(1)
+  })
+  .optional()
+  .describe(
+    'The part of the photo to show, as fractions of it from its top-left (0 to 1), like choosing it in the editor. ' +
+      'It still fills the box, so give it the box’s shape to show exactly that part. Instead of focus'
+  );
 
 const textStyle = {
   font: z.string().optional().describe(`One of: ${COLLAGE_FONTS.map((font) => font.label).join(', ')}`),
@@ -108,11 +157,9 @@ const editSchema = z.discriminatedUnion('op', [
     width: length,
     height: length,
     rotation,
-    fit: z
-      .enum(['fill', 'whole'])
-      .optional()
-      .describe('fill (default): the photo fills the box, cropped to fit. whole: the box takes the photo’s shape, keeping its width'),
+    fit,
     focus,
+    crop,
     frame: z.boolean().optional().describe('Frame this photo; leave out to follow the collage'),
     caption: z.string().max(200).optional()
   }),
@@ -125,7 +172,9 @@ const editSchema = z.discriminatedUnion('op', [
     height: length.optional(),
     rotation,
     photo: z.string().optional().describe('Swap in another photo, keeping the box'),
+    fit,
     focus,
+    crop,
     frame: z.boolean().optional(),
     caption: z.string().max(200).optional(),
     text: z.string().max(500).optional().describe('New words for a text, or a new emoji for a sticker'),
@@ -330,7 +379,8 @@ export const COLLAGE_LAYOUT_RULES = [
   '  visible in the picture. Never caption a person unkindly or with anything sexual or',
   '  violent, and never copy an old caption that does.',
   '- A tall photo in a wide box loses its top and bottom. Set focus "top" so faces stay',
-  '  in frame.'
+  '  in frame. When a face sits elsewhere, set crop to the part with the faces. When the',
+  '  photo itself cuts a head at its edge, or nothing of it should be lost, set fit "inside".'
 ];
 
 const MAKE_COLLAGE_STEPS = [
@@ -455,7 +505,7 @@ function registerWriteTools(server: McpServer, caller: Caller): void {
         }
 
         if (edits.length > 0) {
-          const plan = planChanges(current.doc, edits, current.photos);
+          const plan = planChanges(current.doc, edits, await withShapes(caller, current, edits));
           await collages.change(caller.token, current.collage._id, plan.changes);
           done.push(...plan.done);
         }

@@ -23,6 +23,7 @@ import {
   normalizeCrop,
   normalizeOrientation,
   orientationTurns,
+  PhotoFit,
   rotateCropClockwise
 } from '@tumbaland/collage-core';
 import CollageCropSelector from './CollageCropSelector';
@@ -34,13 +35,15 @@ interface CollagePhotoDialogProps {
   onClose: () => void;
   onSave: (
     patch: Pick<CollagePhotoItem, 'caption' | 'rotation' | 'frame'> &
-      Partial<Pick<CollagePhotoItem, 'crop' | 'orientation' | 'height'>>
+      Partial<Pick<CollagePhotoItem, 'crop' | 'fit' | 'orientation' | 'height'>>
   ) => void;
   onDelete: () => void;
 }
 
 /** value used to encode "inherit the global frame setting" in the select */
 const INHERIT = 'inherit';
+/** value used to encode "fill the box", the default fit, in the select */
+const FILL = 'fill';
 
 /**
  * Height that shows the whole cropped region at the item's current width.
@@ -80,6 +83,7 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
   const [rotation, setRotation] = useState(0);
   const [frame, setFrame] = useState<string>(INHERIT);
   const [crop, setCrop] = useState<CollageCrop | undefined>(undefined);
+  const [fit, setFit] = useState<PhotoFit | undefined>(undefined);
   const [orientation, setOrientation] = useState<number | undefined>(undefined);
   const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null);
 
@@ -89,6 +93,7 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
       setRotation(photo.rotation);
       setFrame(photo.frame === undefined ? INHERIT : photo.frame ? 'on' : 'off');
       setCrop(photo.crop);
+      setFit(photo.fit);
       setOrientation(photo.orientation);
     }
   }, [photo]);
@@ -110,14 +115,18 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
       orientationTurns(orientation) !== orientationTurns(photo?.orientation);
     // Reshape the box to the crop only when the crop or orientation actually
     // changed, so editing just a caption never moves the photo on the canvas.
+    // A whole photo keeps its box: fitting inside it is the point.
     const height =
-      changed && photo && naturalSize ? heightForCrop(photo.width, naturalSize, nextCrop, orientation) : undefined;
+      changed && photo && naturalSize && !fit
+        ? heightForCrop(photo.width, naturalSize, nextCrop, orientation)
+        : undefined;
 
     onSave({
       caption: caption.trim(),
       rotation,
       frame: frame === INHERIT ? undefined : frame === 'on',
       crop: nextCrop,
+      fit,
       orientation: normalizeOrientation(orientation),
       ...(height ? { height } : {})
     });
@@ -143,8 +152,8 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
                 src={photoSrc}
                 rotation={rotation}
                 orientation={orientation}
-                crop={crop}
-                onChange={setCrop}
+                crop={fit ? undefined : crop}
+                onChange={fit ? () => undefined : setCrop}
                 onNaturalSize={setNaturalSize}
               />
             </Box>
@@ -180,11 +189,13 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, mb: 1 }}>
               <Typography variant="caption" sx={{ color: 'text.secondary', flex: 1 }}>
-                {crop
-                  ? `Showing ${Math.round(crop.width * 100)}% × ${Math.round(crop.height * 100)}% of the photo`
-                  : 'Drag on the photo to crop it'}
+                {fit
+                  ? 'Showing the whole photo'
+                  : crop
+                    ? `Showing ${Math.round(crop.width * 100)}% × ${Math.round(crop.height * 100)}% of the photo`
+                    : 'Drag on the photo to crop it'}
               </Typography>
-              <Button size="small" onClick={() => setCrop(undefined)} disabled={!crop}>
+              <Button size="small" onClick={() => setCrop(undefined)} disabled={!crop || !!fit}>
                 Clear crop
               </Button>
             </Box>
@@ -211,6 +222,17 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
             valueLabelDisplay="auto"
           />
         </Box>
+        <TextField
+          select
+          label="Fit"
+          fullWidth
+          margin="dense"
+          value={fit ?? FILL}
+          onChange={(e) => setFit(e.target.value === 'contain' ? 'contain' : undefined)}
+        >
+          <MenuItem value={FILL}>Fill the box, cropping the edges</MenuItem>
+          <MenuItem value="contain">Show the whole photo</MenuItem>
+        </TextField>
         <TextField
           select
           label="Frame"

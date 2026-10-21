@@ -64,8 +64,53 @@ export const drawCover = (
   ctx.drawImage(frame.source, sx, sy, sw, sh, x, y, w, h);
 };
 
+/** How soft the copy behind a whole photo is, for a box of this size. */
+export const wholePhotoBlur = (w: number, h: number): number => Math.round(Math.max(w, h) * 0.04);
+
 /**
- * drawCover for a photo that carries quarter turns: the destination box is
+ * The whole picture inside the box, object-fit: contain, on a blurred copy of
+ * itself drawn to cover the box, so the box keeps its size and nothing of the
+ * photo is cut. The copy is clipped to the box, since the blur spills past it.
+ */
+export const drawContain = (ctx: Canvas2D, frame: Frame, x: number, y: number, w: number, h: number) => {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  const blur = wholePhotoBlur(w, h);
+  // A filter's blur is in device pixels, whatever the transform: scale it the
+  // way the drawing is scaled, so a preview or an export at any size blurs the
+  // same share of the box as the editor does.
+  const transform = ctx.getTransform?.();
+  const pixels = transform ? Math.hypot(transform.a, transform.b) : 1;
+  ctx.filter = `blur(${Math.round(blur * pixels * 100) / 100}px)`;
+  // Drawn a little past the box, so the blur does not fade in from its edges.
+  drawCover(ctx, frame, x - blur, y - blur, w + blur * 2, h + blur * 2);
+  ctx.filter = 'none';
+  ctx.restore();
+
+  const scale = Math.min(w / frame.width, h / frame.height);
+  const dw = frame.width * scale;
+  const dh = frame.height * scale;
+  ctx.drawImage(frame.source, 0, 0, frame.width, frame.height, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+};
+
+/** One photo into its box, by its fit. */
+const drawFitted = (
+  ctx: Canvas2D,
+  frame: Frame,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  photo: CollagePhotoItem
+) => {
+  if (photo.fit === 'contain') drawContain(ctx, frame, x, y, w, h);
+  else drawCover(ctx, frame, x, y, w, h, sourceCrop(photo));
+};
+
+/**
+ * A photo drawn by its fit, carrying its quarter turns: the destination box is
  * turned about its centre and drawn on its side, so the picture lands upright
  * inside the item exactly as the canvas shows it.
  */
@@ -79,9 +124,8 @@ const drawOriented = (
   photo: CollagePhotoItem
 ) => {
   const turns = orientationTurns(photo.orientation);
-  const crop = sourceCrop(photo);
   if (turns === 0) {
-    drawCover(ctx, frame, x, y, w, h, crop);
+    drawFitted(ctx, frame, x, y, w, h, photo);
     return;
   }
 
@@ -91,7 +135,7 @@ const drawOriented = (
   ctx.save();
   ctx.translate(x + w / 2, y + h / 2);
   ctx.rotate((turns * 90 * Math.PI) / 180);
-  drawCover(ctx, frame, -width / 2, -height / 2, width, height, crop);
+  drawFitted(ctx, frame, -width / 2, -height / 2, width, height, photo);
   ctx.restore();
 };
 

@@ -13,6 +13,7 @@ import {
   orientationTurns,
   photoHasFrame,
   sourceCrop,
+  wholePhotoBlur,
   labelRadius,
   SHAPE_OUTLINE_WIDTH,
   SHAPE_PATHS,
@@ -150,6 +151,38 @@ const cropImageStyle = (crop?: CollageCrop): CSSProperties => {
   };
 };
 
+/** The picture's own style: its crop filling the box, or all of it inside the box. */
+const pictureStyle = (photo: CollagePhotoItem): CSSProperties =>
+  photo.fit === 'contain'
+    ? { position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', objectFit: 'contain' }
+    : { ...cropImageStyle(sourceCrop(photo)), objectFit: 'cover' };
+
+/**
+ * Behind a whole photo, a blurred copy of it filling the box, as the export
+ * draws it. Scaled up a little so the blur does not fade in from the edges.
+ */
+const WholePhotoBackdrop: React.FC<{ src?: string; content: { width: number; height: number } }> = ({ src, content }) =>
+  src ? (
+    <img
+      src={src}
+      alt=""
+      aria-hidden
+      draggable={false}
+      style={{
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        filter: `blur(${wholePhotoBlur(content.width, content.height)}px)`,
+        transform: 'scale(1.1)',
+        display: 'block',
+        pointerEvents: 'none'
+      }}
+    />
+  ) : null;
+
 /**
  * Box the image is drawn into before its quarter turns are applied. Turning it
  * by 90 or 270 swaps the axes, so the pre-turn box is the content box on its
@@ -212,6 +245,7 @@ const StagePhoto: React.FC<{
       <Box sx={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', borderRadius: '4px' }}>
         {isVideoType(resolved?.mimetype) && resolved?.src ? (
           <Box sx={orientedLayer(content, photo.orientation)}>
+            {photo.fit === 'contain' && <WholePhotoBackdrop src={resolved.posterSrc} content={content} />}
             {/* Plays silently on a loop, as it would in a moving collage. */}
             <video
               src={resolved.src}
@@ -222,8 +256,7 @@ const StagePhoto: React.FC<{
               autoPlay
               playsInline
               style={{
-                ...cropImageStyle(sourceCrop(photo)),
-                objectFit: 'cover',
+                ...pictureStyle(photo),
                 display: 'block',
                 pointerEvents: 'none'
               }}
@@ -231,13 +264,13 @@ const StagePhoto: React.FC<{
           </Box>
         ) : src ? (
           <Box sx={orientedLayer(content, photo.orientation)}>
+            {photo.fit === 'contain' && <WholePhotoBackdrop src={src} content={content} />}
             <img
               src={src}
               alt={resolved?.title || 'collage photo'}
               draggable={false}
               style={{
-                ...cropImageStyle(sourceCrop(photo)),
-                objectFit: 'cover',
+                ...pictureStyle(photo),
                 display: 'block',
                 pointerEvents: 'none'
               }}

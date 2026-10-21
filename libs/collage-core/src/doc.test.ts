@@ -135,6 +135,22 @@ describe('serializeCollageDoc', () => {
   });
 });
 
+describe('a whole photo', () => {
+  it('keeps the fit it was saved with, and reads anything else as filling the box', () => {
+    const doc = normalizeCollageConfig({
+      ...legacyV1Config,
+      photos: [
+        { photoId: 'photo-1', width: 100, height: 100, fit: 'contain' },
+        { photoId: 'photo-2', width: 100, height: 100, fit: 'stretch' }
+      ]
+    } as unknown as CollageConfig);
+
+    expect(doc.photos.map((photo) => photo.fit)).toEqual(['contain', undefined]);
+    expect(serializeCollageDoc(doc).photos[0]).toMatchObject({ fit: 'contain' });
+    expect(serializeCollageDoc(doc).photos[1]!.fit).toBeUndefined();
+  });
+});
+
 describe('crops', () => {
   it('keeps a stored crop that is a real sub-region', () => {
     const doc = normalizeCollageConfig({

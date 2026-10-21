@@ -127,6 +127,12 @@ export const collages = {
     return parseResponse(imageSchema, '/collages/:id/preview', body);
   },
 
+  /** Width over height of each photo, measured from its picture, for photos with no size recorded. */
+  shapes: async (apiKey: string, id: string, photoIds: string[]): Promise<Record<string, number>> => {
+    const body = await call<unknown>(apiKey, 'GET', `/collages/${id}/shapes`, undefined, { photos: photoIds.join(',') });
+    return parseResponse(z.record(z.string(), z.number()), '/collages/:id/shapes', body);
+  },
+
   sheet: async (
     apiKey: string,
     albumId: string,

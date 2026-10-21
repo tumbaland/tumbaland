@@ -113,6 +113,71 @@ describe('editing what is there', () => {
     expect((result.changes[0] as { item: { crop?: unknown } }).item.crop).toBeUndefined();
   });
 
+  it('shows the part of the photo it is given', () => {
+    const result = plan([{ op: 'edit', item: 'p1', crop: { x: 0.1, y: 0, width: 0.5, height: 0.6 } }]);
+    expect(result.changes[0]).toMatchObject({ item: { crop: { x: 0.1, y: 0, width: 0.5, height: 0.6 } } });
+  });
+
+  it('takes a crop of the whole photo as no crop', () => {
+    const start = doc({ photos: [photo({ crop: { x: 0.1, y: 0.1, width: 0.5, height: 0.5 } })] });
+    const result = plan([{ op: 'edit', item: 'p1', crop: { x: 0, y: 0, width: 1, height: 1 } }], start);
+    expect((result.changes[0] as { item: { crop?: unknown } }).item.crop).toBeUndefined();
+  });
+
+  it('refuses a crop that runs off the photo, or one given with a focus', () => {
+    expect(() => plan([{ op: 'edit', item: 'p1', crop: { x: 0.6, y: 0, width: 0.5, height: 1 } }])).toThrow(/inside the photo/);
+    expect(() => plan([{ op: 'edit', item: 'p1', focus: 'top', crop: { x: 0, y: 0, width: 0.5, height: 0.5 } }])).toThrow(
+      /not both/
+    );
+  });
+
+  it('says it cannot keep the top of a photo whose shape it does not know, rather than doing nothing', () => {
+    const start = doc({ photos: [photo({ photoId: 'ph3' })] });
+    expect(() => plan([{ op: 'edit', item: 'p1', focus: 'top' }], start)).toThrow(/shape of sauna.jpg is not known/);
+    expect(() => plan([{ op: 'place_photo', photo: 'ph3', x: 0, y: 0, width: 400, height: 1, fit: 'whole' }])).toThrow(
+      /cannot be fitted whole/
+    );
+  });
+
+  it('shows all of a photo inside its box, dropping its crop and keeping the box', () => {
+    const start = doc({ photos: [photo({ crop: { x: 0.1, y: 0.1, width: 0.5, height: 0.5 } })] });
+    const result = plan([{ op: 'edit', item: 'p1', fit: 'inside' }], start);
+
+    const item = (result.changes[0] as { item: Record<string, unknown> }).item;
+    expect(item).toMatchObject({ fit: 'contain', width: 800, height: 600 });
+    expect(item.crop).toBeUndefined();
+  });
+
+  it('puts a photo back to filling its box', () => {
+    const start = doc({ photos: [photo({ fit: 'contain' })] });
+    const item = (plan([{ op: 'edit', item: 'p1', fit: 'fill', focus: 'top' }], start).changes[0] as { item: Record<string, unknown> })
+      .item;
+    expect(item.fit).toBeUndefined();
+  });
+
+  it('refuses to crop a photo shown whole, and says how to', () => {
+    const start = doc({ photos: [photo({ fit: 'contain' })] });
+    expect(() => plan([{ op: 'edit', item: 'p1', focus: 'top' }], start)).toThrow(/fit "fill"/);
+    expect(() => plan([{ op: 'edit', item: 'p1', fit: 'inside', crop: { x: 0, y: 0, width: 0.5, height: 0.5 } }])).toThrow(
+      /no crop or focus/
+    );
+  });
+
+  it('gives an existing photo’s box the photo’s shape', () => {
+    // ph2 is 3:4: an 800-wide box becomes 1067 tall.
+    const result = plan([{ op: 'edit', item: 'p2', fit: 'whole' }]);
+    expect(result.changes[0]).toMatchObject({ item: { width: 800, height: 1067 } });
+  });
+
+  it('refuses a crop on a photo fitted whole', () => {
+    expect(() => plan([{ op: 'edit', item: 'p1', fit: 'whole', crop: { x: 0, y: 0, width: 0.5, height: 0.5 } }])).toThrow(/takes no crop/);
+  });
+
+  it('places a photo shown whole', () => {
+    const result = plan([{ op: 'place_photo', photo: 'ph3', x: 0, y: 0, width: 300, height: 300, fit: 'inside' }]);
+    expect(result.changes[0]).toMatchObject({ item: { photoId: 'ph3', fit: 'contain' } });
+  });
+
   it('restyles a text, writing defaults as nothing', () => {
     const result = plan([{ op: 'edit', item: 't1', text: 'Suvi', font: 'Handwritten', size: 80, bold: true, align: 'center', outline: '' }]);
     const item = (result.changes[0] as { item: Record<string, unknown> }).item;
