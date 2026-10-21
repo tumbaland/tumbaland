@@ -126,6 +126,13 @@ describe('checkCollage', () => {
     expect(checkCollage(doc({ photos: [cropped] }), photos).some((problem) => problem.includes('shows only'))).toBe(false);
   });
 
+  it('says a photo is shown whole, and does not count it as cut', () => {
+    const whole = photo({ width: 200, height: 900, fit: 'contain', crop: { x: 0, y: 0, width: 0.3, height: 1 } });
+
+    expect(describeLayout(doc({ photos: [whole] }), photos).join('\n')).toContain('size 200×900, whole photo inside its box  [photo ph1]');
+    expect(checkCollage(doc({ photos: [whole] }), photos).some((problem) => problem.includes('shows only'))).toBe(false);
+  });
+
   it('judges a turned photo by the shape it shows', () => {
     // A 4:3 picture turned a quarter is 3:4, which suits a tall box.
     const turned = photo({ width: 300, height: 400, orientation: 90 });

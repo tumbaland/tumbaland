@@ -56,7 +56,8 @@ const describePhoto = (doc: CollageDoc, photo: CollagePhotoItem, info: PhotoInfo
   const name = info ? `${info.video ? 'video ' : ''}${info.name}${info.dateTaken ? ` (${info.dateTaken})` : ''}` : 'a photo no longer in the albums';
   const details = [
     box(photo),
-    photo.crop
+    photo.fit === 'contain' ? 'whole photo inside its box' : null,
+    photo.crop && photo.fit !== 'contain'
       ? `showing ${percent(photo.crop.width)}×${percent(photo.crop.height)} from ${percent(photo.crop.x)},${percent(photo.crop.y)}`
       : null,
     photo.orientation ? `picture turned ${photo.orientation}°` : null,
@@ -151,7 +152,7 @@ export const checkCollage = (doc: CollageDoc, photos: Map<string, PhotoInfo>): s
     }
 
     // A crop decides what shows, so only an uncropped photo is judged by its shape.
-    if (info?.aspect && !photo.crop && photo.width > 0 && photo.height > 0) {
+    if (info?.aspect && !photo.crop && photo.fit !== 'contain' && photo.width > 0 && photo.height > 0) {
       const aspect = isQuarterTurned(photo.orientation) ? 1 / info.aspect : info.aspect;
       const shown = shareShown(aspect, photo.width / photo.height);
       if (shown < 0.5) {

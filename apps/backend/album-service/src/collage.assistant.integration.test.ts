@@ -273,6 +273,35 @@ describe('looking at collages and albums', () => {
     near(await pixel(res.body.data.image, 700, 400), [0, 0, 255]);
   });
 
+  it('draws a whole photo inside its box, on a blurred copy of itself', async () => {
+    const { _id: albumId } = await album();
+    const tall = await photo(albumId, { minioThumbnailFileId: 'thumb-tall', width: 100, height: 200 });
+    // Red over green, half and half.
+    const canvas = createCanvas(100, 200);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(0, 0, 100, 100);
+    ctx.fillStyle = '#00ff00';
+    ctx.fillRect(0, 100, 100, 100);
+    jest.mocked(getFile).mockResolvedValue(await canvas.encode('jpeg', 95));
+    const id = (
+      await create(TOM, {
+        albumIds: [String(albumId)],
+        config: config([{ id: 'a', photoId: String(tall._id), x: 0, y: 0, width: 1600, height: 900, fit: 'contain' }])
+      })
+    ).body.data._id;
+
+    const res = await request(app).get(`/api/collages/${id}/preview?width=800`).set('Authorization', assistant(['album:read']));
+
+    // All of it, sharp, in the middle: red at the top, green at the bottom.
+    near(await pixel(res.body.data.image, 400, 100), [255, 0, 0]);
+    near(await pixel(res.body.data.image, 400, 350), [0, 255, 0]);
+    // Beside it, the blurred copy: where red meets green it is a mix of both.
+    const [red, green] = await pixel(res.body.data.image, 100, 225);
+    expect(red).toBeGreaterThan(60);
+    expect(green).toBeGreaterThan(60);
+  });
+
   it('leaves out a photo from outside the collage’s albums', async () => {
     const { _id: albumId } = await album();
     const elsewhere = await photo(new mongoose.Types.ObjectId(), { minioThumbnailFileId: 'thumb' });

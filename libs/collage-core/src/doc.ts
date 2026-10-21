@@ -50,7 +50,15 @@ export interface CollagePhotoItem {
   frame?: boolean;
   /** undefined = show the whole image */
   crop?: CollageCrop;
+  /**
+   * undefined = the picture fills the box, trimmed to its shape. 'contain' = the
+   * whole picture shows inside the box, uncropped, on a blurred copy of itself
+   * that fills the rest. The crop is not used then: the point is all of it.
+   */
+  fit?: PhotoFit;
 }
+
+export type PhotoFit = 'contain';
 
 export type TextAlign = 'left' | 'center' | 'right';
 
@@ -221,7 +229,8 @@ export const normalizePhoto = (p: CollageConfigPhoto): CollagePhotoItem => {
     orientation: normalizeOrientation(p.orientation),
     caption: typeof p.caption === 'string' ? p.caption : '',
     frame,
-    crop: normalizeCrop(p.crop)
+    crop: normalizeCrop(p.crop),
+    fit: p.fit === 'contain' ? 'contain' : undefined
   };
 };
 
@@ -325,6 +334,7 @@ export const serializePhoto = (p: CollagePhotoItem, frameEnabled: boolean): Coll
   rotation: p.rotation,
   orientation: p.orientation,
   crop: p.crop,
+  fit: p.fit,
   frame: p.frame,
   frameVisible: p.frame ?? frameEnabled,
   transparentBackground: p.frame === undefined ? undefined : !p.frame

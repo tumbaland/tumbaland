@@ -52,11 +52,18 @@ interface TextStyle {
 const fittedHeight = (text: string, size: number): number =>
   Math.round(text.split('\n').length * size * TEXT_LINE_HEIGHT + size * 0.4);
 
+/**
+ * How a photo sits in its box. fill: it covers the box, cropped to its shape.
+ * whole: the box takes the photo's shape. inside: all of it shows inside the
+ * box as it is, on a blurred copy of itself.
+ */
+export type PhotoFitOp = 'fill' | 'whole' | 'inside';
+
 export type EditOp =
   | ({
       op: 'place_photo';
       photo: string;
-      fit?: 'fill' | 'whole';
+      fit?: PhotoFitOp;
       focus?: CropFocus;
       crop?: CollageCrop;
       frame?: boolean;
@@ -66,6 +73,7 @@ export type EditOp =
       op: 'edit';
       item: string;
       photo?: string;
+      fit?: PhotoFitOp;
       focus?: CropFocus;
       crop?: CollageCrop;
       frame?: boolean;
@@ -190,6 +198,29 @@ export function planChanges(start: CollageDoc, ops: EditOp[], photos: Map<string
     }
     return crop ? normalizeCrop(crop) : undefined;
   };
+  // The fit, crop and focus an edit asks for, applied to a photo in that order.
+  const fitted = (
+    item: CollagePhotoItem,
+    fit: PhotoFitOp | undefined,
+    crop: CollageCrop | undefined,
+    focus: CropFocus | undefined
+  ): CollagePhotoItem => {
+    const cropping = crop !== undefined || (focus !== undefined && focus !== 'center');
+    if (fit === 'inside' || (!fit && item.fit === 'contain' && cropping)) {
+      if (cropping) fail('A photo shown whole inside its box takes no crop or focus. Set fit "fill" to crop it.');
+      return { ...item, fit: 'contain', crop: undefined };
+    }
+    if (fit === 'whole') {
+      // Keep the width and the top-left corner; the height follows the picture.
+      const inset = photoHasFrame(doc, item) ? FRAME_PADDING * 2 : 0;
+      const aspect = shownAspect(aspectOf(item.photoId, 'be fitted whole'), item);
+      return { ...item, fit: undefined, crop: undefined, height: Math.round((item.width - inset) / aspect + inset) };
+    }
+    const next: CollagePhotoItem = fit === 'fill' ? { ...item, fit: undefined } : item;
+    if (crop !== undefined) return { ...next, crop: chosenCrop(crop, focus) };
+    if (focus !== undefined) return { ...next, crop: cropFor(next, focus) };
+    return next;
+  };
 
   for (const op of ops) {
     switch (op.op) {
@@ -206,13 +237,7 @@ export function planChanges(start: CollageDoc, ops: EditOp[], photos: Map<string
           caption: op.caption ?? '',
           frame: op.frame
         };
-        if (op.fit === 'whole') {
-          // Keep the width and the top-left corner; the height follows the picture.
-          const inset = photoHasFrame(doc, item) ? FRAME_PADDING * 2 : 0;
-          item = { ...item, height: Math.round((op.width - inset) / aspectOf(photoId, 'be fitted whole') + inset) };
-        }
-        const crop = chosenCrop(op.crop, op.focus);
-        item = { ...item, crop: op.fit === 'whole' ? undefined : (crop ?? cropFor(item, op.focus)) };
+        item = fitted(item, op.fit, op.crop, op.fit === 'whole' ? undefined : op.focus);
         putPhoto(item);
         added.push({ id: item.id, what: `placed ${photos.get(photoId)!.name}` });
         break;
@@ -225,8 +250,7 @@ export function planChanges(start: CollageDoc, ops: EditOp[], photos: Map<string
         if (photo) {
           let item: CollagePhotoItem = { ...photo, ...box, ...defined({ frame: op.frame, caption: op.caption }) };
           if (op.photo !== undefined) item = { ...item, photoId: photoIdOf(op.photo), crop: undefined, orientation: undefined };
-          if (op.crop !== undefined) item = { ...item, crop: chosenCrop(op.crop, op.focus) };
-          else if (op.focus !== undefined) item = { ...item, crop: cropFor(item, op.focus) };
+          item = fitted(item, op.fit, op.crop, op.focus);
           putPhoto(item);
           done.push(`changed ${op.item}`);
           break;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vite-plus/test';
 import { CollageDoc, CollagePhotoItem } from './doc';
-import { drawCover, FRAME_PADDING, renderScene } from './render';
+import { drawCover, FRAME_PADDING, renderScene, wholePhotoBlur } from './render';
 import { fakeEnv, named, recordingContext } from './testUtils';
 
 const photo = (overrides: Partial<CollagePhotoItem> = {}): CollagePhotoItem => ({
@@ -44,6 +44,30 @@ describe('drawCover', () => {
     const ctx = recordingContext();
     drawCover(ctx, picture, 0, 0, 400, 300, { x: 0.5, y: 0.5, width: 0.5, height: 0.5 });
     expect(named(ctx.calls, 'drawImage')[0]!.args).toEqual(['img', 400, 300, 400, 300, 0, 0, 400, 300]);
+  });
+});
+
+describe('a whole photo', () => {
+  it('draws all of it inside the box, on a blurred copy that covers the box', () => {
+    const ctx = recordingContext();
+    // A 4:3 picture in a square box: as wide as the box, centred top to bottom.
+    renderScene(ctx, doc({ photos: [photo({ width: 400, height: 400, fit: 'contain' })] }), () => picture);
+
+    const [behind, whole] = named(ctx.calls, 'drawImage');
+    expect(behind!.filter).toBe(`blur(${wholePhotoBlur(400, 400)}px)`);
+    expect(named(ctx.calls, 'clip')).toHaveLength(1);
+    expect(whole!.filter).toBe('none');
+    expect(whole!.args).toEqual(['img', 0, 0, 800, 600, -200, -150, 400, 300]);
+  });
+
+  it('shows all of it even when it has a crop', () => {
+    const ctx = recordingContext();
+    renderScene(
+      ctx,
+      doc({ photos: [photo({ fit: 'contain', crop: { x: 0.5, y: 0.5, width: 0.5, height: 0.5 } })] }),
+      () => picture
+    );
+    expect(named(ctx.calls, 'drawImage')[1]!.args.slice(1, 5)).toEqual([0, 0, 800, 600]);
   });
 });
 

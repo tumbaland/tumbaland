@@ -78,7 +78,7 @@ async function withShapes(caller: Caller, loaded: Loaded, edits: EditOp[]): Prom
   };
   const needed = edits.flatMap((edit) => {
     if (edit.op === 'place_photo') return edit.focus || edit.fit === 'whole' ? [edit.photo] : [];
-    if (edit.op === 'edit' && edit.focus) return [edit.photo ?? photoOfItem(edit.item)];
+    if (edit.op === 'edit' && (edit.focus || edit.fit === 'whole')) return [edit.photo ?? photoOfItem(edit.item)];
     return [];
   });
   const missing = [...new Set(needed)].filter((id): id is string => !!id && loaded.photos.has(id) && !loaded.photos.get(id)!.aspect);
@@ -115,6 +115,14 @@ const focus = z
   .enum(CROP_FOCUSES as [string, ...string[]])
   .optional()
   .describe('Which part of the photo to keep when the box is a different shape (default center)');
+const fit = z
+  .enum(['fill', 'whole', 'inside'])
+  .optional()
+  .describe(
+    'fill (default): the photo fills the box, cropped to fit. whole: the box takes the photo’s shape, keeping its width. ' +
+      'inside: the box keeps its size and all of the photo shows inside it, on a blurred copy of itself; for a photo whose ' +
+      'own edge cuts a face, or one that should not lose anything'
+  );
 const crop = z
   .object({
     x: z.number().min(0).max(1),
@@ -149,10 +157,7 @@ const editSchema = z.discriminatedUnion('op', [
     width: length,
     height: length,
     rotation,
-    fit: z
-      .enum(['fill', 'whole'])
-      .optional()
-      .describe('fill (default): the photo fills the box, cropped to fit. whole: the box takes the photo’s shape, keeping its width'),
+    fit,
     focus,
     crop,
     frame: z.boolean().optional().describe('Frame this photo; leave out to follow the collage'),
@@ -167,6 +172,7 @@ const editSchema = z.discriminatedUnion('op', [
     height: length.optional(),
     rotation,
     photo: z.string().optional().describe('Swap in another photo, keeping the box'),
+    fit,
     focus,
     crop,
     frame: z.boolean().optional(),
@@ -373,7 +379,8 @@ export const COLLAGE_LAYOUT_RULES = [
   '  visible in the picture. Never caption a person unkindly or with anything sexual or',
   '  violent, and never copy an old caption that does.',
   '- A tall photo in a wide box loses its top and bottom. Set focus "top" so faces stay',
-  '  in frame. When a face sits elsewhere, set crop to the part with the faces.'
+  '  in frame. When a face sits elsewhere, set crop to the part with the faces. When the',
+  '  photo itself cuts a head at its edge, or nothing of it should be lost, set fit "inside".'
 ];
 
 const MAKE_COLLAGE_STEPS = [

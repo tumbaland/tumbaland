@@ -139,6 +139,41 @@ describe('editing what is there', () => {
     );
   });
 
+  it('shows all of a photo inside its box, dropping its crop and keeping the box', () => {
+    const start = doc({ photos: [photo({ crop: { x: 0.1, y: 0.1, width: 0.5, height: 0.5 } })] });
+    const result = plan([{ op: 'edit', item: 'p1', fit: 'inside' }], start);
+
+    const item = (result.changes[0] as { item: Record<string, unknown> }).item;
+    expect(item).toMatchObject({ fit: 'contain', width: 800, height: 600 });
+    expect(item.crop).toBeUndefined();
+  });
+
+  it('puts a photo back to filling its box', () => {
+    const start = doc({ photos: [photo({ fit: 'contain' })] });
+    const item = (plan([{ op: 'edit', item: 'p1', fit: 'fill', focus: 'top' }], start).changes[0] as { item: Record<string, unknown> })
+      .item;
+    expect(item.fit).toBeUndefined();
+  });
+
+  it('refuses to crop a photo shown whole, and says how to', () => {
+    const start = doc({ photos: [photo({ fit: 'contain' })] });
+    expect(() => plan([{ op: 'edit', item: 'p1', focus: 'top' }], start)).toThrow(/fit "fill"/);
+    expect(() => plan([{ op: 'edit', item: 'p1', fit: 'inside', crop: { x: 0, y: 0, width: 0.5, height: 0.5 } }])).toThrow(
+      /no crop or focus/
+    );
+  });
+
+  it('gives an existing photo’s box the photo’s shape', () => {
+    // ph2 is 3:4: an 800-wide box becomes 1067 tall.
+    const result = plan([{ op: 'edit', item: 'p2', fit: 'whole' }]);
+    expect(result.changes[0]).toMatchObject({ item: { width: 800, height: 1067 } });
+  });
+
+  it('places a photo shown whole', () => {
+    const result = plan([{ op: 'place_photo', photo: 'ph3', x: 0, y: 0, width: 300, height: 300, fit: 'inside' }]);
+    expect(result.changes[0]).toMatchObject({ item: { photoId: 'ph3', fit: 'contain' } });
+  });
+
   it('restyles a text, writing defaults as nothing', () => {
     const result = plan([{ op: 'edit', item: 't1', text: 'Suvi', font: 'Handwritten', size: 80, bold: true, align: 'center', outline: '' }]);
     const item = (result.changes[0] as { item: Record<string, unknown> }).item;

@@ -24,9 +24,12 @@ export interface Canvas2D {
   font: string;
   textAlign: string;
   textBaseline: string;
+  /** A CSS filter such as blur(8px). Optional: a browser without it draws unfiltered. */
+  filter?: string;
 
   beginPath(): void;
   rect(x: number, y: number, width: number, height: number): void;
+  clip(): void;
   roundRect?(x: number, y: number, width: number, height: number, radius: number): void;
   fillRect(x: number, y: number, width: number, height: number): void;
   strokeRect(x: number, y: number, width: number, height: number): void;

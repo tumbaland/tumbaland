@@ -121,7 +121,7 @@ it('changes the frame setting via the select and saves the resolved boolean', as
   const onSave = vi.fn();
   render(<CollagePhotoDialog open photo={photo} onClose={vi.fn()} onSave={onSave} onDelete={vi.fn()} />);
 
-  await userEvent.click(screen.getByRole('combobox'));
+  await userEvent.click(screen.getByRole('combobox', { name: 'Frame' }));
   await userEvent.click(await screen.findByRole('option', { name: 'Always framed' }));
   await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
@@ -398,4 +398,43 @@ it('reshapes the box to the turned photo even when the crop is untouched', async
 
   // a 2:1 photo on its side is 1:2, so the 100-wide box becomes 200 tall
   expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ orientation: 90, height: 200 }));
+});
+
+it('shows the whole photo in its box, keeping the box as it is', async () => {
+  const onSave = vi.fn();
+  render(
+    <CollagePhotoDialog
+      open
+      photo={photo}
+      photoSrc="https://cdn.example/photo.jpg"
+      onClose={vi.fn()}
+      onSave={onSave}
+      onDelete={vi.fn()}
+    />
+  );
+  const img = screen.getByRole('img', { name: 'preview' });
+  Object.defineProperty(img, 'naturalWidth', { value: 800, configurable: true });
+  Object.defineProperty(img, 'naturalHeight', { value: 400, configurable: true });
+  fireEvent.load(img);
+
+  await userEvent.click(screen.getByRole('combobox', { name: 'Fit' }));
+  await userEvent.click(await screen.findByRole('option', { name: 'Show the whole photo' }));
+
+  expect(screen.getByText('Showing the whole photo')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+  const patch = onSave.mock.calls[0][0];
+  expect(patch.fit).toBe('contain');
+  expect(patch).not.toHaveProperty('height');
+});
+
+it('goes back to filling the box', async () => {
+  const onSave = vi.fn();
+  render(<CollagePhotoDialog open photo={{ ...photo, fit: 'contain' }} onClose={vi.fn()} onSave={onSave} onDelete={vi.fn()} />);
+
+  await userEvent.click(screen.getByRole('combobox', { name: 'Fit' }));
+  await userEvent.click(await screen.findByRole('option', { name: 'Fill the box, cropping the edges' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+  expect(onSave.mock.calls[0][0]).toHaveProperty('fit', undefined);
 });
