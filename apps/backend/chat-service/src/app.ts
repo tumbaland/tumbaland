@@ -1,7 +1,13 @@
 import express from 'express';
 import { ipKeyGenerator } from 'express-rate-limit';
 import path from 'path';
-import { authenticateToken, createBaseApp, createRateLimiter, errorHandler, metricsHandler } from '@tumbaland/backend-core';
+import {
+  authenticateToken,
+  createBaseApp,
+  createRateLimiter,
+  errorHandler,
+  metricsHandler
+} from '@tumbaland/backend-core';
 import chatRoutes from './routes/chatRoutes';
 import internalRoutes from './routes/internalRoutes';
 import { stream } from './controllers/streamController';
@@ -42,18 +48,24 @@ app.use('/internal', internalRoutes);
  *
  * The couple using this usually share a home connection, so a per-address
  * limit is one budget for both of them. Typing notices alone can spend 24 a
- * minute each, and with sends, read receipts and the unread poll on top one
- * evening's conversation could reach the standard 300 and lock them both out
- * of the chat. So the real limit is per person per address, counted after
- * sign-in, and the per-address one ahead of it only stops a flood, set well
- * clear of what one household does.
+ * minute each. Fallback polling, read receipts and maps add more: the default
+ * 300 requests per 15 minutes can lock out even one active person. Count over
+ * one minute instead, with room for sustained use and brief reconnect bursts.
+ * The real limit is per person per address, after sign-in; the per-address
+ * limit ahead of it stops a flood while leaving room for a shared connection.
+ * Message sends, calls, typing, geocoding and GPS uploads keep their own limits.
  */
-app.use(createRateLimiter({ max: 1500 }));
+app.use(createRateLimiter({ windowMs: 60_000, max: 600 }));
 
 app.use('/api', authenticateToken);
 app.use(
   '/api',
   createRateLimiter({
+    windowMs: 60_000,
+    max: 120,
+    // Position uploads already have a one-minute limiter. Counting a drive
+    // against this shared budget would eventually lock the driver out of chat.
+    skip: (req) => req.method === 'POST' && /^\/chat\/conversations\/[^/]+\/live\/position\/?$/.test(req.path),
     // authenticateToken has already turned away anyone without a user.
     keyGenerator: (req) => `${req.user?.id ?? ''}@${ipKeyGenerator(req.ip ?? '')}`
   })

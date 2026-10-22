@@ -253,3 +253,56 @@ export const planReminderSchema = z.object({
   place: z.string().max(200).optional(),
   remindAt: z.string().min(1).max(40)
 });
+
+const latitude = z.number().min(-90).max(90);
+const longitude = z.number().min(-180).max(180);
+
+/**
+ * Sharing where one is, live. Both optional: it runs until stopped (four hours
+ * at most), and a destination is a point marked on the map, or none. `null`
+ * takes the destination away; leaving it out keeps the one set before.
+ */
+export const liveStartSchema = z.object({
+  minutes: z.number().int().min(5).max(240).optional(),
+  destination: z.object({ lat: latitude, lng: longitude, label: z.string().trim().max(200).optional() }).nullish(),
+  /** A pin: one place that stays put, rather than a position that moves. */
+  fixed: z.boolean().optional(),
+  /** What the pin is: a saved place's name, or the address it is at. */
+  pinLabel: z.string().trim().max(200).nullish()
+});
+
+/** Searching for a place by name, near a point when one is given. */
+export const placeSearchSchema = z.object({
+  q: z.string().trim().min(2).max(120),
+  lat: z.coerce.number().min(-90).max(90).optional(),
+  lng: z.coerce.number().min(-180).max(180).optional()
+});
+
+export const placeReverseSchema = z.object({
+  lat: z.coerce.number().min(-90).max(90),
+  lng: z.coerce.number().min(-180).max(180)
+});
+
+/** A place kept for picking again: "Home". */
+export const savedPlaceSchema = z.object({
+  name: z.string().trim().min(1, 'Name the place').max(60),
+  lat: latitude,
+  lng: longitude,
+  address: z.string().trim().max(200).optional()
+});
+
+/** One position from the phone, as the browser's geolocation gives it. */
+export const livePositionSchema = z.object({
+  lat: latitude,
+  lng: longitude,
+  accuracy: z.number().min(0).max(100_000).nullish(),
+  heading: z.number().min(0).max(360).nullish(),
+  speed: z.number().min(0).max(1000).nullish()
+});
+
+/** "Tell me when they are close": where the waiter is, and how close counts. */
+export const liveWatchSchema = z.object({
+  lat: latitude,
+  lng: longitude,
+  radiusM: z.number().int().min(100).max(20_000)
+});

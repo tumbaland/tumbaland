@@ -261,7 +261,9 @@ export function useChatStream({
         'call.ringing',
         'call.accepted',
         'call.ended',
-        'call.signal'
+        'call.signal',
+        'live.updated',
+        'live.ended'
       ]) {
         stream.addEventListener(type, handle as EventListener);
       }

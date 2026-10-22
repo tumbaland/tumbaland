@@ -52,8 +52,8 @@ describe('the buttons', () => {
     expect(onRecordVoice).toHaveBeenCalled();
   });
 
-  it('tells the mic from the phone on hover', async () => {
-    render(header({ onCall: () => {}, onRecordVoice: () => {} }));
+  it('labels voice, call and location actions on hover', async () => {
+    render(header({ onCall: () => {}, onRecordVoice: () => {}, onLocation: () => {} }));
 
     await userEvent.hover(screen.getByRole('button', { name: 'Record voice message' }));
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Voice message');
@@ -61,6 +61,10 @@ describe('the buttons', () => {
     await userEvent.unhover(screen.getByRole('button', { name: 'Record voice message' }));
     await userEvent.hover(screen.getByRole('button', { name: 'Call Irja' }));
     expect(await screen.findByText('Call Irja', { selector: '[role="tooltip"] *' })).toBeInTheDocument();
+
+    await userEvent.unhover(screen.getByRole('button', { name: 'Call Irja' }));
+    await userEvent.hover(screen.getByRole('button', { name: 'Share location' }));
+    expect(await screen.findByText('Share location', { selector: '[role="tooltip"] *' })).toBeInTheDocument();
   });
 
   it('will not start a second voice message while one is on the go', () => {

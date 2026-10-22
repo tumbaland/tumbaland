@@ -222,3 +222,15 @@ describe('live', () => {
     expect(container.querySelector('.MuiBadge-dot')).not.toHaveClass('MuiBadge-invisible');
   });
 });
+
+describe('when the list cannot be loaded', () => {
+  it('says so, and tries again on request', async () => {
+    ensureMyConversations.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([conversation()]);
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByText('Irja')).toBeInTheDocument();
+    expect(ensureMyConversations).toHaveBeenCalledTimes(2);
+  });
+});

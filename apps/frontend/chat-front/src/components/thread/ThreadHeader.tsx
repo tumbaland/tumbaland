@@ -11,6 +11,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CallOutlinedIcon from '@mui/icons-material/CallOutlined';
 import MicNoneOutlinedIcon from '@mui/icons-material/MicNoneOutlined';
+import NearMeOutlinedIcon from '@mui/icons-material/NearMeOutlined';
 import type { ReactNode } from 'react';
 import { brand, ink, surface } from '@tumbaland/frontend-core';
 import type { ConversationMember, Presence } from '../../types';
@@ -42,6 +43,9 @@ export interface ThreadHeaderProps {
   onRecordVoice?: () => void;
   /** True while one cannot start: one is being recorded or sent, or an edit has the box. */
   recordingVoice?: boolean;
+  /** Opens the location picker and live sharing controls. */
+  onLocation?: () => void;
+  sharingLocation?: boolean;
 }
 
 /** "Active 5 min ago" has to keep counting while the thread stays open. */
@@ -107,7 +111,9 @@ export function ThreadHeader({
   lastSeen,
   onCall,
   onRecordVoice,
-  recordingVoice = false
+  recordingVoice = false,
+  onLocation,
+  sharingLocation = false
 }: ThreadHeaderProps) {
   const now = useMinuteClock();
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -121,13 +127,19 @@ export function ThreadHeader({
   const status = statusLine(others, presence, typingNames, now, lastSeen);
   const typing = typingNames.length > 0;
   const lead = others[0];
+  const briefStatus = status?.startsWith('Last active ')
+    ? status.slice('Last active '.length).replace(/^on /, '').replace(' at ', ', ')
+    : status;
+  const statusText =
+    status?.startsWith('Last active ') && briefStatus
+      ? briefStatus.charAt(0).toUpperCase() + briefStatus.slice(1)
+      : status;
 
   return (
     <Box
       sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1,
+        containerType: 'inline-size',
+        flexShrink: 0,
         px: onBack ? 0.5 : 1.5,
         py: 0.75,
         borderBottom: 1,
@@ -137,99 +149,147 @@ export function ThreadHeader({
         minHeight: 52
       }}
     >
-      {onBack && (
-        <IconButton size="small" aria-label="Back to conversations" onClick={onBack}>
-          <ArrowBackIcon fontSize="small" />
-        </IconButton>
-      )}
-      {lead && (
-        <MemberAvatar
-          name={lead.name || lead.email}
-          picture={others.length === 1 ? lead.picture : null}
-          size={34}
-          online={others.some((member) => presence[member.userId]?.online)}
-        />
-      )}
-      <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography variant="subtitle2" noWrap sx={{ color: ink.strong, lineHeight: 1.3 }}>
-          {name || 'Chat'}
-        </Typography>
-        {status && (
-          <Typography
-            variant="caption"
-            noWrap
-            component="p"
-            aria-live="polite"
-            // The body grey rather than the muted one: it stays readable on
-            // every theme's tinted bar, where the lighter grey falls short.
-            sx={{ color: typing ? accent : ink.body, lineHeight: 1.3, fontStyle: typing ? 'italic' : 'normal' }}
-          >
-            {status}
-          </Typography>
-        )}
-      </Box>
-
-      {/* A mic and a phone side by side read alike; the hover text tells the
-          recorded message from the live call. */}
-      {onRecordVoice && (
-        <Tooltip title="Voice message" describeChild>
-          {/* A span, because a disabled button fires no hover for the tooltip. */}
-          <span>
-            <IconButton
-              size="small"
-              aria-label="Record voice message"
-              onClick={onRecordVoice}
-              disabled={recordingVoice}
-            >
-              <MicNoneOutlinedIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
-      )}
-
-      {onCall && (
-        <Tooltip title={name ? `Call ${name}` : 'Call'} describeChild>
-          <IconButton size="small" aria-label={`Call ${name || ''}`.trim()} onClick={onCall}>
-            <CallOutlinedIcon fontSize="small" />
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.75
+        }}
+      >
+        {onBack && (
+          <IconButton size="small" aria-label="Back to conversations" onClick={onBack}>
+            <ArrowBackIcon fontSize="small" />
           </IconButton>
-        </Tooltip>
-      )}
-
-      {menu.length > 0 && (
-        <>
-          <Tooltip title="More options" describeChild>
-            <IconButton
-              size="small"
-              aria-label="Conversation options"
-              aria-haspopup="menu"
-              aria-expanded={Boolean(menuAnchor)}
-              onClick={(event) => setMenuAnchor(event.currentTarget)}
-            >
-              <MoreVertIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Menu
-            anchorEl={menuAnchor}
-            open={Boolean(menuAnchor)}
-            onClose={() => setMenuAnchor(null)}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-          >
-            {menu.map((item) => (
-              <MenuItem
-                key={item.label}
-                onClick={() => {
-                  setMenuAnchor(null);
-                  item.onClick();
+        )}
+        {lead && (
+          <Box sx={{ flexShrink: 0, '@container (max-width: 340px)': { display: 'none' } }}>
+            <MemberAvatar
+              name={lead.name || lead.email}
+              picture={others.length === 1 ? lead.picture : null}
+              size={34}
+              online={others.some((member) => presence[member.userId]?.online)}
+            />
+          </Box>
+        )}
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography variant="subtitle2" noWrap title={name || 'Chat'} sx={{ color: ink.strong, lineHeight: 1.3 }}>
+            {name || 'Chat'}
+          </Typography>
+          {status && (
+            <Tooltip title={status} describeChild>
+              <Typography
+                variant="caption"
+                component="p"
+                noWrap
+                aria-live="polite"
+                // The body grey rather than the muted one: it stays readable on
+                // every theme's tinted bar, where the lighter grey falls short.
+                sx={{
+                  color: typing ? accent : ink.body,
+                  lineHeight: 1.3,
+                  fontStyle: typing ? 'italic' : 'normal'
                 }}
               >
-                {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
-                <ListItemText primary={item.label} secondary={item.secondary} />
-              </MenuItem>
-            ))}
-          </Menu>
-        </>
-      )}
+                {statusText}
+              </Typography>
+            </Tooltip>
+          )}
+        </Box>
+
+        <Box
+          role="group"
+          aria-label="Conversation actions"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            flexShrink: 0,
+            gap: 0.5,
+            '& .MuiIconButton-root': { width: 36, height: 36 },
+            '& .MuiSvgIcon-root': { fontSize: 22 },
+            '@container (max-width: 340px)': {
+              gap: 0.25,
+              '& .MuiIconButton-root': { width: 32 },
+              '& .MuiSvgIcon-root': { fontSize: 20 }
+            }
+          }}
+        >
+          {/* A mic and a phone side by side read alike; the hover text tells the
+          recorded message from the live call. */}
+          {onRecordVoice && (
+            <Tooltip title="Voice message" describeChild>
+              {/* A span, because a disabled button fires no hover for the tooltip. */}
+              <span>
+                <IconButton
+                  size="small"
+                  aria-label="Record voice message"
+                  onClick={onRecordVoice}
+                  disabled={recordingVoice}
+                >
+                  <MicNoneOutlinedIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+
+          {onCall && (
+            <Tooltip title={name ? `Call ${name}` : 'Call'} describeChild>
+              <IconButton size="small" aria-label={`Call ${name || ''}`.trim()} onClick={onCall}>
+                <CallOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {onLocation && (
+            <Tooltip title={sharingLocation ? 'Sharing location' : 'Share location'} describeChild>
+              <IconButton
+                size="small"
+                aria-label={sharingLocation ? 'Manage location sharing' : 'Share location'}
+                onClick={onLocation}
+                sx={sharingLocation ? { color: accent } : undefined}
+              >
+                <NearMeOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {menu.length > 0 && (
+            <>
+              <Tooltip title="More options" describeChild>
+                <IconButton
+                  size="small"
+                  aria-label="Conversation options"
+                  aria-haspopup="menu"
+                  aria-expanded={Boolean(menuAnchor)}
+                  onClick={(event) => setMenuAnchor(event.currentTarget)}
+                >
+                  <MoreVertIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Menu
+                anchorEl={menuAnchor}
+                open={Boolean(menuAnchor)}
+                onClose={() => setMenuAnchor(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              >
+                {menu.map((item) => (
+                  <MenuItem
+                    key={item.label}
+                    onClick={() => {
+                      setMenuAnchor(null);
+                      item.onClick();
+                    }}
+                  >
+                    {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
+                    <ListItemText primary={item.label} secondary={item.secondary} />
+                  </MenuItem>
+                ))}
+              </Menu>
+            </>
+          )}
+        </Box>
+      </Box>
     </Box>
   );
 }

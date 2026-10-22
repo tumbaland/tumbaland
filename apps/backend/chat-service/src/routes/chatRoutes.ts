@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { createRateLimiter, validate } from '@tumbaland/backend-core';
 import * as ctrl from '../controllers/chatController';
 import * as calls from '../controllers/callController';
+import * as live from '../controllers/liveController';
+import * as places from '../controllers/placeController';
 import { caller } from '../services/accessService';
 import { touch as touchPresence } from '../services/presenceService';
 import {
@@ -19,7 +21,11 @@ import {
   startCollageSchema,
   thumbnailSchema,
   unsubscribeSchema,
-  uploadUrlSchema
+  uploadUrlSchema,
+  liveStartSchema,
+  livePositionSchema,
+  liveWatchSchema,
+  savedPlaceSchema
 } from '../validation/schemas';
 
 const router = Router();
@@ -91,6 +97,40 @@ router.post('/calls/:callId/accept', validate(callDeviceSchema), calls.accept);
 router.post('/calls/:callId/decline', calls.decline);
 router.post('/calls/:callId/end', calls.end);
 router.post('/calls/:callId/signal', signalLimiter, validate(callSignalSchema), calls.signal);
+
+/**
+ * A phone sends a position every few seconds while sharing; a two-hour drive
+ * is a couple of thousand. The ceiling is for a client stuck in a loop.
+ */
+const livePositionLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { success: false, message: 'Too many location updates' }
+});
+
+// Sharing where one is, live: "I am on my way".
+router.get('/conversations/:id/live', live.list);
+router.put('/conversations/:id/live', validate(liveStartSchema), live.start);
+router.post('/conversations/:id/live/position', livePositionLimiter, validate(livePositionSchema), live.position);
+router.delete('/conversations/:id/live', live.stop);
+router.put('/conversations/:id/live/:userId/watch', validate(liveWatchSchema), live.watch);
+router.delete('/conversations/:id/live/:userId/watch', live.unwatch);
+
+/**
+ * The map's search box asks as someone types, and every lookup goes on to the
+ * public geocoder, whose fair-use limits are this server's to keep.
+ */
+const geocodeLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { success: false, message: 'Too many place lookups, wait a moment' }
+});
+
+router.get('/places/search', geocodeLimiter, places.search);
+router.get('/places/reverse', geocodeLimiter, places.reverse);
+router.get('/conversations/:id/places', places.list);
+router.post('/conversations/:id/places', validate(savedPlaceSchema), places.save);
+router.delete('/conversations/:id/places/:placeId', places.remove);
 
 // GET /api/chat/stream is deliberately not here: app.ts registers it ahead of
 // the rate limiter.

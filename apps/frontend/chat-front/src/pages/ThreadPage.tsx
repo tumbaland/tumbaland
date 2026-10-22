@@ -1,49 +1,29 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
 import Snackbar from '@mui/material/Snackbar';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import PhotoAlbumOutlinedIcon from '@mui/icons-material/PhotoAlbumOutlined';
-import UndoIcon from '@mui/icons-material/Undo';
-import ReplyIcon from '@mui/icons-material/Reply';
+import { surface } from '@tumbaland/frontend-core';
 import { Composer } from '../components/thread/Composer';
-import { EmojiPicker, type MessageAction } from '../components/thread/EmojiPicker';
-import { FullEmojiPicker } from '../components/thread/FullEmojiPicker';
 import { MessageList } from '../components/thread/MessageList';
-import { canChange } from '../components/thread/MessageBubble';
 import { TypingIndicator } from '../components/thread/TypingIndicator';
 import { ScreenEffect } from '../components/thread/ScreenEffect';
-import { ThreadHeader } from '../components/thread/ThreadHeader';
+import { ThreadToolbar } from '../components/thread/ThreadToolbar';
+import { ThreadMessageActions, type PickedMessage } from '../components/thread/ThreadMessageActions';
+import { ThreadLocation } from '../components/live/ThreadLocation';
 import { AlbumPicker } from '../components/thread/AlbumPicker';
 import { ChoosePhotosDialog } from '../components/thread/ChoosePhotosDialog';
-import { AlbumCollageDialog } from '../components/thread/AlbumCollageDialog';
-import { SearchDialog } from '../components/thread/SearchDialog';
-import { ThemePicker } from '../components/thread/ThemePicker';
-import { chatColors, chatThemeVars, themeById } from '../components/thread/themes';
-import { surface } from '@tumbaland/frontend-core';
-import { recordEmoji } from '../components/thread/recentEmoji';
-import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
-import SearchIcon from '@mui/icons-material/Search';
-import { chatApi } from '../services/chatApi';
-import { requestCall } from '../services/callBus';
-import { isVisualType } from '../services/voice';
-import { messageSummary } from '../services/summary';
-import { clearShare, isMedia, readShare, sharedMessage } from '../services/sharedInbox';
 import { Lightbox } from '../components/thread/Lightbox';
-import { uploadVoice, useAttachmentUploads } from '../hooks/useAttachmentUploads';
-import { useVoiceMessage, type SendVoice } from '../hooks/useVoiceMessage';
+import { SearchDialog } from '../components/thread/SearchDialog';
+import { chatColors, chatThemeVars, themeById } from '../components/thread/themes';
 import { useChatThread } from '../hooks/useChatThread';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useScreenEffects } from '../hooks/useScreenEffects';
-import type { Message, PhotoAlbum, PhotoAlbumChoice, SendOptions, ThreadMessage } from '../types';
+import { useThreadComposer } from '../hooks/useThreadComposer';
+import { useThreadLocation } from '../hooks/useThreadLocation';
+import { useThreadMedia } from '../hooks/useThreadMedia';
+import { useThreadSearch } from '../hooks/useThreadSearch';
 
 export interface ThreadPageProps {
   /** Given by the side panel, which has no route to read it from. */
@@ -52,345 +32,37 @@ export interface ThreadPageProps {
   onBack?: () => void;
 }
 
+/** A conversation change resets its state and isolates any requests still in flight. */
 export default function ThreadPage({ conversationId: given, onBack }: ThreadPageProps = {}) {
   const params = useParams<{ conversationId: string }>();
   const conversationId = given ?? params.conversationId;
+  return <ThreadContent key={conversationId} conversationId={conversationId} onBack={onBack} acceptShared={!given} />;
+}
+
+/** Compose the thread's features; each feature owns its interaction state and dialogs. */
+function ThreadContent({ conversationId, onBack, acceptShared }: ThreadPageProps & { acceptShared: boolean }) {
   const { user, loading: loadingUser } = useCurrentUser();
-  const [picker, setPicker] = useState<{ messageId: string; anchor: HTMLElement } | null>(null);
-  // The full picker, once someone asks for an emoji the quick row does not
-  // have. It remembers which message it was opened for.
-  const [morePicker, setMorePicker] = useState<{ messageId: string; anchor: HTMLElement } | null>(null);
-  // By message rather than a copy of its attachments, so the viewer shows an
-  // album change the moment it lands.
-  const [viewing, setViewing] = useState<{ messageId: string; index: number } | null>(null);
-  /** A sent message's photos being moved: all of them, or the one named. */
-  /** A message's photos, or some of them (`fileIds`), on their way to another album. */
-  const [placing, setPlacing] = useState<{ messageId: string; fileIds?: string[] } | null>(null);
-  /** First, for a message with several photos: which of them a move or a removal is for. */
-  const [choosing, setChoosing] = useState<{ messageId: string; mode: 'move' | 'remove' } | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [unsending, setUnsending] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [choosingAlbum, setChoosingAlbum] = useState(false);
-  const [choosingTheme, setChoosingTheme] = useState(false);
-  const [albumAndCollage, setAlbumAndCollage] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  /** The message the list scrolls to and flashes: a search result. */
-  const [focus, setFocus] = useState<{ id: string; key: number } | null>(null);
-  const [jumping, setJumping] = useState(false);
+  const currentUserId = user?.id ?? '';
   const navigate = useNavigate();
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [picked, setPicked] = useState<PickedMessage | null>(null);
+  const [choosingAlbum, setChoosingAlbum] = useState(false);
 
-  const thread = useChatThread(conversationId, user?.id ?? '');
-  const uploads = useAttachmentUploads(conversationId);
-  const screenEffect = useScreenEffects(conversationId, thread.messages, user?.id ?? '', !thread.loading);
-
-  /**
-   * Something shared from another app, sent here by the shell's /share page
-   * with `?shared=1`. It goes into the composer, not straight out: the link
-   * in the box and the photos on the tray, so the person can add a line or
-   * change their mind before pressing Send.
-   *
-   * The side panel never takes it. It shows on desktop next to other pages,
-   * and would pick up a share meant for an album.
-   *
-   * The share is cleared only once it is in the composer, so a render that
-   * is thrown away half-way leaves it for the next one to pick up.
-   */
-  const [searchParams, setSearchParams] = useSearchParams();
-  const sharing = !given && searchParams.has('shared');
-  /** Kept with the conversation it was shared to, so a later one's composer does not pick it up. */
-  const [prefill, setPrefill] = useState<{ text: string; key: number; conversationId: string } | null>(null);
-  const addUploads = uploads.add;
-  useEffect(() => {
-    if (!sharing || !conversationId) return;
-    let active = true;
-    void readShare().then(async (share) => {
-      if (!active) return;
-      if (share) {
-        const media = share.files.filter(isMedia);
-        if (media.length > 0) void addUploads(media);
-        const text = sharedMessage(share);
-        if (text) setPrefill({ text, key: Date.now(), conversationId });
-        await clearShare();
-      }
-      setSearchParams(
-        (previous) => {
-          const next = new URLSearchParams(previous);
-          next.delete('shared');
-          return next;
-        },
-        { replace: true }
-      );
-    });
-    return () => {
-      active = false;
-    };
-  }, [sharing, conversationId, addUploads, setSearchParams]);
-
-  const find = (id: string | null | undefined) =>
-    id ? thread.messages.find((message) => message.id === id) : undefined;
-
-  /** The message the next send answers. Dropped if it is unsent meanwhile. */
-  const [replyingId, setReplyingId] = useState<string | null>(null);
-  // Opening another conversation from a notification keeps this page mounted;
-  // a reply chosen in the last one is not meant for this one.
-  useEffect(() => setReplyingId(null), [conversationId]);
-  const replyingMessage = find(replyingId);
-  const replying =
-    replyingMessage && !replyingMessage.deletedAt
-      ? {
-          id: replyingMessage.id,
-          name:
-            replyingMessage.senderId === user?.id
-              ? 'yourself'
-              : thread.members.find((member) => member.userId === replyingMessage.senderId)?.name ||
-                replyingMessage.senderName,
-          text: messageSummary(replyingMessage)
-        }
-      : null;
-  // A reply and an edit both use the box; starting one ends the other.
-  const startReply = (messageId: string) => {
-    setEditingId(null);
-    setReplyingId(messageId);
-  };
-  const startEdit = (messageId: string) => {
-    setReplyingId(null);
-    setEditingId(messageId);
-  };
-
-  // Unsent from another device while the edit was open: nothing left to edit.
-  const editingMessage = find(editingId);
-  const editing =
-    editingMessage && !editingMessage.deletedAt
-      ? { id: editingMessage.id, body: editingMessage.body, hasMedia: editingMessage.attachments.length > 0 }
-      : null;
-
-  const saveEdit = async (body: string) => {
-    if (!editing) return;
-    try {
-      await thread.edit(editing.id, body);
-      setEditingId(null);
-    } catch {
-      setActionError('Could not save the edit. Try again.');
-    }
-  };
-
-  const unsend = async () => {
-    if (!unsending) return;
-    const id = unsending;
-    setUnsending(null);
-    try {
-      await thread.remove(id);
-      if (editingId === id) setEditingId(null);
-    } catch {
-      setActionError('Could not unsend that message. Try again.');
-    }
-  };
-
-  /**
-   * Edit and Unsend, for the sender's own stored messages only; the album for
-   * anyone, since it is the group's.
-   */
-  const pickedMessage = find(picker?.messageId);
-  const pickedStored =
-    pickedMessage && !pickedMessage.deletedAt && pickedMessage.delivery !== 'pending' && pickedMessage.delivery !== 'failed';
-  const inAlbum = Boolean(pickedMessage?.attachments.some((attachment) => attachment.albumId));
-  const actions: MessageAction[] = [
-    ...(pickedMessage && pickedStored && pickedMessage.kind !== 'system'
-      ? [{ label: 'Reply', icon: <ReplyIcon fontSize="small" />, onClick: () => startReply(pickedMessage.id) }]
-      : []),
-    ...(pickedMessage &&
-    pickedStored &&
-    pickedMessage.attachments.some((attachment) => isVisualType(attachment.mimetype))
-      ? [
-          {
-            label: inAlbum ? 'Change album…' : 'Add to album…',
-            icon: <PhotoAlbumOutlinedIcon fontSize="small" />,
-            onClick: () => editAlbum(pickedMessage.id)
-          }
-        ]
-      : []),
-    ...(pickedMessage && canChange(pickedMessage, pickedMessage.senderId === user?.id)
-      ? [
-          { label: 'Edit', icon: <EditOutlinedIcon fontSize="small" />, onClick: () => startEdit(pickedMessage.id) },
-          {
-            label: 'Unsend',
-            icon: <UndoIcon fontSize="small" />,
-            onClick: () => setUnsending(pickedMessage.id),
-            danger: true
-          }
-        ]
-      : [])
-  ];
-
-  const send = (body: string, options?: SendOptions) => {
-    // `take` empties the queue, so the attachments and the text leave together
-    // and a second press cannot send the same files twice.
-    const replyTo = replying?.id;
-    void thread.send(body, uploads.take(), replyTo ? { ...options, replyTo } : options);
-    setReplyingId(null);
-  };
-
-  /**
-   * Uploads, then sends like any message. Throws when the upload fails, so the
-   * composer keeps the recording for another try instead of losing it.
-   */
-  const sendVoice: SendVoice = async (recording, onProgress) => {
-    if (!conversationId) return;
-    // Read now, not when recording started: the reply could have been chosen meanwhile.
-    const replyTo = replying?.id;
-    const attachment = await uploadVoice(conversationId, recording, onProgress);
-    void thread.send('', [attachment], replyTo ? { replyTo } : undefined);
-    setReplyingId(null);
-  };
-  const voice = useVoiceMessage(conversationId, sendVoice);
-
-  const loadAlbums = useCallback(
-    () => (conversationId ? chatApi.listAlbums(conversationId) : Promise.resolve([])),
-    [conversationId]
-  );
-
-  const turnAlbumOff = async () => {
-    try {
-      await thread.setPhotoAlbum({ mode: 'off' });
-    } catch {
-      setActionError('Could not change that. Try again.');
-    }
-  };
-
-  const viewingMessage = find(viewing?.messageId);
-  // The lightbox shows photos and videos; a document is saved from its card, a voice message played in its bubble.
-  const viewingMedia = (viewingMessage?.attachments ?? []).filter((attachment) => isVisualType(attachment.mimetype));
-  const viewingIndex =
-    viewingMessage && viewing ? viewingMedia.indexOf(viewingMessage.attachments[viewing.index]!) : -1;
-  const viewingStored =
-    viewingMessage &&
-    !viewingMessage.deletedAt &&
-    viewingMessage.delivery !== 'pending' &&
-    viewingMessage.delivery !== 'failed';
-
-  const photosOf = (message: Message | undefined) =>
-    (message?.attachments ?? []).filter((attachment) => isVisualType(attachment.mimetype));
-
-  /** The pencil: straight to the albums for one photo; for several, which ones first. */
-  const editAlbum = (messageId: string) => {
-    if (photosOf(find(messageId)).length > 1) setChoosing({ messageId, mode: 'move' });
-    else setPlacing({ messageId });
-  };
-
-  const takeOutOfAlbum = (messageId: string, fileIds?: string[]) =>
-    thread
-      .removeFromAlbum(messageId, fileIds)
-      .catch(() => setActionError('Could not remove it from the album. Try again.'));
-
-  /** The minus: at once for one photo; for several, which ones first. */
-  const removeAlbum = (messageId: string) => {
-    if (photosOf(find(messageId)).filter((photo) => photo.albumId).length > 1)
-      setChoosing({ messageId, mode: 'remove' });
-    else void takeOutOfAlbum(messageId);
-  };
-
-  const choosingMessage = find(choosing?.messageId);
-  const choosingPhotos =
-    choosing?.mode === 'remove'
-      ? photosOf(choosingMessage).filter((photo) => photo.albumId)
-      : photosOf(choosingMessage);
-
-  /** What the "Move to album" picker marks as current: the photos' album, or none. */
-  const placingMessage = find(placing?.messageId);
-  const placingFile = placingMessage?.attachments.find((attachment) =>
-    placing?.fileIds ? placing.fileIds.includes(attachment.fileId) : attachment.albumId
-  );
-  const placingCurrent: PhotoAlbum = placingFile?.albumId
-    ? { mode: 'album', albumId: placingFile.albumId, albumName: placingFile.albumName ?? null }
-    : { mode: 'off', albumId: null, albumName: null };
-
-  // Errors are left to the picker, which stays open and says so.
-  const place = async (choice: PhotoAlbumChoice) => {
-    if (!placing) return;
-    if (choice.mode === 'off') await thread.removeFromAlbum(placing.messageId, placing.fileIds);
-    else
-      await thread.placeInAlbum(
-        placing.messageId,
-        'albumId' in choice ? { albumId: choice.albumId } : { newAlbumName: choice.newAlbumName },
-        placing.fileIds
-      );
-  };
-
+  const thread = useChatThread(conversationId, currentUserId);
+  const composer = useThreadComposer({
+    conversationId,
+    currentUserId,
+    thread,
+    acceptShared,
+    onError: setActionError
+  });
+  const media = useThreadMedia({ conversationId, thread, onError: setActionError });
+  const location = useThreadLocation(conversationId, currentUserId, thread);
+  const search = useThreadSearch(conversationId, currentUserId, thread, setActionError);
+  const screenEffect = useScreenEffects(conversationId, thread.messages, currentUserId, !thread.loading);
   const theme = themeById(thread.appearance.theme);
-
-  // When the thread last saw each person: their read position or their last
-  // message, whichever is later. The header falls back to it when presence
-  // has no record of them.
-  const lastSeen: Record<string, string> = {};
-  const note = (userId: string, iso: string | undefined | null) => {
-    if (iso && (!lastSeen[userId] || new Date(iso) > new Date(lastSeen[userId]!))) lastSeen[userId] = iso;
-  };
-  for (const read of Object.values(thread.reads)) note(read.userId, read.lastReadAt);
-  for (const message of thread.messages) {
-    const stored = message.delivery !== 'pending' && message.delivery !== 'failed';
-    if (message.kind !== 'system' && stored) note(message.senderId, message.createdAt);
-  }
-
-  // Calls are one to one: offered only when there is exactly one other person.
-  const others = thread.members.filter((member) => member.userId !== user?.id);
-  const callable =
-    user && conversationId && others.length === 1
-      ? { userId: others[0]!.userId, name: others[0]!.name || others[0]!.email, picture: others[0]!.picture ?? null }
-      : null;
-
-  const makeBackground = async (fileId: string) => {
-    try {
-      await thread.setAppearance({ backgroundFileId: fileId });
-      setViewing(null);
-    } catch {
-      setActionError('Could not set that as the background. Try again.');
-    }
-  };
-
-  const albumLabel =
-    thread.photoAlbum.mode === 'album'
-      ? (thread.photoAlbum.albumName ?? 'An album')
-      : thread.photoAlbum.mode === 'off'
-        ? 'Not saving to Album'
-        : 'Not chosen yet';
-
-  const openCollage = (collageId: string) => navigate(`/album/collages/${collageId}`);
-  const openPlan = (planId: string) =>
-    navigate(`/relationship/journal?view=calendar&plan=${encodeURIComponent(planId)}`);
-
-  // The card is in the thread for the others; the one who made it goes straight in.
-  const startCollage = async (title: string, clientId: string) => {
-    const card = await thread.startCollage(title, clientId);
-    if (card?.collage) openCollage(card.collage.id);
-  };
-
-  /**
-   * A search result: older messages are loaded until it is in the thread,
-   * then the list scrolls to it. Past the loading limit, or unsent since the
-   * search, it says so instead.
-   */
-  const openResult = async (message: Message) => {
-    setSearchOpen(false);
-    await jumpTo(message.id, message.createdAt);
-  };
-
-  /** A search result or a reply's quote: loads back to the message and shows it. */
-  const jumpTo = async (messageId: string, createdAt: string) => {
-    setJumping(true);
-    try {
-      const outcome = await thread.loadUntil(messageId, createdAt);
-      if (outcome === 'found') setFocus({ id: messageId, key: Date.now() });
-      else if (outcome === 'too-far') setActionError('That message is too far back to open here.');
-      else setActionError('That message is no longer in the chat.');
-    } catch {
-      setActionError('Could not open that message. Try again.');
-    } finally {
-      setJumping(false);
-    }
-  };
-
-  const openMedia = (message: ThreadMessage, index: number) => setViewing({ messageId: message.id, index });
+  const voice = composer.props.voice;
+  const openCollage = (id: string) => navigate(`/album/collages/${id}`);
 
   if (loadingUser || (thread.loading && thread.messages.length === 0)) {
     return (
@@ -413,8 +85,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
           : {}),
         background: chatColors.background,
         position: 'relative',
-        // The photo layer below sits behind everything in this box and in
-        // front of nothing outside it.
+        // Keep the background photo behind this thread without affecting the shell.
         isolation: 'isolate'
       }}
     >
@@ -429,50 +100,26 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
             backgroundImage: `url("${thread.appearance.backgroundUrl}")`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            // A veil, so the grey times and the bubbles stay readable over
-            // whatever the photo is. Pale on light, dark on dark.
             '&::after': { content: '""', position: 'absolute', inset: 0, background: surface.scrim }
           }}
         />
       )}
-      <ThreadHeader
-        members={thread.members}
-        currentUserId={user?.id ?? ''}
-        title={thread.title}
-        presence={thread.presence}
-        typingNames={thread.typingNames}
+
+      <ThreadToolbar
+        conversationId={conversationId}
+        currentUserId={currentUserId}
+        thread={thread}
         onBack={onBack}
-        background={chatColors.header}
-        accent={chatColors.headerAccent}
-        lastSeen={lastSeen}
-        onCall={callable ? () => requestCall({ conversationId: conversationId!, peer: callable }) : undefined}
+        onSearch={search.open}
+        onLocation={location.openMap}
+        sharing={location.drive.state === 'sharing' || Boolean(location.ownShare)}
         onRecordVoice={voice.supported ? () => void voice.start() : undefined}
-        // An edit has the box; a recording would take it over mid-edit.
-        recordingVoice={voice.active || Boolean(editing)}
-        menu={[
-          {
-            label: 'Search messages',
-            icon: <SearchIcon fontSize="small" />,
-            onClick: () => setSearchOpen(true)
-          },
-          {
-            label: 'Album and collage',
-            secondary: albumLabel,
-            icon: <PhotoAlbumOutlinedIcon fontSize="small" />,
-            onClick: () => setAlbumAndCollage(true)
-          },
-          {
-            label: 'Theme',
-            secondary: thread.appearance.backgroundFileId ? `${theme.name}, with a photo` : theme.name,
-            icon: <PaletteOutlinedIcon fontSize="small" />,
-            onClick: () => setChoosingTheme(true)
-          }
-        ]}
+        recordingVoice={voice.active || Boolean(composer.props.editing)}
+        choosingAlbum={choosingAlbum}
+        onCloseAlbum={() => setChoosingAlbum(false)}
+        onOpenCollage={openCollage}
       />
 
-      {/* The connection banner appears only when the transport has actually
-          degraded. A permanently visible status line trains people to ignore
-          it, which is the opposite of what it is for. */}
       {thread.connection === 'offline' && (
         <Alert severity="warning" sx={{ borderRadius: 0 }}>
           Reconnecting
@@ -489,169 +136,75 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         </Alert>
       )}
 
+      <ThreadLocation
+        conversationId={conversationId}
+        currentUserId={currentUserId}
+        shares={thread.live}
+        location={location}
+      />
+
       <MessageList
         messages={thread.messages}
-        currentUserId={user?.id ?? ''}
+        currentUserId={currentUserId}
         hasOlder={thread.hasOlder}
         loadingOlder={thread.loadingOlder}
         onLoadOlder={thread.loadOlder}
         onReact={thread.react}
         onRetry={thread.retry}
-        onPickEmoji={(messageId, anchor) => setPicker({ messageId, anchor })}
-        onReply={startReply}
-        onOpenQuote={(messageId, createdAt) => void jumpTo(messageId, createdAt)}
-        onOpenMedia={openMedia}
-        onOpenAlbum={(albumId) => navigate(`/album/albums/${albumId}`)}
-        onEditAlbum={editAlbum}
-        onRemoveFromAlbum={removeAlbum}
+        onPickEmoji={(messageId, anchor) => setPicked({ messageId, anchor })}
+        onReply={composer.reply}
+        onOpenQuote={(messageId, createdAt) => void search.jumpTo(messageId, createdAt)}
+        onOpenMedia={media.openMedia}
+        onOpenAlbum={(id) => navigate(`/album/albums/${id}`)}
+        onEditAlbum={media.editAlbum}
+        onRemoveFromAlbum={media.removeAlbum}
         onOpenCollage={openCollage}
-        onOpenPlan={openPlan}
+        onOpenPlan={(id) => navigate(`/relationship/journal?view=calendar&plan=${encodeURIComponent(id)}`)}
         accent={chatColors.bubble}
         members={thread.members}
         reads={thread.reads}
-        focus={focus}
+        focus={search.focus}
       />
-
       <TypingIndicator names={thread.typingNames} />
 
       {screenEffect.playing && (
-        <ScreenEffect
-          key={screenEffect.playing.key}
-          effect={screenEffect.playing.effect}
-          onDone={screenEffect.done}
-        />
+        <ScreenEffect key={screenEffect.playing.key} effect={screenEffect.playing.effect} onDone={screenEffect.done} />
       )}
 
-      {/* One per conversation. Opening another from a notification keeps this
-          page mounted, and a half-typed line must not go with it. (A recording
-          is dropped by useVoiceMessage.) */}
+      {/* Only a conversation change resets the draft, never a stream update or an open dialog. */}
       <Composer
         key={conversationId}
-        onSend={send}
-        voice={voice}
-        onTyping={thread.notifyTyping}
-        uploads={uploads.uploads}
-        onAddFiles={uploads.add}
-        onRemoveUpload={uploads.remove}
-        uploading={uploads.busy}
-        editing={editing}
-        onSaveEdit={(body) => void saveEdit(body)}
-        onCancelEdit={() => setEditingId(null)}
-        replying={replying}
-        onCancelReply={() => setReplyingId(null)}
+        {...composer.props}
         photoAlbum={thread.photoAlbum}
         onChooseAlbum={() => setChoosingAlbum(true)}
-        onAlbumOff={() => void turnAlbumOff()}
         accent={chatColors.bubble}
-        prefill={prefill?.conversationId === conversationId ? prefill : null}
       />
 
-      {conversationId && (
-        <SearchDialog
-          open={searchOpen}
-          onClose={() => setSearchOpen(false)}
-          conversationId={conversationId}
-          members={thread.members}
-          currentUserId={user?.id ?? ''}
-          onPick={(message) => void openResult(message)}
-        />
-      )}
-
-      <Snackbar open={jumping} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+      {conversationId && <SearchDialog {...search.dialog} />}
+      <Snackbar open={search.jumping} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         <Alert severity="info" icon={<CircularProgress size={18} />} sx={{ width: '100%' }}>
           Finding the message…
         </Alert>
       </Snackbar>
 
-      <ThemePicker
-        open={choosingTheme}
-        onClose={() => setChoosingTheme(false)}
-        appearance={thread.appearance}
-        onChange={thread.setAppearance}
-      />
-
-      <AlbumCollageDialog
-        open={albumAndCollage}
-        onClose={() => setAlbumAndCollage(false)}
-        photoAlbum={thread.photoAlbum}
-        loadAlbums={loadAlbums}
-        onChooseAlbum={thread.setPhotoAlbum}
-        onStartCollage={startCollage}
-      />
-
-      {/* On its own for the composer's "Photos go to" line, where the
-          question is only where this photo goes. */}
-      <AlbumPicker
-        open={choosingAlbum}
-        onClose={() => setChoosingAlbum(false)}
-        current={thread.photoAlbum}
-        loadAlbums={loadAlbums}
-        onChoose={thread.setPhotoAlbum}
-      />
-
-      <ChoosePhotosDialog
-        open={Boolean(choosing && choosingPhotos.length > 0)}
-        title={choosing?.mode === 'remove' ? 'Take which photos out?' : 'Which photos?'}
-        photos={choosingPhotos}
-        initial={choosingPhotos.map((photo) => photo.fileId)}
-        confirmLabel={(count) =>
-          choosing?.mode === 'remove' ? `Take ${count} out of the album` : count === 1 ? 'Next' : `Next (${count})`
-        }
-        onConfirm={async (fileIds) => {
-          if (!choosing) return;
-          // All of them is the message as a whole, which is also how one message
-          // goes to a new album without making it once per photo.
-          const some = fileIds.length < choosingPhotos.length ? fileIds : undefined;
-          if (choosing.mode === 'remove') await thread.removeFromAlbum(choosing.messageId, some);
-          else setPlacing({ messageId: choosing.messageId, fileIds: some });
-          setChoosing(null);
+      <ThreadMessageActions
+        picked={picked}
+        onClose={() => setPicked(null)}
+        messages={thread.messages}
+        currentUserId={currentUserId}
+        onReply={composer.reply}
+        onEdit={composer.edit}
+        onEditAlbum={media.editAlbum}
+        onReact={thread.react}
+        onUnsend={async (id) => {
+          await thread.remove(id);
+          composer.cancelEditFor(id);
         }}
-        onClose={() => setChoosing(null)}
+        onError={setActionError}
       />
-
-      <AlbumPicker
-        open={Boolean(placing)}
-        onClose={() => setPlacing(null)}
-        purpose="photo"
-        current={placingCurrent}
-        loadAlbums={loadAlbums}
-        onChoose={place}
-      />
-
-      <EmojiPicker
-        anchorEl={picker?.anchor ?? null}
-        onClose={() => setPicker(null)}
-        onPick={(emoji) => {
-          if (!picker) return;
-          recordEmoji(emoji);
-          void thread.react(picker.messageId, emoji);
-        }}
-        onMore={() => picker && setMorePicker({ messageId: picker.messageId, anchor: picker.anchor })}
-        actions={actions}
-      />
-
-      <FullEmojiPicker
-        anchorEl={morePicker?.anchor ?? null}
-        onClose={() => setMorePicker(null)}
-        onPick={(emoji) => {
-          if (!morePicker) return;
-          recordEmoji(emoji);
-          void thread.react(morePicker.messageId, emoji);
-        }}
-      />
-
-      <Dialog open={Boolean(unsending)} onClose={() => setUnsending(null)} maxWidth="xs" fullWidth>
-        <DialogTitle>Unsend this message?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>It will be removed for everyone in the chat.</DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setUnsending(null)}>Cancel</Button>
-          <Button color="error" onClick={() => void unsend()}>
-            Unsend
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ChoosePhotosDialog {...media.photoSelection} />
+      <AlbumPicker {...media.albumPicker} />
+      <Lightbox {...media.lightbox} />
 
       <Snackbar
         open={Boolean(actionError)}
@@ -663,28 +216,6 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
           {actionError}
         </Alert>
       </Snackbar>
-
-      <Lightbox
-        attachments={viewingMedia}
-        index={viewingMessage && viewingIndex >= 0 ? viewingIndex : null}
-        onClose={() => setViewing(null)}
-        onEditAlbum={
-          viewingStored
-            ? (index) => {
-                const fileId = viewingMedia[index]?.fileId;
-                if (fileId) setPlacing({ messageId: viewingMessage.id, fileIds: [fileId] });
-              }
-            : undefined
-        }
-        onUseAsBackground={
-          viewingStored
-            ? (index) => {
-                const fileId = viewingMedia[index]?.fileId;
-                if (fileId) void makeBackground(fileId);
-              }
-            : undefined
-        }
-      />
     </Box>
   );
 }
