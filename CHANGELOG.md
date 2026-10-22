@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.537](https://github.com/tumbaland/tumbaland/compare/app-v0.0.536...app-v0.0.537) (2026-10-22)
+
+### Features
+
+* **chat:** add voice messages, replies and per-photo album choices ([#83](https://github.com/tumbaland/tumbaland/issues/83)) ([5ad1839](https://github.com/tumbaland/tumbaland/commit/5ad183914fea760b47d2976e8d5403a881d01f83))
+
 ## [0.0.536](https://github.com/tumbaland/tumbaland/compare/app-v0.0.535...app-v0.0.536) (2026-10-21)
 
 ### Features
