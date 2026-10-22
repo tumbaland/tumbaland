@@ -165,6 +165,16 @@ describe('GET /files/download/:fileId (downloadPublic)', () => {
     expect((res.body as Buffer).toString()).toBe('2345');
   });
 
+  it('serves a voice message as audio, so a phone plays it in place', async () => {
+    const fileId = 'chat/group/conversation/upload/original.m4a';
+    stored(fileId, 'aac bytes');
+
+    const res = await request(app).get(`/files/download/${fileId}?${signedQuery('download', fileId)}`);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toBe('audio/mp4');
+  });
+
   it('falls back to application/octet-stream for an unrecognized extension', async () => {
     const fileId = 'group/album/file.html';
     stored(fileId, '<script>');

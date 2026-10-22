@@ -9,10 +9,63 @@ import { ink, surface } from '@tumbaland/frontend-core';
 import type { PendingUpload } from '../../types';
 import { isDocumentType } from '../../services/documents';
 import { firstFrameSrc } from './MediaGrid';
+import { isVisualType } from '../../services/voice';
+import PhotoAlbumIcon from '@mui/icons-material/PhotoAlbum';
+import PhotoAlbumOutlinedIcon from '@mui/icons-material/PhotoAlbumOutlined';
+import { brand } from '@tumbaland/frontend-core';
+
+/**
+ * Whether one photo on the tray goes to the album: filled when it does,
+ * outlined when it stays in chat only. A photo left out is also dimmed, so a
+ * tray of them reads at a glance.
+ */
+function AlbumSwitch({
+  name,
+  album,
+  going,
+  onToggle
+}: {
+  name: string;
+  album: string;
+  going: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <>
+      {!going && (
+        <Box aria-hidden sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.4)', pointerEvents: 'none' }} />
+      )}
+      <Tooltip title={going ? `Goes to ${album}. Tap to keep it out` : `Stays in chat only. Tap to add to ${album}`}>
+        <IconButton
+          size="small"
+          aria-label={`Add ${name} to ${album}`}
+          aria-pressed={going}
+          onClick={onToggle}
+          sx={{
+            position: 'absolute',
+            bottom: 2,
+            left: 2,
+            p: 0.25,
+            color: '#fff',
+            bgcolor: going ? brand.pinkInk : 'rgba(0,0,0,0.55)',
+            '&:hover': { bgcolor: going ? brand.pinkInk : 'rgba(0,0,0,0.75)' }
+          }}
+        >
+          {going ? <PhotoAlbumIcon sx={{ fontSize: 14 }} /> : <PhotoAlbumOutlinedIcon sx={{ fontSize: 14 }} />}
+        </IconButton>
+      </Tooltip>
+    </>
+  );
+}
 
 export interface UploadTrayProps {
   uploads: PendingUpload[];
   onRemove: (id: string) => void;
+  /**
+   * The chat's album, when photos are going to one: each photo gets a switch
+   * for whether it goes too. Absent when nothing is being saved.
+   */
+  album?: { name: string; skipped: ReadonlySet<string>; onToggle: (id: string) => void };
 }
 
 /**
@@ -22,7 +75,7 @@ export interface UploadTrayProps {
  * picked rather than after a round trip. Progress is per file: one slow clip
  * among four photos should not look like everything has stalled.
  */
-export function UploadTray({ uploads, onRemove }: UploadTrayProps) {
+export function UploadTray({ uploads, onRemove, album }: UploadTrayProps) {
   return (
     <Box
       sx={{ display: 'flex', gap: 1, px: 1, pt: 1, overflowX: 'auto' }}
@@ -105,6 +158,15 @@ export function UploadTray({ uploads, onRemove }: UploadTrayProps) {
                   <ErrorOutlineIcon sx={{ color: 'error.main' }} />
                 </Box>
               </Tooltip>
+            )}
+
+            {album && isVisualType(upload.mimetype) && (
+              <AlbumSwitch
+                name={upload.name}
+                album={album.name}
+                going={!album.skipped.has(upload.id)}
+                onToggle={() => album.onToggle(upload.id)}
+              />
             )}
 
             <IconButton

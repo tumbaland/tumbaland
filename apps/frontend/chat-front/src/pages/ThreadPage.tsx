@@ -13,6 +13,7 @@ import Snackbar from '@mui/material/Snackbar';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PhotoAlbumOutlinedIcon from '@mui/icons-material/PhotoAlbumOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
+import ReplyIcon from '@mui/icons-material/Reply';
 import { Composer } from '../components/thread/Composer';
 import { EmojiPicker, type MessageAction } from '../components/thread/EmojiPicker';
 import { FullEmojiPicker } from '../components/thread/FullEmojiPicker';
@@ -22,6 +23,7 @@ import { TypingIndicator } from '../components/thread/TypingIndicator';
 import { ScreenEffect } from '../components/thread/ScreenEffect';
 import { ThreadHeader } from '../components/thread/ThreadHeader';
 import { AlbumPicker } from '../components/thread/AlbumPicker';
+import { ChoosePhotosDialog } from '../components/thread/ChoosePhotosDialog';
 import { AlbumCollageDialog } from '../components/thread/AlbumCollageDialog';
 import { SearchDialog } from '../components/thread/SearchDialog';
 import { ThemePicker } from '../components/thread/ThemePicker';
@@ -32,10 +34,12 @@ import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import { chatApi } from '../services/chatApi';
 import { requestCall } from '../services/callBus';
-import { isDocumentType } from '../services/documents';
+import { isVisualType } from '../services/voice';
+import { messageSummary } from '../services/summary';
 import { clearShare, isMedia, readShare, sharedMessage } from '../services/sharedInbox';
 import { Lightbox } from '../components/thread/Lightbox';
-import { useAttachmentUploads } from '../hooks/useAttachmentUploads';
+import { uploadVoice, useAttachmentUploads } from '../hooks/useAttachmentUploads';
+import { useVoiceMessage, type SendVoice } from '../hooks/useVoiceMessage';
 import { useChatThread } from '../hooks/useChatThread';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useScreenEffects } from '../hooks/useScreenEffects';
@@ -60,7 +64,10 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
   // album change the moment it lands.
   const [viewing, setViewing] = useState<{ messageId: string; index: number } | null>(null);
   /** A sent message's photos being moved: all of them, or the one named. */
-  const [placing, setPlacing] = useState<{ messageId: string; fileId?: string } | null>(null);
+  /** A message's photos, or some of them (`fileIds`), on their way to another album. */
+  const [placing, setPlacing] = useState<{ messageId: string; fileIds?: string[] } | null>(null);
+  /** First, for a message with several photos: which of them a move or a removal is for. */
+  const [choosing, setChoosing] = useState<{ messageId: string; mode: 'move' | 'remove' } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [unsending, setUnsending] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -91,7 +98,8 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
    */
   const [searchParams, setSearchParams] = useSearchParams();
   const sharing = !given && searchParams.has('shared');
-  const [prefill, setPrefill] = useState<{ text: string; key: number } | null>(null);
+  /** Kept with the conversation it was shared to, so a later one's composer does not pick it up. */
+  const [prefill, setPrefill] = useState<{ text: string; key: number; conversationId: string } | null>(null);
   const addUploads = uploads.add;
   useEffect(() => {
     if (!sharing || !conversationId) return;
@@ -102,7 +110,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         const media = share.files.filter(isMedia);
         if (media.length > 0) void addUploads(media);
         const text = sharedMessage(share);
-        if (text) setPrefill({ text, key: Date.now() });
+        if (text) setPrefill({ text, key: Date.now(), conversationId });
         await clearShare();
       }
       setSearchParams(
@@ -119,7 +127,36 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
     };
   }, [sharing, conversationId, addUploads, setSearchParams]);
 
-  const find = (id: string | null | undefined) => (id ? thread.messages.find((message) => message.id === id) : undefined);
+  const find = (id: string | null | undefined) =>
+    id ? thread.messages.find((message) => message.id === id) : undefined;
+
+  /** The message the next send answers. Dropped if it is unsent meanwhile. */
+  const [replyingId, setReplyingId] = useState<string | null>(null);
+  // Opening another conversation from a notification keeps this page mounted;
+  // a reply chosen in the last one is not meant for this one.
+  useEffect(() => setReplyingId(null), [conversationId]);
+  const replyingMessage = find(replyingId);
+  const replying =
+    replyingMessage && !replyingMessage.deletedAt
+      ? {
+          id: replyingMessage.id,
+          name:
+            replyingMessage.senderId === user?.id
+              ? 'yourself'
+              : thread.members.find((member) => member.userId === replyingMessage.senderId)?.name ||
+                replyingMessage.senderName,
+          text: messageSummary(replyingMessage)
+        }
+      : null;
+  // A reply and an edit both use the box; starting one ends the other.
+  const startReply = (messageId: string) => {
+    setEditingId(null);
+    setReplyingId(messageId);
+  };
+  const startEdit = (messageId: string) => {
+    setReplyingId(null);
+    setEditingId(messageId);
+  };
 
   // Unsent from another device while the edit was open: nothing left to edit.
   const editingMessage = find(editingId);
@@ -159,19 +196,29 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
     pickedMessage && !pickedMessage.deletedAt && pickedMessage.delivery !== 'pending' && pickedMessage.delivery !== 'failed';
   const inAlbum = Boolean(pickedMessage?.attachments.some((attachment) => attachment.albumId));
   const actions: MessageAction[] = [
-    ...(pickedMessage && pickedStored && pickedMessage.attachments.length > 0
+    ...(pickedMessage && pickedStored && pickedMessage.kind !== 'system'
+      ? [{ label: 'Reply', icon: <ReplyIcon fontSize="small" />, onClick: () => startReply(pickedMessage.id) }]
+      : []),
+    ...(pickedMessage &&
+    pickedStored &&
+    pickedMessage.attachments.some((attachment) => isVisualType(attachment.mimetype))
       ? [
           {
             label: inAlbum ? 'Change album…' : 'Add to album…',
             icon: <PhotoAlbumOutlinedIcon fontSize="small" />,
-            onClick: () => setPlacing({ messageId: pickedMessage.id })
+            onClick: () => editAlbum(pickedMessage.id)
           }
         ]
       : []),
     ...(pickedMessage && canChange(pickedMessage, pickedMessage.senderId === user?.id)
       ? [
-          { label: 'Edit', icon: <EditOutlinedIcon fontSize="small" />, onClick: () => setEditingId(pickedMessage.id) },
-          { label: 'Unsend', icon: <UndoIcon fontSize="small" />, onClick: () => setUnsending(pickedMessage.id), danger: true }
+          { label: 'Edit', icon: <EditOutlinedIcon fontSize="small" />, onClick: () => startEdit(pickedMessage.id) },
+          {
+            label: 'Unsend',
+            icon: <UndoIcon fontSize="small" />,
+            onClick: () => setUnsending(pickedMessage.id),
+            danger: true
+          }
         ]
       : [])
   ];
@@ -179,8 +226,24 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
   const send = (body: string, options?: SendOptions) => {
     // `take` empties the queue, so the attachments and the text leave together
     // and a second press cannot send the same files twice.
-    void thread.send(body, uploads.take(), options);
+    const replyTo = replying?.id;
+    void thread.send(body, uploads.take(), replyTo ? { ...options, replyTo } : options);
+    setReplyingId(null);
   };
+
+  /**
+   * Uploads, then sends like any message. Throws when the upload fails, so the
+   * composer keeps the recording for another try instead of losing it.
+   */
+  const sendVoice: SendVoice = async (recording, onProgress) => {
+    if (!conversationId) return;
+    // Read now, not when recording started: the reply could have been chosen meanwhile.
+    const replyTo = replying?.id;
+    const attachment = await uploadVoice(conversationId, recording, onProgress);
+    void thread.send('', [attachment], replyTo ? { replyTo } : undefined);
+    setReplyingId(null);
+  };
+  const voice = useVoiceMessage(conversationId, sendVoice);
 
   const loadAlbums = useCallback(
     () => (conversationId ? chatApi.listAlbums(conversationId) : Promise.resolve([])),
@@ -196,16 +259,47 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
   };
 
   const viewingMessage = find(viewing?.messageId);
-  // The lightbox shows photos and videos; a document is saved from its card.
-  const viewingMedia = (viewingMessage?.attachments ?? []).filter((attachment) => !isDocumentType(attachment.mimetype));
-  const viewingIndex = viewingMessage && viewing ? viewingMedia.indexOf(viewingMessage.attachments[viewing.index]!) : -1;
+  // The lightbox shows photos and videos; a document is saved from its card, a voice message played in its bubble.
+  const viewingMedia = (viewingMessage?.attachments ?? []).filter((attachment) => isVisualType(attachment.mimetype));
+  const viewingIndex =
+    viewingMessage && viewing ? viewingMedia.indexOf(viewingMessage.attachments[viewing.index]!) : -1;
   const viewingStored =
-    viewingMessage && !viewingMessage.deletedAt && viewingMessage.delivery !== 'pending' && viewingMessage.delivery !== 'failed';
+    viewingMessage &&
+    !viewingMessage.deletedAt &&
+    viewingMessage.delivery !== 'pending' &&
+    viewingMessage.delivery !== 'failed';
 
-  /** What the "Move to album" picker marks as current: the photo's album, or none. */
+  const photosOf = (message: Message | undefined) =>
+    (message?.attachments ?? []).filter((attachment) => isVisualType(attachment.mimetype));
+
+  /** The pencil: straight to the albums for one photo; for several, which ones first. */
+  const editAlbum = (messageId: string) => {
+    if (photosOf(find(messageId)).length > 1) setChoosing({ messageId, mode: 'move' });
+    else setPlacing({ messageId });
+  };
+
+  const takeOutOfAlbum = (messageId: string, fileIds?: string[]) =>
+    thread
+      .removeFromAlbum(messageId, fileIds)
+      .catch(() => setActionError('Could not remove it from the album. Try again.'));
+
+  /** The minus: at once for one photo; for several, which ones first. */
+  const removeAlbum = (messageId: string) => {
+    if (photosOf(find(messageId)).filter((photo) => photo.albumId).length > 1)
+      setChoosing({ messageId, mode: 'remove' });
+    else void takeOutOfAlbum(messageId);
+  };
+
+  const choosingMessage = find(choosing?.messageId);
+  const choosingPhotos =
+    choosing?.mode === 'remove'
+      ? photosOf(choosingMessage).filter((photo) => photo.albumId)
+      : photosOf(choosingMessage);
+
+  /** What the "Move to album" picker marks as current: the photos' album, or none. */
   const placingMessage = find(placing?.messageId);
   const placingFile = placingMessage?.attachments.find((attachment) =>
-    placing?.fileId ? attachment.fileId === placing.fileId : attachment.albumId
+    placing?.fileIds ? placing.fileIds.includes(attachment.fileId) : attachment.albumId
   );
   const placingCurrent: PhotoAlbum = placingFile?.albumId
     ? { mode: 'album', albumId: placingFile.albumId, albumName: placingFile.albumName ?? null }
@@ -214,12 +308,12 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
   // Errors are left to the picker, which stays open and says so.
   const place = async (choice: PhotoAlbumChoice) => {
     if (!placing) return;
-    if (choice.mode === 'off') await thread.removeFromAlbum(placing.messageId, placing.fileId);
+    if (choice.mode === 'off') await thread.removeFromAlbum(placing.messageId, placing.fileIds);
     else
       await thread.placeInAlbum(
         placing.messageId,
         'albumId' in choice ? { albumId: choice.albumId } : { newAlbumName: choice.newAlbumName },
-        placing.fileId
+        placing.fileIds
       );
   };
 
@@ -278,10 +372,15 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
    */
   const openResult = async (message: Message) => {
     setSearchOpen(false);
+    await jumpTo(message.id, message.createdAt);
+  };
+
+  /** A search result or a reply's quote: loads back to the message and shows it. */
+  const jumpTo = async (messageId: string, createdAt: string) => {
     setJumping(true);
     try {
-      const outcome = await thread.loadUntil(message.id, message.createdAt);
-      if (outcome === 'found') setFocus({ id: message.id, key: Date.now() });
+      const outcome = await thread.loadUntil(messageId, createdAt);
+      if (outcome === 'found') setFocus({ id: messageId, key: Date.now() });
       else if (outcome === 'too-far') setActionError('That message is too far back to open here.');
       else setActionError('That message is no longer in the chat.');
     } catch {
@@ -309,6 +408,9 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         height: '100%',
         minHeight: 0,
         ...chatThemeVars(theme),
+        ...(thread.appearance.backgroundUrl
+          ? { '--chat-meta-halo': `0 0 3px ${surface.paper}, 0 0 8px ${surface.paper}` }
+          : {}),
         background: chatColors.background,
         position: 'relative',
         // The photo layer below sits behind everything in this box and in
@@ -344,6 +446,9 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         accent={chatColors.headerAccent}
         lastSeen={lastSeen}
         onCall={callable ? () => requestCall({ conversationId: conversationId!, peer: callable }) : undefined}
+        onRecordVoice={voice.supported ? () => void voice.start() : undefined}
+        // An edit has the box; a recording would take it over mid-edit.
+        recordingVoice={voice.active || Boolean(editing)}
         menu={[
           {
             label: 'Search messages',
@@ -393,12 +498,12 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         onReact={thread.react}
         onRetry={thread.retry}
         onPickEmoji={(messageId, anchor) => setPicker({ messageId, anchor })}
+        onReply={startReply}
+        onOpenQuote={(messageId, createdAt) => void jumpTo(messageId, createdAt)}
         onOpenMedia={openMedia}
         onOpenAlbum={(albumId) => navigate(`/album/albums/${albumId}`)}
-        onEditAlbum={(messageId) => setPlacing({ messageId })}
-        onRemoveFromAlbum={(messageId) =>
-          void thread.removeFromAlbum(messageId).catch(() => setActionError('Could not remove it from the album. Try again.'))
-        }
+        onEditAlbum={editAlbum}
+        onRemoveFromAlbum={removeAlbum}
         onOpenCollage={openCollage}
         onOpenPlan={openPlan}
         accent={chatColors.bubble}
@@ -417,8 +522,13 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         />
       )}
 
+      {/* One per conversation. Opening another from a notification keeps this
+          page mounted, and a half-typed line must not go with it. (A recording
+          is dropped by useVoiceMessage.) */}
       <Composer
+        key={conversationId}
         onSend={send}
+        voice={voice}
         onTyping={thread.notifyTyping}
         uploads={uploads.uploads}
         onAddFiles={uploads.add}
@@ -427,11 +537,13 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         editing={editing}
         onSaveEdit={(body) => void saveEdit(body)}
         onCancelEdit={() => setEditingId(null)}
+        replying={replying}
+        onCancelReply={() => setReplyingId(null)}
         photoAlbum={thread.photoAlbum}
         onChooseAlbum={() => setChoosingAlbum(true)}
         onAlbumOff={() => void turnAlbumOff()}
         accent={chatColors.bubble}
-        prefill={prefill}
+        prefill={prefill?.conversationId === conversationId ? prefill : null}
       />
 
       {conversationId && (
@@ -475,6 +587,26 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         current={thread.photoAlbum}
         loadAlbums={loadAlbums}
         onChoose={thread.setPhotoAlbum}
+      />
+
+      <ChoosePhotosDialog
+        open={Boolean(choosing && choosingPhotos.length > 0)}
+        title={choosing?.mode === 'remove' ? 'Take which photos out?' : 'Which photos?'}
+        photos={choosingPhotos}
+        initial={choosingPhotos.map((photo) => photo.fileId)}
+        confirmLabel={(count) =>
+          choosing?.mode === 'remove' ? `Take ${count} out of the album` : count === 1 ? 'Next' : `Next (${count})`
+        }
+        onConfirm={async (fileIds) => {
+          if (!choosing) return;
+          // All of them is the message as a whole, which is also how one message
+          // goes to a new album without making it once per photo.
+          const some = fileIds.length < choosingPhotos.length ? fileIds : undefined;
+          if (choosing.mode === 'remove') await thread.removeFromAlbum(choosing.messageId, some);
+          else setPlacing({ messageId: choosing.messageId, fileIds: some });
+          setChoosing(null);
+        }}
+        onClose={() => setChoosing(null)}
       />
 
       <AlbumPicker
@@ -537,7 +669,12 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         index={viewingMessage && viewingIndex >= 0 ? viewingIndex : null}
         onClose={() => setViewing(null)}
         onEditAlbum={
-          viewingStored ? (index) => setPlacing({ messageId: viewingMessage.id, fileId: viewingMedia[index]?.fileId }) : undefined
+          viewingStored
+            ? (index) => {
+                const fileId = viewingMedia[index]?.fileId;
+                if (fileId) setPlacing({ messageId: viewingMessage.id, fileIds: [fileId] });
+              }
+            : undefined
         }
         onUseAsBackground={
           viewingStored

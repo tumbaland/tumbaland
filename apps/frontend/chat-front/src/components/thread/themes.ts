@@ -161,5 +161,11 @@ export const chatColors = {
    * Links in the other person's bubbles. The header's accent, which is already
    * checked for contrast on a pale tint in light and a dark one in dark.
    */
-  link: `var(--chat-header-accent, ${brand.pinkInkDeep})`
+  link: `var(--chat-header-accent, ${brand.pinkInkDeep})`,
+  /**
+   * Around the small grey text that sits straight on the background (times,
+   * "Seen", the album line). Nothing on a plain theme; a halo of the page's
+   * own colour over a photo, where the veil alone leaves it hard to read.
+   */
+  metaHalo: 'var(--chat-meta-halo, none)'
 } as const;

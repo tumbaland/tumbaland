@@ -4,6 +4,7 @@ import { chatApi, newClientId } from '../services/chatApi';
 import { documentMimetype } from '../services/documents';
 import { captureVideoPoster, downscaleImage } from '../services/mediaPrep';
 import type { Attachment, PendingUpload } from '../types';
+import type { VoiceRecording } from './useVoiceRecorder';
 
 /**
  * Files the composer is holding, and their journey to storage.
@@ -48,6 +49,27 @@ function putWithProgress(url: string, blob: Blob, mimetype: string, onProgress: 
 
     request.send(blob);
   });
+}
+
+/**
+ * Puts a voice message in storage and returns it as an attachment to send.
+ *
+ * Not a queue entry like a photo: a recording is sent the moment it is
+ * finished, so there is nothing to show on the tray.
+ */
+export async function uploadVoice(
+  conversationId: string,
+  recording: VoiceRecording,
+  onProgress: (percent: number) => void = () => {}
+): Promise<Attachment> {
+  const { blob, format, durationMs } = recording;
+  const ticket = await chatApi.attachmentUploadUrl(conversationId, {
+    filename: format.filename,
+    mimetype: format.mimetype,
+    sizeBytes: blob.size
+  });
+  await putWithProgress(ticket.uploadUrl, blob, format.mimetype, onProgress);
+  return { fileId: ticket.fileId, mimetype: format.mimetype, sizeBytes: blob.size, durationMs: Math.round(durationMs) };
 }
 
 export function useAttachmentUploads(conversationId: string | undefined): UseAttachmentUploadsResult {

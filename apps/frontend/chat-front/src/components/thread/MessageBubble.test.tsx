@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MessageBubble, canChange, isJumbo } from './MessageBubble';
+import { MessageBubble, albumLabel, canChange, isJumbo } from './MessageBubble';
 import type { ThreadMessage } from '../../types';
 
 const message = (overrides: Partial<ThreadMessage> = {}): ThreadMessage => ({
@@ -376,5 +376,189 @@ describe('message effects', () => {
   it('takes the effect away with an unsent message', () => {
     renderBubble({ effect: 'kisses', deletedAt: '2026-09-21T10:05:00.000Z' });
     expect(screen.queryByTestId(/bubble-effect/)).not.toBeInTheDocument();
+  });
+});
+
+describe('voice messages', () => {
+  it('draws a player in the bubble rather than a photo tile', () => {
+    const { container } = renderBubble({
+      kind: 'media',
+      body: '',
+      attachments: [{ fileId: 'v1', mimetype: 'audio/webm', sizeBytes: 1, durationMs: 4_000, url: 'https://files.test/v1.weba' }]
+    });
+
+    expect(screen.getByLabelText('Play voice message')).toBeInTheDocument();
+    expect(screen.getByText('0:04')).toBeInTheDocument();
+    expect(container.querySelector('img, video')).toBeNull();
+  });
+});
+
+describe('replies', () => {
+  const quote = { name: 'Irja', text: 'dinner at 7?', unsent: false };
+
+  it('quotes the message it answers above its own text', () => {
+    renderBubble({ body: 'yes!' }, { quote });
+
+    const quoted = screen.getByText('dinner at 7?');
+    expect(screen.getByText('Irja')).toBeInTheDocument();
+    expect(quoted.compareDocumentPosition(screen.getByText('yes!')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('goes to the original from the quote', async () => {
+    const onOpen = vi.fn();
+    renderBubble({ body: 'yes!' }, { quote: { ...quote, onOpen } });
+
+    await userEvent.click(screen.getByRole('button', { name: /Reply to Irja: dinner at 7\?/ }));
+
+    expect(onOpen).toHaveBeenCalled();
+  });
+
+  it('says so when the original was unsent', () => {
+    renderBubble({ body: 'yes!' }, { quote: { ...quote, text: '', unsent: true } });
+    expect(screen.getByText('Message unsent')).toBeInTheDocument();
+  });
+
+  it('keeps an emoji reply in its bubble, under the quote', () => {
+    renderBubble({ body: '❤️' }, { quote });
+    expect(screen.getByText('❤️').tagName).toBe('P');
+    expect(screen.getByText('❤️')).not.toHaveClass('MuiTypography-h3');
+  });
+
+  it('replies from the button beside the bubble', async () => {
+    const onReply = vi.fn();
+    const { container } = renderBubble({}, { onReply });
+
+    fireEvent.mouseEnter(container.firstChild as Element);
+    await userEvent.click(screen.getByRole('button', { name: 'Reply' }));
+
+    expect(onReply).toHaveBeenCalledWith('m1');
+  });
+
+  const swipe = (target: Element, dx: number, dy: number) => {
+    fireEvent.touchStart(target, { touches: [{ clientX: 100, clientY: 100 }] });
+    fireEvent.touchMove(target, { touches: [{ clientX: 100 + dx / 2, clientY: 100 + dy / 2 }] });
+    fireEvent.touchMove(target, { touches: [{ clientX: 100 + dx, clientY: 100 + dy }] });
+    fireEvent.touchEnd(target);
+  };
+
+  it('replies to a bubble swiped to the right', () => {
+    const onReply = vi.fn();
+    renderBubble({ body: 'swipe me' }, { onReply });
+
+    swipe(screen.getByText('swipe me').parentElement!, 80, 4);
+
+    expect(onReply).toHaveBeenCalledWith('m1');
+  });
+
+  it('leaves a scroll alone, and a swipe too short to mean it', () => {
+    const onReply = vi.fn();
+    renderBubble({ body: 'swipe me' }, { onReply });
+    const bubble = screen.getByText('swipe me').parentElement!;
+
+    swipe(bubble, 20, 120);
+    swipe(bubble, 30, 0);
+
+    expect(onReply).not.toHaveBeenCalled();
+  });
+
+  it('offers no reply on a message still sending', () => {
+    const onReply = vi.fn();
+    const { container } = renderBubble({ delivery: 'pending' }, { onReply });
+    fireEvent.mouseEnter(container.firstChild as Element);
+    expect(screen.queryByRole('button', { name: 'Reply' })).not.toBeInTheDocument();
+  });
+});
+
+describe('albumLabel', () => {
+  const photo = (fileId: string, albumId: string | null, albumName: string | null = albumId) => ({
+    fileId,
+    mimetype: 'image/jpeg',
+    sizeBytes: 1,
+    albumId,
+    albumName
+  });
+
+  it('names the album when every photo is in it', () => {
+    expect(albumLabel([photo('a', 'Rome'), photo('b', 'Rome')])).toBe('In Rome');
+  });
+
+  it('says how many are in it when some were left out', () => {
+    expect(albumLabel([photo('a', 'Rome'), photo('b', null), photo('c', 'Rome')])).toBe('2 of 3 in Rome');
+  });
+
+  it('counts the albums when the photos went different ways', () => {
+    expect(albumLabel([photo('a', 'Rome'), photo('b', 'Home')])).toBe('In 2 albums');
+  });
+
+  it('leaves a document out of the count', () => {
+    expect(albumLabel([photo('a', 'Rome'), { fileId: 'd', mimetype: 'application/pdf', sizeBytes: 1 }])).toBe('In Rome');
+  });
+});
+
+describe('double tap for a heart', () => {
+  const tap = (target: Element) => {
+    fireEvent.touchStart(target, { touches: [{ clientX: 50, clientY: 50 }] });
+    fireEvent.touchEnd(target);
+  };
+
+  it('hearts a message tapped twice, and shows it', () => {
+    const onLove = vi.fn();
+    renderBubble({ body: 'love you' }, { onLove });
+    const bubble = screen.getByText('love you').parentElement!;
+
+    tap(bubble);
+    tap(bubble);
+
+    expect(onLove).toHaveBeenCalledWith('m1');
+    expect(screen.getByTestId('heart-burst')).toBeInTheDocument();
+  });
+
+  it('takes one tap as just a tap', () => {
+    const onLove = vi.fn();
+    renderBubble({ body: 'love you' }, { onLove });
+
+    tap(screen.getByText('love you').parentElement!);
+
+    expect(onLove).not.toHaveBeenCalled();
+  });
+
+  it('hearts a message double-clicked on a computer', () => {
+    const onLove = vi.fn();
+    renderBubble({ body: 'love you' }, { onLove });
+
+    fireEvent.doubleClick(screen.getByText('love you').parentElement!);
+
+    expect(onLove).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores the double click a phone sends after a double tap, so it is one heart', () => {
+    const onLove = vi.fn();
+    renderBubble({ body: 'love you' }, { onLove });
+    const bubble = screen.getByText('love you').parentElement!;
+
+    tap(bubble);
+    tap(bubble);
+    fireEvent.doubleClick(bubble);
+
+    expect(onLove).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not count a cancelled touch as a tap', () => {
+    const onLove = vi.fn();
+    renderBubble({ body: 'love you' }, { onLove });
+    const bubble = screen.getByText('love you').parentElement!;
+
+    tap(bubble);
+    fireEvent.touchStart(bubble, { touches: [{ clientX: 50, clientY: 50 }] });
+    fireEvent.touchCancel(bubble);
+
+    expect(onLove).not.toHaveBeenCalled();
+  });
+
+  it('leaves a message still sending alone', () => {
+    const onLove = vi.fn();
+    renderBubble({ body: 'love you', delivery: 'pending' }, { onLove });
+    fireEvent.doubleClick(screen.getByText('love you').parentElement!);
+    expect(onLove).not.toHaveBeenCalled();
   });
 });

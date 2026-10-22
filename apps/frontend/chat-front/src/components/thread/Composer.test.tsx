@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vite-plus/test';
+import { afterEach, describe, expect, it, vi, beforeEach } from 'vite-plus/test';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 // The composer's emoji button opens the full picker, whose real package
@@ -15,6 +15,7 @@ vi.mock('./FullEmojiPicker', () => ({
 
 import { Composer } from './Composer';
 import { resetRecentEmojiCache } from './recentEmoji';
+import { useVoiceMessage, type SendVoice } from '../../hooks/useVoiceMessage';
 import type { PendingUpload } from '../../types';
 
 /** Drives the `(hover: none)` query the composer uses to tell phone from desktop. */
@@ -441,6 +442,50 @@ describe('saving to Album', () => {
     expect(screen.getByRole('button', { name: 'Not this one' })).toHaveAttribute('aria-pressed', 'false');
   });
 
+  const twoPhotos = [
+    doneUpload(),
+    { ...doneUpload(), id: 'u2', name: 'sunset.jpg', attachment: { fileId: 'f2', mimetype: 'image/jpeg', sizeBytes: 1 } }
+  ];
+
+  it('leaves out only the photos unticked on the tray', async () => {
+    const onSend = vi.fn();
+    renderWith('album', { onSend, uploads: twoPhotos });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add sunset.jpg to Rome' }));
+
+    expect(screen.getByRole('button', { name: 'Adding 1 of 2 to Rome. Change album' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add sunset.jpg to Rome' })).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(screen.getByLabelText('Send'));
+    expect(onSend).toHaveBeenLastCalledWith('', { skipAlbum: false, skipAlbumFileIds: ['f2'] });
+  });
+
+  it('counts unticking every photo as "Not this one"', async () => {
+    const onSend = vi.fn();
+    renderWith('album', { onSend, uploads: twoPhotos });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add a.jpg to Rome' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add sunset.jpg to Rome' }));
+
+    expect(screen.getByRole('button', { name: 'Not this one' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(screen.getByLabelText('Send'));
+    expect(onSend).toHaveBeenLastCalledWith('', { skipAlbum: true });
+  });
+
+  it('puts every photo back with "Not this one" once they are all out', async () => {
+    renderWith('album', { uploads: twoPhotos });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Not this one' }));
+    expect(screen.getByRole('button', { name: 'Add sunset.jpg to Rome' })).toHaveAttribute('aria-pressed', 'false');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Not this one' }));
+    expect(screen.getByRole('button', { name: 'Add sunset.jpg to Rome' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('offers no per-photo switch when photos are not being saved', () => {
+    renderWith('off', { uploads: twoPhotos });
+    expect(screen.queryByRole('button', { name: /to Rome/ })).not.toBeInTheDocument();
+  });
+
   it('shows nothing about albums without photos on the tray', () => {
     render(
       <Composer
@@ -610,5 +655,227 @@ describe('a share from another app', () => {
     );
 
     expect(screen.getByLabelText('Message')).toHaveValue('old text');
+  });
+});
+
+describe('voice messages', () => {
+  /** Stands in for the browser's recorder: records "voice" and stops on request. */
+  class FakeRecorder {
+    static last: FakeRecorder | null = null;
+    static isTypeSupported = (type: string) => type === 'audio/webm;codecs=opus';
+    state: 'inactive' | 'recording' = 'inactive';
+    ondataavailable: ((event: { data: Blob }) => void) | null = null;
+    onstop: (() => void) | null = null;
+    constructor() {
+      FakeRecorder.last = this;
+    }
+    start() {
+      this.state = 'recording';
+    }
+    stop() {
+      this.state = 'inactive';
+      this.ondataavailable?.({ data: new Blob(['voice'], { type: 'audio/webm' }) });
+      queueMicrotask(() => this.onstop?.());
+    }
+  }
+
+  let now = 0;
+  const track = { stop: vi.fn(), addEventListener: vi.fn() };
+  const getUserMedia = vi.fn();
+
+  beforeEach(() => {
+    now = 0;
+    vi.spyOn(Date, 'now').mockImplementation(() => now);
+    track.stop.mockClear();
+    getUserMedia.mockReset().mockResolvedValue({ getTracks: () => [track] });
+    vi.stubGlobal('MediaRecorder', FakeRecorder);
+    Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  /** Wired as ThreadPage wires it: the mic on the header, the recording in the composer. */
+  function Thread({ conversationId = 'c1', send }: { conversationId?: string; send: SendVoice }) {
+    const voice = useVoiceMessage(conversationId, send);
+    return (
+      <>
+        {voice.supported && (
+          <button type="button" aria-label="Record voice message" disabled={voice.active} onClick={() => void voice.start()} />
+        )}
+        <Composer onSend={() => {}} onTyping={() => {}} voice={voice} />
+      </>
+    );
+  }
+
+  const record = async () => {
+    await userEvent.click(screen.getByLabelText('Record voice message'));
+    expect(await screen.findByText('Recording')).toBeInTheDocument();
+  };
+
+  it('keeps Send where it is, with the message box, until a recording starts', async () => {
+    render(<Thread send={vi.fn()} />);
+
+    expect(screen.getByLabelText('Send')).toBeInTheDocument();
+    await record();
+
+    expect(screen.queryByLabelText('Message')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Send voice message')).toBeInTheDocument();
+    expect(screen.getByLabelText('Record voice message')).toBeDisabled();
+  });
+
+  it('gives back what was being typed once the recording is done', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    render(<Thread send={send} />);
+    await userEvent.type(screen.getByLabelText('Message'), 'half a thought');
+
+    await record();
+    now = 2_000;
+    await userEvent.click(screen.getByLabelText('Send voice message'));
+
+    expect(await screen.findByLabelText('Message')).toHaveValue('half a thought');
+  });
+
+  it('sends the recording with its length, and lets go of the microphone', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    render(<Thread send={send} />);
+
+    await record();
+    now = 4_000;
+    await userEvent.click(screen.getByLabelText('Send voice message'));
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ durationMs: 4_000, format: expect.objectContaining({ mimetype: 'audio/webm' }) }),
+      expect.any(Function)
+    );
+    expect(track.stop).toHaveBeenCalled();
+    expect(await screen.findByLabelText('Message')).toBeInTheDocument();
+  });
+
+  it('throws a discarded recording away', async () => {
+    const send = vi.fn();
+    render(<Thread send={send} />);
+
+    await record();
+    await userEvent.click(screen.getByLabelText('Discard voice message'));
+
+    expect(send).not.toHaveBeenCalled();
+    expect(track.stop).toHaveBeenCalled();
+    expect(screen.getByLabelText('Message')).toBeInTheDocument();
+  });
+
+  it('keeps a recording that did not send, to try again', async () => {
+    const send = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(undefined);
+    render(<Thread send={send} />);
+
+    await record();
+    now = 3_000;
+    await userEvent.click(screen.getByLabelText('Send voice message'));
+    expect(await screen.findByText('Not sent. Press send to try again')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByLabelText('Send voice message'));
+
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[1]![0]).toBe(send.mock.calls[0]![0]);
+    expect(await screen.findByLabelText('Message')).toBeInTheDocument();
+  });
+
+  it('shows how far the upload has got', async () => {
+    let report: (percent: number) => void = () => {};
+    const send = vi.fn((_recording: unknown, onProgress: (percent: number) => void) => {
+      report = onProgress;
+      return new Promise<void>(() => {});
+    });
+    render(<Thread send={send} />);
+
+    await record();
+    now = 2_000;
+    await userEvent.click(screen.getByLabelText('Send voice message'));
+    act(() => report(40));
+
+    expect(screen.getByText('Sending 40%')).toBeInTheDocument();
+    expect(screen.getByLabelText('Discard voice message')).toBeDisabled();
+  });
+
+  it('keeps a recording the microphone was taken from, for the person to send or not', async () => {
+    const send = vi.fn().mockResolvedValue(undefined);
+    render(<Thread send={send} />);
+
+    await record();
+    now = 6_000;
+    // The browser ends it: a phone call, a headset gone.
+    act(() => FakeRecorder.last!.stop());
+
+    expect(await screen.findByText('Recording stopped. Send it?')).toBeInTheDocument();
+    expect(screen.getByText('0:06')).toBeInTheDocument();
+    expect(send).not.toHaveBeenCalled();
+    expect(track.stop).toHaveBeenCalled();
+
+    await userEvent.click(screen.getByLabelText('Send voice message'));
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ durationMs: 6_000 }), expect.any(Function));
+  });
+
+  it('drops a recording when another conversation is opened', async () => {
+    const send = vi.fn();
+    const { rerender } = render(<Thread conversationId="a" send={send} />);
+    await record();
+
+    rerender(<Thread conversationId="b" send={send} />);
+
+    expect(track.stop).toHaveBeenCalled();
+    expect(await screen.findByLabelText('Message')).toBeInTheDocument();
+    expect(screen.getByLabelText('Record voice message')).toBeEnabled();
+  });
+
+  it('says nothing about a microphone it was told to stop waiting for', async () => {
+    let deny: (error: Error) => void = () => {};
+    getUserMedia.mockReturnValue(new Promise((_, reject) => (deny = reject)));
+    render(<Thread send={vi.fn()} />);
+
+    await userEvent.click(screen.getByLabelText('Record voice message'));
+    await userEvent.click(screen.getByLabelText('Discard voice message'));
+    await act(async () => deny(Object.assign(new Error('denied'), { name: 'NotAllowedError' })));
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('says so when the microphone is blocked', async () => {
+    getUserMedia.mockRejectedValue(Object.assign(new Error('denied'), { name: 'NotAllowedError' }));
+    render(<Thread send={vi.fn()} />);
+
+    await userEvent.click(screen.getByLabelText('Record voice message'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The microphone is blocked');
+  });
+
+  it('is not offered where the browser cannot record', () => {
+    vi.stubGlobal('MediaRecorder', undefined);
+    render(<Thread send={vi.fn()} />);
+
+    expect(screen.queryByLabelText('Record voice message')).not.toBeInTheDocument();
+  });
+});
+
+describe('replying', () => {
+  const replying = { id: 'm1', name: 'Irja', text: 'dinner at 7?' };
+
+  it('shows what is being answered, and puts the cursor in the box', () => {
+    render(<Composer onSend={() => {}} onTyping={() => {}} replying={replying} onCancelReply={() => {}} />);
+
+    expect(screen.getByText('Replying to Irja')).toBeInTheDocument();
+    expect(screen.getByText('dinner at 7?')).toBeInTheDocument();
+    expect(screen.getByLabelText('Message')).toHaveFocus();
+  });
+
+  it('is cancelled from its cross or with Escape', async () => {
+    const onCancelReply = vi.fn();
+    render(<Composer onSend={() => {}} onTyping={() => {}} replying={replying} onCancelReply={onCancelReply} />);
+
+    await userEvent.click(screen.getByLabelText('Cancel reply'));
+    await userEvent.type(screen.getByLabelText('Message'), '{Escape}');
+
+    expect(onCancelReply).toHaveBeenCalledTimes(2);
   });
 });

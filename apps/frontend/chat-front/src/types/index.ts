@@ -45,7 +45,10 @@ export interface AlbumOption {
 /** Where one sent message's photos, or one photo, should be. */
 export type AlbumPlacement = { albumId: string } | { newAlbumName: string };
 
-export type PhotoAlbumChoice = { mode: 'off' } | { mode: 'album'; albumId: string } | { mode: 'album'; newAlbumName: string };
+export type PhotoAlbumChoice =
+  | { mode: 'off' }
+  | { mode: 'album'; albumId: string }
+  | { mode: 'album'; newAlbumName: string };
 
 export interface Reaction {
   userId: string;
@@ -115,7 +118,21 @@ export type MessageEffect = 'hearts' | 'confetti' | 'kisses';
 export interface SendOptions {
   /** "Not this one" on the photo tray: keep this send out of the album. */
   skipAlbum?: boolean;
+  /** The photos unticked on the tray: these stay out of the album, the rest go in. */
+  skipAlbumFileIds?: string[];
   effect?: MessageEffect;
+  /** The message this answers. */
+  replyTo?: string;
+}
+
+/** What a reply shows of the message it answers. */
+export interface Quote {
+  senderId: string;
+  senderName: string;
+  /** One line of it. Empty once it is unsent. */
+  text: string;
+  createdAt: string;
+  deleted?: boolean;
 }
 
 /** "Make a collage together": the collage a card invites the others to. */
@@ -148,6 +165,12 @@ export interface Message {
   body: string;
   attachments: Attachment[];
   replyTo: string | null;
+  /**
+   * On a reply: the message it answers, as it read when the reply was sent,
+   * kept up to date by the server. What the quote shows when that message is
+   * not loaded. Absent on replies from before quotes were kept.
+   */
+  quote?: Quote | null;
   /** Absent from a server older than effects. */
   effect?: MessageEffect | null;
   /** On a `collage` message: the collage in Album that "Join" opens. */

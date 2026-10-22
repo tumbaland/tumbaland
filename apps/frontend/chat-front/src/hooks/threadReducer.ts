@@ -146,7 +146,10 @@ export function threadReducer(state: ThreadState, action: ThreadAction): ThreadS
         messages: state.messages.map((message) =>
           message.id === action.id
             ? { ...message, deletedAt: new Date().toISOString(), body: '', attachments: [], reactions: [] }
-            : message
+            : // Its words leave the replies that quoted it too, as the server does.
+              message.replyTo === action.id && message.quote
+              ? { ...message, quote: { ...message.quote, text: '', deleted: true } }
+              : message
         )
       };
 

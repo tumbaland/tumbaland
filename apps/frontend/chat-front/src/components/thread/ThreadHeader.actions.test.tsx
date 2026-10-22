@@ -41,10 +41,38 @@ describe('the buttons', () => {
     expect(onCall).toHaveBeenCalled();
   });
 
+  it('starts a voice message from the mic beside the call button', async () => {
+    const onRecordVoice = vi.fn();
+    render(header({ onCall: () => {}, onRecordVoice }));
+
+    const mic = screen.getByRole('button', { name: 'Record voice message' });
+    expect(mic.compareDocumentPosition(screen.getByRole('button', { name: 'Call Irja' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await userEvent.click(mic);
+
+    expect(onRecordVoice).toHaveBeenCalled();
+  });
+
+  it('tells the mic from the phone on hover', async () => {
+    render(header({ onCall: () => {}, onRecordVoice: () => {} }));
+
+    await userEvent.hover(screen.getByRole('button', { name: 'Record voice message' }));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Voice message');
+
+    await userEvent.unhover(screen.getByRole('button', { name: 'Record voice message' }));
+    await userEvent.hover(screen.getByRole('button', { name: 'Call Irja' }));
+    expect(await screen.findByText('Call Irja', { selector: '[role="tooltip"] *' })).toBeInTheDocument();
+  });
+
+  it('will not start a second voice message while one is on the go', () => {
+    render(header({ onRecordVoice: () => {}, recordingVoice: true }));
+    expect(screen.getByRole('button', { name: 'Record voice message' })).toBeDisabled();
+  });
+
   it('offers no call or menu unless it was given them', () => {
     render(header());
 
     expect(screen.queryByRole('button', { name: /Call/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Record voice message' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Conversation options' })).not.toBeInTheDocument();
   });
 });

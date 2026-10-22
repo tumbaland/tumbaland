@@ -303,29 +303,29 @@ describe('appearance and albums', () => {
     });
   });
 
-  it('takes a whole message, or one file of it, out of its album', async () => {
+  it('takes a whole message, or some files of it, out of its album', async () => {
     const fetchMock = reply({ data: { id: 'm1' } });
 
     await chatApi.removeFromAlbum('c1', 'm1');
-    await chatApi.removeFromAlbum('c1', 'm1', 'f 1');
+    await chatApi.removeFromAlbum('c1', 'm1', ['f 1', 'f2']);
 
     expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/api/chat/conversations/c1/messages/m1/album`);
-    expect(fetchMock.mock.calls[1][0]).toBe(`${BASE}/api/chat/conversations/c1/messages/m1/album?fileId=f%201`);
+    expect(fetchMock.mock.calls[1][0]).toBe(`${BASE}/api/chat/conversations/c1/messages/m1/album?fileId=f%201&fileId=f2`);
     expect(sent(fetchMock).method).toBe('DELETE');
   });
 
-  it('puts a message’s files, or one of them, in another album', async () => {
+  it('puts a message’s files, or some of them, in another album', async () => {
     const fetchMock = reply({ data: { id: 'm1' } });
 
     await chatApi.placeInAlbum('c1', 'm1', { albumId: 'a2' } as never);
-    await chatApi.placeInAlbum('c1', 'm1', { albumId: 'a2' } as never, 'f1');
+    await chatApi.placeInAlbum('c1', 'm1', { albumId: 'a2' } as never, ['f1']);
 
     expect(sent(fetchMock, 0)).toMatchObject({
       path: '/api/chat/conversations/c1/messages/m1/album',
       method: 'PUT',
       body: { albumId: 'a2' }
     });
-    expect(sent(fetchMock, 1).body).toEqual({ albumId: 'a2', fileId: 'f1' });
+    expect(sent(fetchMock, 1).body).toEqual({ albumId: 'a2', fileIds: ['f1'] });
   });
 });
 

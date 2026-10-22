@@ -41,7 +41,10 @@ function announceSetting(conversation: IConversation, setting: IPhotoAlbumSettin
   });
 }
 
-export type PhotoAlbumChoice = { mode: 'off' } | { mode: 'album'; albumId: string } | { mode: 'album'; newAlbumName: string };
+export type PhotoAlbumChoice =
+  | { mode: 'off' }
+  | { mode: 'album'; albumId: string }
+  | { mode: 'album'; newAlbumName: string };
 
 /** Changes where the conversation's photos go, for everyone in it. */
 export async function setPhotoAlbum(
@@ -101,12 +104,20 @@ async function publishUpdated(conversation: IConversation, message: IMessage): P
  * Adds a just-sent message's files to the conversation's album, then marks
  * them "In Rome" in the thread. Never throws.
  */
-export async function saveToAlbum(conversation: IConversation, message: IMessage): Promise<void> {
+export async function saveToAlbum(
+  conversation: IConversation,
+  message: IMessage,
+  skipFileIds: string[] = []
+): Promise<void> {
   const setting = conversation.photoAlbum;
-  if (setting?.mode !== 'album' || !setting.albumId || !message.attachments.some(isMedia)) return;
+  // The ones the sender left out on the tray stay in chat only.
+  const going = message.attachments.filter(
+    (attachment) => isMedia(attachment) && !skipFileIds.includes(attachment.fileId)
+  );
+  if (setting?.mode !== 'album' || !setting.albumId || going.length === 0) return;
 
   try {
-    for (const attachment of message.attachments.filter(isMedia)) {
+    for (const attachment of going) {
       const saved = await albums.addChatPhoto({
         groupId: conversation.groupId,
         albumId: setting.albumId,
@@ -159,11 +170,11 @@ async function messageIn(conversation: IConversation, messageId: string): Promis
   return message;
 }
 
-/** The message's files the change is about: one, when a file is named, or all of them. */
-function targetsOf(message: IMessage, fileId?: string) {
+/** The message's files the change is about: the ones named, or all of them. */
+function targetsOf(message: IMessage, fileIds?: string[]) {
   // Documents have no place in an album, so they are never a target.
   const targets = message.attachments.filter(
-    (attachment) => isMedia(attachment) && (!fileId || attachment.fileId === fileId)
+    (attachment) => isMedia(attachment) && (!fileIds?.length || fileIds.includes(attachment.fileId))
   );
   if (targets.length === 0) throw new NotFoundError('That file is not on this message');
   return targets;
@@ -176,12 +187,13 @@ function targetsOf(message: IMessage, fileId?: string) {
 export async function removeFromAlbum(
   conversation: IConversation,
   messageId: string,
-  fileId?: string
+  fileIds?: string[]
 ): Promise<MessageView> {
   const message = await messageIn(conversation, messageId);
-  const targets = targetsOf(message, fileId);
+  const targets = targetsOf(message, fileIds);
 
-  await albums.removeChatPhotos(messageId, fileId);
+  if (!fileIds?.length) await albums.removeChatPhotos(messageId);
+  else for (const attachment of targets) await albums.removeChatPhotos(messageId, attachment.fileId);
 
   for (const attachment of targets) {
     attachment.albumId = null;
@@ -205,10 +217,10 @@ export async function placeInAlbum(
   conversation: IConversation,
   messageId: string,
   placement: AlbumPlacement,
-  fileId?: string
+  fileIds?: string[]
 ): Promise<MessageView> {
   const message = await messageIn(conversation, messageId);
-  const targets = targetsOf(message, fileId);
+  const targets = targetsOf(message, fileIds);
 
   const album =
     'newAlbumName' in placement

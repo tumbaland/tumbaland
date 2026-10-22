@@ -44,12 +44,28 @@ export const ALLOWED_DOCUMENT_TYPES = [
   'text/csv'
 ] as const;
 
-export const ALLOWED_UPLOAD_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES, ...ALLOWED_DOCUMENT_TYPES];
+/**
+ * Voice messages, as browsers record them: WebM (Chrome, Firefox), MP4 (Safari)
+ * and Ogg (older Firefox). Recorded in the app, never picked from a file.
+ */
+export const ALLOWED_AUDIO_TYPES = ['audio/webm', 'audio/mp4', 'audio/ogg'] as const;
+
+export const ALLOWED_UPLOAD_TYPES = [
+  ...ALLOWED_IMAGE_TYPES,
+  ...ALLOWED_VIDEO_TYPES,
+  ...ALLOWED_AUDIO_TYPES,
+  ...ALLOWED_DOCUMENT_TYPES
+];
 
 export const isDocumentType = (mimetype: string): boolean =>
   (ALLOWED_DOCUMENT_TYPES as readonly string[]).includes(mimetype);
 
+export const isAudioType = (mimetype: string): boolean => (ALLOWED_AUDIO_TYPES as readonly string[]).includes(mimetype);
+
 export const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
+
+/** The app stops a recording at five minutes, a few MB; this leaves room for a high bitrate. */
+export const MAX_AUDIO_BYTES = 15 * 1024 * 1024;
 
 export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 /**
@@ -96,7 +112,9 @@ export const sendMessageSchema = z
     attachments: z.array(attachmentSchema).max(MAX_ATTACHMENTS).optional(),
     replyTo: z.string().nullish(),
     effect: z.enum(MESSAGE_EFFECTS).nullish(),
-    skipAlbum: z.boolean().optional()
+    skipAlbum: z.boolean().optional(),
+    /** Photos of this send that stay out of the album, when the rest go in. */
+    skipAlbumFileIds: z.array(z.string().max(512)).max(MAX_ATTACHMENTS).optional()
   })
   .refine((value) => Boolean(value.body?.trim()) || (value.attachments?.length ?? 0) > 0, {
     message: 'A message needs text or an attachment'
@@ -140,10 +158,16 @@ export const photoAlbumSchema = z.union([
   z.object({ mode: z.literal('album'), newAlbumName: z.string().trim().min(1, 'Name the album').max(100) })
 ]);
 
-/** One message's photos, or one of them, into an existing album or a new one. */
+/** Which of a message's photos a change is about. Neither means all of them. */
+const albumTargets = {
+  fileId: z.string().max(512).optional(),
+  fileIds: z.array(z.string().max(512)).min(1).max(MAX_ATTACHMENTS).optional()
+};
+
+/** One message's photos, or some of them, into an existing album or a new one. */
 export const albumPlacementSchema = z.union([
-  z.object({ albumId: z.string().min(1).max(64), fileId: z.string().max(512).optional() }),
-  z.object({ newAlbumName: z.string().trim().min(1, 'Name the album').max(100), fileId: z.string().max(512).optional() })
+  z.object({ albumId: z.string().min(1).max(64), ...albumTargets }),
+  z.object({ newAlbumName: z.string().trim().min(1, 'Name the album').max(100), ...albumTargets })
 ]);
 
 /** A theme, a background photo (or null to remove it), or both. */

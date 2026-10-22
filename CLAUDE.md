@@ -7,9 +7,16 @@ are not are easy to miss.
 ## Getting a change onto `main`
 
 Nothing is pushed to `main`, even where nothing would stop you. Every change is
-a pull request:
+a pull request.
 
-1. Branch from an up to date `main`: `type/short-name` (`fix/chat-badge`).
+**Work uncommitted, in the `main` checkout, until the owner says to ship it.**
+Make changes in the working tree on `main` and stop there: no branch, no commit,
+no push, no PR. The owner reviews the diff locally first. Only when they say to
+(for example "commit it", "open the PR") do the steps below. Their go-ahead
+covers that one change, not the next one.
+
+1. Branch from an up to date `main`: `type/short-name` (`fix/chat-badge`). The
+   uncommitted changes come with it.
 2. Commit as conventional commits. The history inside a branch does not matter,
    it is squashed.
 3. Before pushing, run the checks for what you touched, so CI is not the first

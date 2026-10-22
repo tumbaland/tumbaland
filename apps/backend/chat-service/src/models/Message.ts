@@ -51,6 +51,21 @@ export interface IPlanCard {
   place: string | null;
 }
 
+/**
+ * What a reply quotes: the message it answers, as it read when the reply was
+ * sent. A copy beside the `replyTo` link, so the quote can be drawn when the
+ * original is far back in the thread and not loaded. Kept in step by an edit
+ * of the original, and emptied by its unsend.
+ */
+export interface IQuote {
+  senderId: string;
+  senderName: string;
+  /** One line of it: the text, or "Photo", "Voice message" and the like. Empty once unsent. */
+  text: string;
+  createdAt: Date;
+  deleted?: boolean;
+}
+
 export interface IReaction {
   /** `User._id`. One reaction per person per message. */
   userId: string;
@@ -72,6 +87,7 @@ export interface IMessage extends Document {
   body: string;
   attachments: IAttachment[];
   replyTo?: string | null;
+  quote?: IQuote | null;
   effect?: MessageEffect | null;
   collage?: ICollageCard | null;
   plan?: IPlanCard | null;
@@ -126,6 +142,13 @@ const MessageSchema = new Schema<IMessage>(
     body: { type: String, default: '', maxlength: 8000 },
     attachments: { type: [AttachmentSchema], default: [] },
     replyTo: { type: String, default: null },
+    quote: {
+      type: new Schema<IQuote>(
+        { senderId: String, senderName: String, text: String, createdAt: Date, deleted: Boolean },
+        { _id: false }
+      ),
+      default: null
+    },
     effect: { type: String, enum: [...MESSAGE_EFFECTS, null], default: null },
     collage: { type: new Schema<ICollageCard>({ id: String, title: String }, { _id: false }), default: null },
     plan: {
