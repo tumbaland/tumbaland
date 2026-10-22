@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import { ConfigProvider } from '../config/ConfigProvider';
 import ConversationsPage from '../pages/ConversationsPage';
@@ -42,6 +43,7 @@ function Panel() {
   const [conversations, setConversations] = useState<Conversation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -59,14 +61,31 @@ function Panel() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [attempt]);
 
   const open = (id: string | null) => {
     setOpenId(id);
     writeLastOpen(id);
   };
 
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (error)
+    return (
+      <Alert
+        severity="error"
+        action={
+          <Button
+            onClick={() => {
+              setError(null);
+              setAttempt((value) => value + 1);
+            }}
+          >
+            Try again
+          </Button>
+        }
+      >
+        {error}
+      </Alert>
+    );
 
   if (!conversations || !user) {
     return (

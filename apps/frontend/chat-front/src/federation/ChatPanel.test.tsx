@@ -78,3 +78,13 @@ it('reopens on the conversation it was last showing', async () => {
 
   expect(await screen.findByText('thread c2')).toBeInTheDocument();
 });
+
+it('says when the chats cannot be loaded, and tries again on request', async () => {
+  ensureMyConversations.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([conversation('c1', 'Irja')]);
+  render(<ChatPanel />);
+
+  await userEvent.click(await screen.findByRole('button', { name: 'Try again' }));
+
+  expect(await screen.findByText('thread c1')).toBeInTheDocument();
+  expect(ensureMyConversations).toHaveBeenCalledTimes(2);
+});

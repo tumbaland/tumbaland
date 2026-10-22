@@ -10,6 +10,10 @@ import type {
   CallView,
   ConversationDetail,
   IceConfig,
+  LivePosition,
+  LiveShare,
+  PlaceResult,
+  SavedPlace,
   Message,
   MessageEffect,
   MessagePage,
@@ -171,6 +175,103 @@ export const chatApi = {
       change
     );
     return json.data;
+  },
+
+  /** Who is sharing where they are in this conversation, now. */
+  async listLive(conversationId: string): Promise<LiveShare[]> {
+    const json = await client.get<{ data: LiveShare[] }>(`/api/chat/conversations/${encodeURIComponent(conversationId)}/live`);
+    return json?.data ?? [];
+  },
+
+  /**
+   * Starts sharing where the caller is, or carries on a share already running.
+   * `destination: null` takes the destination away; left out, it stays.
+   */
+  async startLive(
+    conversationId: string,
+    input: {
+      destination?: { lat: number; lng: number; label?: string } | null;
+      fixed?: boolean;
+      pinLabel?: string | null;
+    } = {}
+  ): Promise<LiveShare> {
+    const json = await client.put<{ data: LiveShare }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/live`,
+      input
+    );
+    return json.data;
+  },
+
+  async sendLivePosition(conversationId: string, position: LivePosition): Promise<LiveShare> {
+    const json = await client.post<{ data: LiveShare }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/live/position`,
+      position
+    );
+    return json.data;
+  },
+
+  async stopLive(conversationId: string): Promise<void> {
+    await client.delete(`/api/chat/conversations/${encodeURIComponent(conversationId)}/live`);
+  },
+
+  /** "Tell me when they are close": where the caller is now, and how close counts. */
+  async watchLive(
+    conversationId: string,
+    userId: string,
+    point: { lat: number; lng: number; radiusM: number }
+  ): Promise<LiveShare> {
+    const json = await client.put<{ data: LiveShare }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/live/${encodeURIComponent(userId)}/watch`,
+      point
+    );
+    return json.data;
+  },
+
+  async unwatchLive(conversationId: string, userId: string): Promise<LiveShare> {
+    const json = await client.delete<{ data: LiveShare }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/live/${encodeURIComponent(userId)}/watch`
+    );
+    return json.data;
+  },
+
+  /** Places matching what was typed, nearest to `near` first. Empty when the geocoder cannot say. */
+  async searchPlaces(query: string, near?: { lat: number; lng: number } | null): Promise<PlaceResult[]> {
+    const params = new URLSearchParams({ q: query });
+    if (near) {
+      params.set('lat', String(near.lat));
+      params.set('lng', String(near.lng));
+    }
+    const json = await client.get<{ data: PlaceResult[] }>(`/api/chat/places/search?${params.toString()}`);
+    return json?.data ?? [];
+  },
+
+  /** The address at a point, or null. */
+  async placeAt(lat: number, lng: number): Promise<PlaceResult | null> {
+    const json = await client.get<{ data: PlaceResult | null }>(`/api/chat/places/reverse?lat=${lat}&lng=${lng}`);
+    return json?.data ?? null;
+  },
+
+  /** The group's saved places, by name. */
+  async listSavedPlaces(conversationId: string): Promise<SavedPlace[]> {
+    const json = await client.get<{ data: SavedPlace[] }>(`/api/chat/conversations/${encodeURIComponent(conversationId)}/places`);
+    return json?.data ?? [];
+  },
+
+  async savePlace(
+    conversationId: string,
+    place: { name: string; lat: number; lng: number; address?: string }
+  ): Promise<SavedPlace> {
+    const json = await client.post<{ data: SavedPlace }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/places`,
+      place
+    );
+    return json.data;
+  },
+
+  async deleteSavedPlace(conversationId: string, placeId: string): Promise<void> {
+    await client.delete(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/places/${encodeURIComponent(placeId)}`
+    );
   },
 
   /** The group's albums, for the "photos go to" picker. */

@@ -30,7 +30,9 @@ export type ChatEventType =
   | 'call.ringing'
   | 'call.accepted'
   | 'call.ended'
-  | 'call.signal';
+  | 'call.signal'
+  | 'live.updated'
+  | 'live.ended';
 
 export interface ChatEvent {
   type: ChatEventType;

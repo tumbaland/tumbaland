@@ -438,3 +438,72 @@ it('sends someone whose session ended to sign in, and back again', async () => {
   );
   Object.defineProperty(window, 'location', { configurable: true, value: original });
 });
+
+describe('sharing where one is, live', () => {
+  it('lists, starts, sends, and stops a share', async () => {
+    const fetchMock = reply({ data: [] });
+
+    await chatApi.listLive('c1');
+    await chatApi.startLive('c1', { destination: { lat: 59.4, lng: 24.7 } });
+    await chatApi.sendLivePosition('c1', { lat: 59.4, lng: 24.7, accuracy: 8 });
+    await chatApi.stopLive('c1');
+
+    expect(sent(fetchMock, 0)).toMatchObject({ path: '/api/chat/conversations/c1/live', method: 'GET' });
+    expect(sent(fetchMock, 1)).toMatchObject({
+      path: '/api/chat/conversations/c1/live',
+      method: 'PUT',
+      body: { destination: { lat: 59.4, lng: 24.7 } }
+    });
+    expect(sent(fetchMock, 2)).toMatchObject({
+      path: '/api/chat/conversations/c1/live/position',
+      method: 'POST',
+      body: { lat: 59.4, lng: 24.7, accuracy: 8 }
+    });
+    expect(sent(fetchMock, 3)).toMatchObject({ path: '/api/chat/conversations/c1/live', method: 'DELETE' });
+  });
+
+  it('asks to be told when someone is close, and stops asking', async () => {
+    const fetchMock = reply({ data: { userId: 'u-tom' } });
+
+    await chatApi.watchLive('c1', 'u-tom', { lat: 59.4, lng: 24.7, radiusM: 1000 });
+    await chatApi.unwatchLive('c1', 'u-tom');
+
+    expect(sent(fetchMock, 0)).toMatchObject({
+      path: '/api/chat/conversations/c1/live/u-tom/watch',
+      method: 'PUT',
+      body: { lat: 59.4, lng: 24.7, radiusM: 1000 }
+    });
+    expect(sent(fetchMock, 1)).toMatchObject({ path: '/api/chat/conversations/c1/live/u-tom/watch', method: 'DELETE' });
+  });
+});
+
+describe('places', () => {
+  it('searches near a point, and finds the address at one', async () => {
+    const fetchMock = reply({ data: [] });
+
+    await chatApi.searchPlaces('kalev spa', { lat: 59.4, lng: 24.7 });
+    await chatApi.searchPlaces('kalev');
+    await chatApi.placeAt(59.43, 24.76);
+
+    expect(sent(fetchMock, 0)).toMatchObject({ path: '/api/chat/places/search', method: 'GET' });
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/api/chat/places/search?q=kalev+spa&lat=59.4&lng=24.7`);
+    expect(fetchMock.mock.calls[1][0]).toBe(`${BASE}/api/chat/places/search?q=kalev`);
+    expect(fetchMock.mock.calls[2][0]).toBe(`${BASE}/api/chat/places/reverse?lat=59.43&lng=24.76`);
+  });
+
+  it('lists, saves and deletes the group\u2019s places', async () => {
+    const fetchMock = reply({ data: [] });
+
+    await chatApi.listSavedPlaces('c1');
+    await chatApi.savePlace('c1', { name: 'Home', lat: 59.5, lng: 24.8, address: 'Viru 4' });
+    await chatApi.deleteSavedPlace('c1', 'p-home');
+
+    expect(sent(fetchMock, 0)).toMatchObject({ path: '/api/chat/conversations/c1/places', method: 'GET' });
+    expect(sent(fetchMock, 1)).toMatchObject({
+      path: '/api/chat/conversations/c1/places',
+      method: 'POST',
+      body: { name: 'Home', lat: 59.5, lng: 24.8, address: 'Viru 4' }
+    });
+    expect(sent(fetchMock, 2)).toMatchObject({ path: '/api/chat/conversations/c1/places/p-home', method: 'DELETE' });
+  });
+});

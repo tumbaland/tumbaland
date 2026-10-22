@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import type { ChatEvent, Message } from '../types';
+import type { ChatEvent, LiveShare, Message } from '../types';
 
 const listMessages = vi.fn();
 const getConversation = vi.fn();
+const listLive = vi.fn();
 let streamEvent: ((event: ChatEvent) => void) | undefined;
 
 vi.mock('../services/chatApi', () => ({
   chatApi: {
     listMessages: (...args: unknown[]) => listMessages(...args),
     getConversation: (...args: unknown[]) => getConversation(...args),
+    listLive: (...args: unknown[]) => listLive(...args),
     markRead: () => Promise.resolve()
   },
   newClientId: () => 'client-x'
@@ -55,6 +57,7 @@ async function openThread() {
 beforeEach(() => {
   listMessages.mockReset();
   getConversation.mockReset().mockReturnValue(new Promise(() => {}));
+  listLive.mockReset().mockResolvedValue([]);
 });
 
 describe('member renames', () => {
@@ -155,5 +158,90 @@ describe('loadUntil', () => {
     expect(result.current.loadingOlder).toBe(false);
     expect(result.current.error).toBeNull();
     expect(result.current.hasOlder).toBe(true);
+  });
+});
+
+describe('sharing where one is, live', () => {
+  const share = (overrides: Partial<LiveShare> = {}): LiveShare => ({
+    userId: 'u-irja',
+    name: 'Irja',
+    position: { lat: 59.43, lng: 24.75, accuracy: 10, heading: null, speed: null, at: '2026-10-22T18:00:00.000Z' },
+    startedAt: '2026-10-22T17:55:00.000Z',
+    endsAt: '2099-01-01T00:00:00.000Z',
+    destination: null,
+    fixed: false,
+    pinLabel: null,
+    watchers: [],
+    ...overrides
+  });
+
+  it('shows who is sharing when the thread opens', async () => {
+    listMessages.mockResolvedValueOnce(page(2, 1, null));
+    listLive.mockResolvedValueOnce([share()]);
+
+    const { result } = await openThread();
+
+    await waitFor(() => expect(result.current.live).toHaveLength(1));
+  });
+
+  it('moves a share along as the stream reports it, and drops it when it ends', async () => {
+    listMessages.mockResolvedValueOnce(page(2, 1, null));
+    const { result } = await openThread();
+
+    act(() => streamEvent?.({ type: 'live.updated', conversationId: 'c1', at: 1, payload: share() }));
+    act(() =>
+      streamEvent?.({
+        type: 'live.updated',
+        conversationId: 'c1',
+        at: 2,
+        payload: share({ position: { ...share().position!, lat: 59.5 } })
+      })
+    );
+    expect(result.current.live).toHaveLength(1);
+    expect(result.current.live[0]!.position!.lat).toBe(59.5);
+
+    act(() => streamEvent?.({ type: 'live.ended', conversationId: 'c1', at: 3, payload: { userId: 'u-irja' } }));
+    expect(result.current.live).toEqual([]);
+  });
+
+  it('takes a share from an answer ahead of the stream, and can drop it', async () => {
+    listMessages.mockResolvedValueOnce(page(2, 1, null));
+    const { result } = await openThread();
+
+    act(() => result.current.setLiveShare('u-tom', share({ userId: 'u-tom', name: 'Tom' })));
+    expect(result.current.live.map((entry) => entry.userId)).toEqual(['u-tom']);
+
+    act(() => result.current.setLiveShare('u-tom', null));
+    expect(result.current.live).toEqual([]);
+  });
+
+  it('does not resurrect a stopped share from an older list request', async () => {
+    listMessages.mockResolvedValueOnce(page(2, 1, null));
+    let finish!: (shares: LiveShare[]) => void;
+    listLive.mockReturnValueOnce(
+      new Promise<LiveShare[]>((resolve) => {
+        finish = resolve;
+      })
+    );
+    const { result } = await openThread();
+    act(() => streamEvent?.({ type: 'live.updated', conversationId: 'c1', at: 1, payload: share() }));
+    act(() => streamEvent?.({ type: 'live.ended', conversationId: 'c1', at: 2, payload: { userId: 'u-irja' } }));
+    await act(async () => {
+      finish([share()]);
+    });
+    expect(result.current.live).toEqual([]);
+  });
+
+  it('removes expired shares so an open map also disappears', async () => {
+    listMessages.mockResolvedValueOnce(page(2, 1, null));
+    const { result } = await openThread();
+    vi.useFakeTimers();
+    try {
+      act(() => result.current.setLiveShare('u-irja', share({ endsAt: new Date(Date.now() + 5000).toISOString() })));
+      await act(async () => vi.advanceTimersByTime(5001));
+      expect(result.current.live).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

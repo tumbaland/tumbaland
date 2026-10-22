@@ -160,7 +160,25 @@ export default function ConversationsPage({ currentUserId, onOpen }: Conversatio
     );
   }
 
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (error)
+    return (
+      <Alert
+        severity="error"
+        action={
+          <Button
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              void load();
+            }}
+          >
+            Try again
+          </Button>
+        }
+      >
+        {error}
+      </Alert>
+    );
 
   if (conversations.length === 0) {
     return (
@@ -169,8 +187,8 @@ export default function ConversationsPage({ currentUserId, onOpen }: Conversatio
           Nobody to talk to yet
         </Typography>
         <Typography variant="body2" sx={{ color: ink.muted, mb: 3 }}>
-          Chat happens inside a group. Make one, add the person you want to talk to, and the
-          conversation appears here on its own.
+          Chat happens inside a group. Make one, add the person you want to talk to, and the conversation appears here
+          on its own.
         </Typography>
         {/* A link rather than a sentence telling someone to go and find it. */}
         <Button component={Link} to="/groups" variant="contained">
@@ -208,11 +226,7 @@ export default function ConversationsPage({ currentUserId, onOpen }: Conversatio
             </PresenceDot>
 
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography
-                variant="subtitle2"
-                noWrap
-                sx={{ fontWeight: conversation.unreadCount > 0 ? 700 : 500 }}
-              >
+              <Typography variant="subtitle2" noWrap sx={{ fontWeight: conversation.unreadCount > 0 ? 700 : 500 }}>
                 {name}
               </Typography>
               <Typography variant="caption" sx={{ color: ink.muted, display: 'block' }}>

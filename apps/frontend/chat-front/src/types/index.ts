@@ -216,7 +216,73 @@ export type ChatEventType =
   | 'call.ringing'
   | 'call.accepted'
   | 'call.ended'
-  | 'call.signal';
+  | 'call.signal'
+  | 'live.updated'
+  | 'live.ended';
+
+/**
+ * Someone sharing where they are, live. Only their newest position, which
+ * stops coming whenever their phone's screen is off: `position.at` says how
+ * old it is.
+ */
+export interface LiveShare {
+  userId: string;
+  name: string;
+  position: {
+    lat: number;
+    lng: number;
+    accuracy: number | null;
+    heading: number | null;
+    speed: number | null;
+    at: string;
+  } | null;
+  /** Where they are heading, marked on the map, and how far off it is in a straight line. */
+  destination: { lat: number; lng: number; label: string | null; distanceM: number | null } | null;
+  /** A pin: one place that stays put, for "come and get me here". Never shown as old. */
+  fixed: boolean;
+  /** What the pin is: a saved place's name, or the address it is at. */
+  pinLabel: string | null;
+  startedAt: string;
+  /** Four hours from the start at most, as a safety net; never shown. */
+  endsAt: string;
+  /** Who asked to be told when they are close. Their own point is never sent, only the distance to it. */
+  watchers: Array<{ userId: string; name: string; radiusM: number; distanceM: number | null; notified: boolean }>;
+}
+
+/** A place found by name, or the address at a point. */
+export interface PlaceResult {
+  /** "Viru 4", or a place's own name: "Kalev Spa". */
+  name: string;
+  /** The rest of the address: "Kesklinn, Tallinn, Estonia". */
+  detail: string;
+  lat: number;
+  lng: number;
+}
+
+/** A place the group keeps for sharing where one is: "Home". */
+export interface SavedPlace {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  address: string;
+}
+
+/** A point picked for sharing, with what to call it. */
+export interface PickedPlace {
+  lat: number;
+  lng: number;
+  /** A saved place's name or an address; null until one is known. */
+  label: string | null;
+}
+
+export interface LivePosition {
+  lat: number;
+  lng: number;
+  accuracy?: number | null;
+  heading?: number | null;
+  speed?: number | null;
+}
 
 export interface ChatEvent {
   type: ChatEventType;

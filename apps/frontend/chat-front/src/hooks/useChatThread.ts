@@ -11,6 +11,7 @@ import type {
   ConversationMember,
   AlbumPlacement,
   Appearance,
+  LiveShare,
   Message,
   MessagePage,
   PhotoAlbum,
@@ -63,6 +64,10 @@ export interface UseChatThreadResult {
   photoAlbum: PhotoAlbum;
   /** How the thread looks, for everyone in it. */
   appearance: Appearance;
+  /** Who is sharing where they are, live, the caller included. */
+  live: LiveShare[];
+  /** A share as an API call answered with it, ahead of the stream; null `share` drops `userId`'s. */
+  setLiveShare: (userId: string, share: LiveShare | null) => void;
   setAppearance: (change: { theme?: string; backgroundFileId?: string | null }) => Promise<void>;
   setPhotoAlbum: (choice: PhotoAlbumChoice) => Promise<void>;
   /**
@@ -93,6 +98,9 @@ export interface UseChatThreadResult {
  * otherwise pull the whole history onto a phone to show one line.
  */
 const JUMP_PAGE_SIZE = 100;
+
+/** How often a thread with someone sharing live asks for their position, beside the stream. */
+const LIVE_REFRESH_MS = 20_000;
 const JUMP_MAX_PAGES = 30;
 
 export function useChatThread(conversationId: string | undefined, currentUserId: string): UseChatThreadResult {
@@ -105,6 +113,12 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   const [title, setTitle] = useState('');
   const [photoAlbum, setPhotoAlbumState] = useState<PhotoAlbum>(UNSET_ALBUM);
   const [appearance, setAppearanceState] = useState<Appearance>(DEFAULT_APPEARANCE);
+  const [live, setLive] = useState<LiveShare[]>([]);
+  const liveRevision = useRef(0);
+  const setLiveShare = useCallback((userId: string, share: LiveShare | null) => {
+    liveRevision.current += 1;
+    setLive((current) => [...current.filter((entry) => entry.userId !== userId), ...(share ? [share] : [])]);
+  }, []);
 
   // The stream handler is created once and reads the current conversation from
   // this ref, so switching threads does not rebuild the connection. Written in
@@ -113,6 +127,20 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   useInsertionEffect(() => {
     conversationRef.current = conversationId;
   });
+  const refreshLive = useCallback(() => {
+    if (!conversationId) return;
+    const revision = liveRevision.current;
+    void chatApi
+      .listLive(conversationId)
+      .then((shares) => {
+        // A snapshot requested before a stream event or a local stop must not undo it.
+        if (conversationRef.current === conversationId && liveRevision.current === revision) {
+          liveRevision.current += 1;
+          setLive(shares);
+        }
+      })
+      .catch(() => undefined);
+  }, [conversationId]);
   const lastTypingSent = useRef(0);
   /** Bodies kept by clientId so a failed send can be retried unchanged. */
   const outbox = useRef(
@@ -144,13 +172,15 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
       })
       .catch((error: Error) => logger.warn('Could not load conversation details', { error: error.message }));
 
+    refreshLive();
+
     try {
       const page = await chatApi.listMessages(conversationId, { limit: 50 });
       dispatch({ type: 'loaded', messages: page.messages, nextCursor: page.nextCursor });
     } catch (error) {
       dispatch({ type: 'failed', error: (error as Error).message });
     }
-  }, [conversationId, currentUserId]);
+  }, [conversationId, currentUserId, refreshLive]);
 
   // Another thread's markers and pictures must not show while this one loads.
   useEffect(() => {
@@ -160,7 +190,36 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     setTitle('');
     setPhotoAlbumState(UNSET_ALBUM);
     setAppearanceState(DEFAULT_APPEARANCE);
+    setLive([]);
+    liveRevision.current += 1;
   }, [conversationId]);
+
+  // While someone is sharing, asked again now and then as well as told by the
+  // stream: a stream that fell back to polling carries no live events, and a
+  // position that stops arriving should still be seen to age.
+  const sharing = live.length > 0;
+  useEffect(() => {
+    if (!conversationId || !sharing) return;
+    const timer = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      refreshLive();
+    }, LIVE_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [conversationId, sharing, refreshLive]);
+
+  // Expiry also closes an open viewer; the banner alone hiding it would leave its map up.
+  useEffect(() => {
+    if (!live.length) return;
+    const nextEnd = Math.min(...live.map((share) => new Date(share.endsAt).getTime()));
+    const timer = setTimeout(
+      () => {
+        liveRevision.current += 1;
+        setLive((current) => current.filter((share) => new Date(share.endsAt).getTime() > Date.now()));
+      },
+      Math.min(2_147_483_647, Math.max(0, nextEnd - Date.now()))
+    );
+    return () => clearTimeout(timer);
+  }, [live]);
 
   useEffect(() => {
     void load();
@@ -243,7 +302,11 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
           if (message.senderId !== currentUserId) {
             setReads((previous) => ({
               ...previous,
-              [message.senderId]: { userId: message.senderId, lastReadMessageId: message.id, lastReadAt: message.createdAt }
+              [message.senderId]: {
+                userId: message.senderId,
+                lastReadMessageId: message.id,
+                lastReadAt: message.createdAt
+              }
             }));
           }
           break;
@@ -275,6 +338,16 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
           }
           break;
         }
+        case 'live.updated': {
+          const share = event.payload as LiveShare;
+          setLiveShare(share.userId, share);
+          break;
+        }
+        case 'live.ended': {
+          const { userId } = event.payload as { userId: string };
+          setLiveShare(userId, null);
+          break;
+        }
         case 'typing': {
           const payload = event.payload as TypingPayload;
           if (payload.userId === currentUserId) return;
@@ -298,7 +371,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
           break;
       }
     },
-    [currentUserId, noteTyping, clearTyping]
+    [currentUserId, noteTyping, clearTyping, setLiveShare]
   );
 
   useChatStream({ onEvent, onResync: load, onStateChange: setConnection });
@@ -537,6 +610,8 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     presence,
     title,
     photoAlbum,
+    live,
+    setLiveShare,
     setPhotoAlbum,
     startCollage,
     appearance,

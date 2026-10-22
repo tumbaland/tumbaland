@@ -57,6 +57,19 @@ export function PrivacyContent() {
             <td>What you enter or import.</td>
           </tr>
           <tr>
+            <td>
+              Where you are, while you share it in a chat: your latest position only, never the route,
+              and where you said you are going
+            </td>
+            <td>
+              Your phone, while you share. Deleted when you stop, and after four hours at most.
+            </td>
+          </tr>
+          <tr>
+            <td>Places you save for sharing: a name, a point and its address</td>
+            <td>What you save. Kept for your group until one of you deletes it.</td>
+          </tr>
+          <tr>
             <td>Group membership, by email address</td>
             <td>Groups you create or are invited to.</td>
           </tr>
@@ -117,6 +130,14 @@ export function PrivacyContent() {
             <td>
               Receives place names you type when searching for a location to attach to an entry.
               Only the search text, not the entry.
+            </td>
+          </tr>
+          <tr>
+            <td>OpenStreetMap (Photon, by komoot)</td>
+            <td>
+              When you share where you are in a chat: the place names you search for, and the points on
+              the map you pick, to show their addresses. Asked by our server, so it does not see your
+              device, and never told who you are or who you share with.
             </td>
           </tr>
           <tr>

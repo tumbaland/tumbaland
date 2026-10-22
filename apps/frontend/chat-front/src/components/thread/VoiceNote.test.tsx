@@ -107,4 +107,37 @@ describe('VoiceNote', () => {
     expect(screen.getByText('0:12')).toBeInTheDocument();
     expect(screen.getByLabelText('Play voice message')).toBeDisabled();
   });
+
+  it('follows the playback, and goes back to the start at the end', () => {
+    const { container } = render(<VoiceNote attachment={voice()} mine={false} />);
+    const audio = container.querySelector('audio')!;
+
+    Object.defineProperty(audio, 'currentTime', { value: 5, configurable: true, writable: true });
+    fireEvent.timeUpdate(audio);
+    expect(screen.getByText('0:05')).toBeInTheDocument();
+    expect(screen.getByRole('slider')).toHaveAttribute('aria-valuetext', '0:05 of 0:12');
+
+    fireEvent.ended(audio);
+    expect(screen.getByText('0:12')).toBeInTheDocument();
+  });
+
+  it('jumps to where the position bar is moved', () => {
+    const { container } = render(<VoiceNote attachment={voice()} mine={false} />);
+    const audio = container.querySelector('audio')!;
+    Object.defineProperty(audio, 'currentTime', { value: 0, configurable: true, writable: true });
+
+    fireEvent.keyDown(screen.getByRole('slider'), { key: 'End' });
+
+    expect(audio.currentTime).toBe(12);
+  });
+
+  it('takes the length from the file when the message has none', () => {
+    const { container } = render(<VoiceNote attachment={voice({ durationMs: null })} mine={false} />);
+    const audio = container.querySelector('audio')!;
+
+    Object.defineProperty(audio, 'duration', { value: 9, configurable: true });
+    fireEvent.loadedMetadata(audio);
+
+    expect(screen.getByText('0:09')).toBeInTheDocument();
+  });
 });
