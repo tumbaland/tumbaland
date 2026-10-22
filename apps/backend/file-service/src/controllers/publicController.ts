@@ -62,6 +62,11 @@ const MIME_TYPES: Record<string, string> = {
   mov: 'video/quicktime',
   avi: 'video/x-msvideo',
   mkv: 'video/x-matroska',
+  // Chat's voice messages. `.weba` rather than `.webm`, so a recording is not
+  // labelled as a video; iOS Safari will not play audio sent as a download.
+  weba: 'audio/webm',
+  m4a: 'audio/mp4',
+  ogg: 'audio/ogg',
   pdf: 'application/pdf'
 };
 

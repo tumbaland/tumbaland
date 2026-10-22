@@ -230,3 +230,153 @@ describe('opening a message from search', () => {
     expect(document.querySelector('[data-message-id="m5"]')).toHaveTextContent('message 5');
   });
 });
+
+describe('grouping', () => {
+  const at = (minute: number) => new Date(Date.UTC(2026, 8, 22, 10, minute)).toISOString();
+  const from = (index: number, senderId: string, minute: number): ThreadMessage => ({
+    ...message(index),
+    senderId,
+    senderName: senderId === 'u-tom' ? 'Tom' : 'Irja',
+    createdAt: at(minute)
+  });
+
+  const renderMessages = (messages: ThreadMessage[], members = 2) =>
+    render(
+      <MessageList
+        messages={messages}
+        currentUserId="u-tom"
+        hasOlder={false}
+        loadingOlder={false}
+        onLoadOlder={() => {}}
+        onReact={() => {}}
+        onRetry={() => {}}
+        onPickEmoji={() => {}}
+        onOpenMedia={() => {}}
+        members={['u-tom', 'u-irja', 'u-mari'].slice(0, members).map((userId) => ({
+          userId,
+          email: '',
+          name: userId === 'u-tom' ? 'Tom' : userId === 'u-irja' ? 'Irja' : 'Mari',
+          joinedAt: ''
+        }))}
+      />
+    );
+
+  it('names no one between two people, where the side says who wrote it', () => {
+    renderMessages([from(0, 'u-irja', 0)]);
+    expect(screen.queryByText('Irja')).not.toBeInTheDocument();
+  });
+
+  it('names the sender in a group', () => {
+    renderMessages([from(0, 'u-irja', 0)], 3);
+    expect(screen.getByText('Irja')).toBeInTheDocument();
+  });
+
+  it('times a run of messages once, under its last', () => {
+    renderMessages([from(0, 'u-irja', 0), from(1, 'u-irja', 1), from(2, 'u-tom', 1)]);
+    // Irja's two, a minute apart, show one time between them; Tom's has its own.
+    expect(screen.getAllByText(/^\d{2}:\d{2}$/)).toHaveLength(2);
+  });
+
+  it('times each message that is further apart than the run allows', () => {
+    renderMessages([from(0, 'u-irja', 0), from(1, 'u-irja', 10)]);
+    expect(screen.getAllByText(/^\d{2}:\d{2}$/)).toHaveLength(2);
+  });
+});
+
+describe('reply quotes', () => {
+  const base = (overrides: Partial<ThreadMessage>): ThreadMessage => ({ ...message(0), ...overrides });
+
+  const renderThread = (messages: ThreadMessage[], onOpenQuote = vi.fn()) =>
+    render(
+      <MessageList
+        messages={messages}
+        currentUserId="u-tom"
+        hasOlder={false}
+        loadingOlder={false}
+        onLoadOlder={() => {}}
+        onReact={() => {}}
+        onRetry={() => {}}
+        onPickEmoji={() => {}}
+        onOpenMedia={() => {}}
+        onOpenQuote={onOpenQuote}
+      />
+    );
+
+  it('quotes the original from the thread, calling your own "You"', () => {
+    renderThread([
+      base({ id: 'p', clientId: 'p', senderId: 'u-tom', body: 'dinner at 7?' }),
+      base({ id: 'r', clientId: 'r', senderId: 'u-irja', body: 'yes', replyTo: 'p', createdAt: new Date(Date.UTC(2026, 8, 22, 11)).toISOString() })
+    ]);
+
+    expect(screen.getByRole('button', { name: 'Reply to You: dinner at 7?. Show it' })).toBeInTheDocument();
+  });
+
+  it('falls back to the copy on the reply when the original is not loaded, and goes back to it', () => {
+    const onOpenQuote = vi.fn();
+    renderThread(
+      [
+        base({
+          id: 'r',
+          clientId: 'r',
+          senderId: 'u-irja',
+          body: 'yes',
+          replyTo: 'far-back',
+          quote: { senderId: 'u-tom', senderName: 'Tom', text: 'remember Rome?', createdAt: '2026-01-25T10:00:00.000Z' }
+        })
+      ],
+      onOpenQuote
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /remember Rome\?/ }));
+
+    expect(onOpenQuote).toHaveBeenCalledWith('far-back', '2026-01-25T10:00:00.000Z');
+  });
+
+  it('shows an unsent original as unsent, with nothing to go to', () => {
+    renderThread([
+      base({ id: 'p', clientId: 'p', senderId: 'u-tom', body: '', deletedAt: '2026-09-22T10:05:00.000Z' }),
+      base({ id: 'r', clientId: 'r', senderId: 'u-irja', body: 'yes', replyTo: 'p', createdAt: new Date(Date.UTC(2026, 8, 22, 11)).toISOString() })
+    ]);
+
+    expect(screen.getAllByText('Message unsent')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: /Show it/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('double tap for a heart', () => {
+  const renderOne = (onReact: (id: string, emoji: string) => void, reactions: ThreadMessage['reactions'] = []) =>
+    render(
+      <MessageList
+        messages={[{ ...message(0), body: 'love you', reactions }]}
+        currentUserId="u-tom"
+        hasOlder={false}
+        loadingOlder={false}
+        onLoadOlder={() => {}}
+        onReact={onReact}
+        onRetry={() => {}}
+        onPickEmoji={() => {}}
+        onOpenMedia={() => {}}
+      />
+    );
+
+  it('sends a heart once, however fast the double clicks come', () => {
+    const onReact = vi.fn();
+    renderOne(onReact);
+    const bubble = screen.getByText('love you').parentElement!;
+
+    fireEvent.doubleClick(bubble);
+    fireEvent.doubleClick(bubble);
+
+    expect(onReact).toHaveBeenCalledTimes(1);
+    expect(onReact).toHaveBeenCalledWith('m0', '❤️');
+  });
+
+  it('never takes a heart off that is already there', () => {
+    const onReact = vi.fn();
+    renderOne(onReact, [{ userId: 'u-tom', name: 'Tom', emoji: '❤️', at: '2026-09-22T10:00:00.000Z' }]);
+
+    fireEvent.doubleClick(screen.getByText('love you').parentElement!);
+
+    expect(onReact).not.toHaveBeenCalled();
+  });
+});

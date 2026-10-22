@@ -3,6 +3,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import InputBase from '@mui/material/InputBase';
+import CircularProgress from '@mui/material/CircularProgress';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -10,9 +11,11 @@ import SendIcon from '@mui/icons-material/Send';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import ReplyIcon from '@mui/icons-material/Reply';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import SentimentSatisfiedAltIcon from '@mui/icons-material/SentimentSatisfiedAlt';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import { PHONE, TOUCH_TARGET, brand, ink, surface } from '@tumbaland/frontend-core';
 import { DOCUMENT_ACCEPT, isDocumentType } from '../../services/documents';
 import { FullEmojiPicker, loadEmojiPicker } from './FullEmojiPicker';
@@ -20,6 +23,8 @@ import { UploadTray } from './UploadTray';
 import { AlbumDestination } from './AlbumDestination';
 import { emojiIn, recordEmoji, useRecentEmoji } from './recentEmoji';
 import { EFFECTS } from './effects';
+import type { VoiceMessage } from '../../hooks/useVoiceMessage';
+import { MAX_VOICE_MS, formatDuration, isVisualType } from '../../services/voice';
 import type { MessageEffect, PendingUpload, PhotoAlbum, SendOptions } from '../../types';
 
 export interface ComposerProps {
@@ -36,10 +41,18 @@ export interface ComposerProps {
   onRemoveUpload?: (id: string) => void;
   /** True while something is still uploading; sending waits for it. */
   uploading?: boolean;
+  /**
+   * The thread's voice message. Its mic is on the header; while it is recording,
+   * sending or held, its controls take this row over.
+   */
+  voice?: VoiceMessage;
   /** A sent message being edited. The box holds its text until saved or cancelled. */
   editing?: { id: string; body: string; hasMedia: boolean } | null;
   onSaveEdit?: (body: string) => void;
   onCancelEdit?: () => void;
+  /** The message the next send answers, shown above the box until sent or cancelled. */
+  replying?: { id: string; name: string; text: string } | null;
+  onCancelReply?: () => void;
   /** Where the conversation's photos go. Absent where saving to Album is not offered. */
   photoAlbum?: PhotoAlbum;
   onChooseAlbum?: () => void;
@@ -70,6 +83,16 @@ const ACCEPTED = 'image/*,video/*';
  */
 const ACCEPTED_DOCUMENTS = DOCUMENT_ACCEPT;
 
+/** There for a screen reader, not on screen. */
+const visuallyHidden = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap'
+} as const;
+
 /** How long Send must be held before it offers effects instead of sending. */
 const HOLD_MS = 450;
 
@@ -81,9 +104,12 @@ export function Composer({
   onAddFiles,
   onRemoveUpload,
   uploading,
+  voice,
   editing,
   onSaveEdit,
   onCancelEdit,
+  replying,
+  onCancelReply,
   photoAlbum,
   onChooseAlbum,
   onAlbumOff,
@@ -91,7 +117,8 @@ export function Composer({
   prefill
 }: ComposerProps) {
   /** "Not this one", for the photos on the tray now. Cleared after each send. */
-  const [skipAlbum, setSkipAlbum] = useState(false);
+  /** Photos on the tray kept out of the album, by upload id. Cleared after each send. */
+  const [albumSkips, setAlbumSkips] = useState<ReadonlySet<string>>(() => new Set());
   const [value, setValue] = useState('');
   /** What was being typed before an edit took the box over, given back after. */
   const draft = useRef('');
@@ -129,6 +156,12 @@ export function Composer({
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [editingId]);
 
+  // Choosing Reply puts the cursor in the box, ready for the answer.
+  const replyingId = replying?.id;
+  useEffect(() => {
+    if (replyingId) inputRef.current?.focus();
+  }, [replyingId]);
+
   useEffect(() => {
     if (!prefill?.text || wasEditing.current) return;
     setValue(prefill.text);
@@ -136,6 +169,15 @@ export function Composer({
   }, [prefill]);
 
   const ready = uploads.filter((upload) => upload.status === 'done').length;
+  const mediaUploads = uploads.filter((upload) => isVisualType(upload.mimetype));
+  const goingToAlbum = mediaUploads.filter((upload) => !albumSkips.has(upload.id)).length;
+  const toggleAlbumSkip = (id: string) =>
+    setAlbumSkips((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   // A message may be attachments alone, but never an attachment still in
   // flight: its bytes might not be there when the other person opens it.
   // An edit can only empty the text of a message that has a photo to keep.
@@ -152,12 +194,22 @@ export function Composer({
       else onSaveEdit?.(body);
       return;
     }
-    const options: SendOptions = { ...(ready > 0 ? { skipAlbum } : {}), ...(effect ? { effect } : {}) };
+    // All of them left out is the plain "not this one"; some, and only those stay out.
+    const readyMedia = uploads.filter(
+      (upload) => upload.status === 'done' && upload.attachment && isVisualType(upload.mimetype)
+    );
+    const skipped = readyMedia.filter((upload) => albumSkips.has(upload.id)).map((upload) => upload.attachment!.fileId);
+    const skipAlbum = readyMedia.length > 0 && skipped.length === readyMedia.length;
+    const options: SendOptions = {
+      ...(ready > 0 ? { skipAlbum } : {}),
+      ...(skipped.length > 0 && !skipAlbum ? { skipAlbumFileIds: skipped } : {}),
+      ...(effect ? { effect } : {})
+    };
     if (Object.keys(options).length > 0) onSend(body, options);
     else onSend(body);
     // Emoji typed from the phone's own keyboard count as used too.
     recordEmoji(...emojiIn(body).reverse());
-    setSkipAlbum(false);
+    setAlbumSkips(new Set());
     setValue('');
     // Kept focused, so a conversation does not need a tap between each line.
     inputRef.current?.focus();
@@ -167,6 +219,11 @@ export function Composer({
     if (event.key === 'Escape' && editing) {
       event.preventDefault();
       onCancelEdit?.();
+      return;
+    }
+    if (event.key === 'Escape' && replying) {
+      event.preventDefault();
+      onCancelReply?.();
       return;
     }
     if (event.key !== 'Enter') return;
@@ -192,6 +249,22 @@ export function Composer({
 
   // Effects are for a new message. An edit keeps whatever it was sent with.
   const offerEffects = canSend && !editing;
+
+  const voiceActive = Boolean(voice?.active);
+  const sendingVoice = voice?.progress != null;
+  const nearLimit = voice?.state === 'recording' && voice.elapsedMs >= MAX_VOICE_MS - 30_000;
+  const showLevels = voice?.state === 'recording' && voice.levels.some((level) => level > 0.02);
+  const voiceStatus = sendingVoice
+    ? voice?.progress
+      ? `Sending ${voice.progress}%`
+      : 'Sending'
+    : voice?.held?.reason === 'failed'
+      ? 'Not sent. Press send to try again'
+      : voice?.held
+        ? 'Recording stopped. Send it?'
+        : voice?.state === 'starting'
+          ? 'Waiting for the microphone'
+          : 'Recording';
 
   const cancelHold = () => {
     if (holdTimer.current) clearTimeout(holdTimer.current);
@@ -263,6 +336,23 @@ export function Composer({
         </Box>
       )}
 
+      {replying && !editing && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 2, pr: 1, pt: 0.5 }}>
+          <ReplyIcon sx={{ fontSize: 18, color: accent }} />
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="caption" sx={{ display: 'block', color: ink.muted, fontWeight: 600, lineHeight: 1.3 }}>
+              Replying to {replying.name || 'a message'}
+            </Typography>
+            <Typography variant="caption" noWrap sx={{ display: 'block', color: ink.muted, lineHeight: 1.3 }}>
+              {replying.text}
+            </Typography>
+          </Box>
+          <IconButton size="small" aria-label="Cancel reply" onClick={onCancelReply} sx={{ color: ink.muted }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      )}
+
       {/* Documents never go to the album, so the choice is only offered for photos and videos. */}
       {!editing &&
         uploads.some((upload) => !isDocumentType(upload.mimetype)) &&
@@ -271,20 +361,35 @@ export function Composer({
         onAlbumOff && (
           <AlbumDestination
             photoAlbum={photoAlbum}
-            skip={skipAlbum}
-            onToggleSkip={() => setSkipAlbum((skip) => !skip)}
+            skip={mediaUploads.length > 0 && goingToAlbum === 0}
+            going={goingToAlbum}
+            total={mediaUploads.length}
+            onToggleSkip={() =>
+              // Some left out, or none: leave them all out. All left out: put them all back.
+              setAlbumSkips(goingToAlbum === 0 ? new Set() : new Set(mediaUploads.map((upload) => upload.id)))
+            }
             onChoose={onChooseAlbum}
             onTurnOff={onAlbumOff}
           />
         )}
 
-      {!editing && uploads.length > 0 && onRemoveUpload && <UploadTray uploads={uploads} onRemove={onRemoveUpload} />}
+      {!editing && uploads.length > 0 && onRemoveUpload && (
+        <UploadTray
+          uploads={uploads}
+          onRemove={onRemoveUpload}
+          album={
+            photoAlbum?.mode === 'album'
+              ? { name: photoAlbum.albumName ?? 'the album', skipped: albumSkips, onToggle: toggleAlbumSkip }
+              : undefined
+          }
+        />
+      )}
 
       {/* On a phone, while writing only: a thread being read keeps its height,
           and the keyboard opening already reshapes the screen. On a desktop
           it stays put, because appearing on focus and going on blur resized
           the message list and made the whole thread jump each time. */}
-      {(!isPhone || focused || value.length > 0) && !disabled && (
+      {(!isPhone || focused || value.length > 0) && !disabled && !voiceActive && (
         <Box
           role="group"
           aria-label="Recent emoji"
@@ -330,132 +435,238 @@ export function Composer({
         </Box>
       )}
 
-      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5, p: 1 }}>
-        {/* One button. On a phone the system picker already offers the camera
-          beside the library, so a separate camera button was the same thing
-          twice. */}
-        {!editing && onAddFiles && (
+      {voice?.error && !voiceActive && (
+        <Typography variant="caption" role="alert" sx={{ display: 'block', px: 2, pt: 0.5, color: 'error.main' }}>
+          {voice.error}
+        </Typography>
+      )}
+
+      {voice && voiceActive ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, p: 1 }}>
           <IconButton
-            aria-label="Add photo or video"
-            onClick={() => fileRef.current?.click()}
+            aria-label="Discard voice message"
+            onClick={voice.discard}
+            disabled={sendingVoice}
             sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
           >
-            <AddPhotoAlternateOutlinedIcon />
+            <DeleteOutlineIcon />
           </IconButton>
-        )}
 
-        {!editing && onAddFiles && (
-          <IconButton
-            aria-label="Add document"
-            onClick={() => documentRef.current?.click()}
-            sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET, ml: -0.5 }}
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              minHeight: TOUCH_TARGET,
+              px: 1.5,
+              borderRadius: 3,
+              bgcolor: surface.sunken
+            }}
           >
-            <AttachFileIcon />
-          </IconButton>
-        )}
-
-        <InputBase
-          inputRef={inputRef}
-          value={value}
-          onChange={(event) => {
-            setValue(event.target.value);
-            if (!editing) onTyping();
-          }}
-          onKeyDown={onKeyDown}
-          onPaste={onPaste}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          placeholder="Message"
-          multiline
-          maxRows={6}
-          disabled={disabled}
-          inputProps={{ 'aria-label': 'Message' }}
-          // Inside the box, at its end, so the message gets the row's width and
-          // the only thing beside it is the photo button.
-          endAdornment={
-            <IconButton
-              aria-label="Add emoji"
-              onPointerEnter={() => void loadEmojiPicker().catch(() => {})}
-              onFocus={() => void loadEmojiPicker().catch(() => {})}
-              // Keeps the focus, and on a phone the keyboard, in the message box.
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={(event) => setEmojiAnchor(event.currentTarget)}
+            {voice.state === 'recording' && (
+              <Box
+                aria-hidden
+                sx={{
+                  flexShrink: 0,
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  bgcolor: 'error.main',
+                  animation: 'voice-pulse 1.2s ease-in-out infinite',
+                  '@keyframes voice-pulse': { '50%': { opacity: 0.3 } }
+                }}
+              />
+            )}
+            <Typography
+              variant="body2"
               sx={{
-                // Level with the last line as the box grows, and pulled into
-                // its padding so it does not make a one-line box any taller.
-                alignSelf: 'flex-end',
-                width: 36,
-                height: 36,
-                // The theme gives every icon button a 44px minimum on a phone,
-                // which made the box 52px against the 44px photo and Send
-                // buttons beside it, and left them sitting low. Undone inside
-                // the same query, or the theme's rule wins by coming later.
-                [PHONE]: { minWidth: 36, minHeight: 36 },
-                my: -0.5,
-                mr: -1,
-                ml: 0.5,
-                color: ink.muted,
-                bgcolor: 'transparent'
+                flexShrink: 0,
+                fontVariantNumeric: 'tabular-nums',
+                fontWeight: 600,
+                color: nearLimit ? 'error.main' : 'inherit'
               }}
             >
-              <SentimentSatisfiedAltIcon fontSize="small" />
-            </IconButton>
-          }
-          sx={{
-            flex: 1,
-            // As tall as the buttons beside it, so one line of text sits level
-            // with Send rather than a few pixels below its top. Longer messages
-            // still grow upwards from here.
-            minHeight: TOUCH_TARGET,
-            boxSizing: 'border-box',
-            px: 1.5,
-            py: 1,
-            borderRadius: 3,
-            bgcolor: surface.sunken,
-            // 16px or larger, or iOS Safari zooms the page on focus and never
-            // zooms back out.
-            fontSize: 16,
-            lineHeight: 1.4
-          }}
-        />
+              {formatDuration(voice.held ? voice.held.recording.durationMs : voice.elapsedMs)}
+            </Typography>
+            {/* The bars once the microphone is heard; the words until then, and
+                for a screen reader always. Only the words are announced: the
+                timer would be read out ten times a second. */}
+            {showLevels && <LevelBars levels={voice.levels} />}
+            <Typography
+              variant="body2"
+              noWrap
+              role="status"
+              sx={{
+                color: voice.held && !sendingVoice ? 'error.main' : ink.muted,
+                ...(showLevels ? visuallyHidden : {})
+              }}
+            >
+              {voiceStatus}
+            </Typography>
+            {nearLimit && (
+              <Typography variant="caption" noWrap sx={{ flexShrink: 0, ml: 'auto', color: 'error.main' }}>
+                {formatDuration(MAX_VOICE_MS - voice.elapsedMs)} left
+              </Typography>
+            )}
+          </Box>
 
-        <IconButton
-          type="submit"
-          aria-label={editing ? 'Save edit' : 'Send'}
-          aria-haspopup={offerEffects ? 'menu' : undefined}
-          disabled={!canSend}
-          onPointerDown={startHold}
-          onPointerUp={cancelHold}
-          onPointerLeave={cancelHold}
-          onPointerCancel={cancelHold}
-          onContextMenu={(event) => {
-            if (!offerEffects) return;
-            event.preventDefault();
-            cancelHold();
-            setEffectAnchor(event.currentTarget);
-          }}
-          onClick={(event) => {
-            // The press that opened the menu ends in a click; it chose nothing yet.
-            if (held.current) {
-              event.preventDefault();
-              held.current = false;
+          <IconButton
+            aria-label="Send voice message"
+            onClick={() => void voice.finish()}
+            disabled={voice.state === 'starting' || sendingVoice}
+            aria-busy={sendingVoice || undefined}
+            sx={{
+              width: TOUCH_TARGET,
+              height: TOUCH_TARGET,
+              color: '#fff',
+              bgcolor: accent,
+              '&:hover': { bgcolor: accent, filter: 'brightness(0.94)' },
+              '&.Mui-disabled': { bgcolor: surface.sunken, color: ink.muted }
+            }}
+          >
+            {sendingVoice ? (
+              <CircularProgress
+                size={18}
+                color="inherit"
+                // Indeterminate until the first byte is counted, so a slow start still moves.
+                variant={voice.progress ? 'determinate' : 'indeterminate'}
+                value={voice.progress ?? 0}
+              />
+            ) : (
+              <SendIcon fontSize="small" />
+            )}
+          </IconButton>
+        </Box>
+      ) : (
+        <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5, p: 1 }}>
+          {/* One button. On a phone the system picker already offers the camera
+            beside the library, so a separate camera button was the same thing
+            twice. */}
+          {!editing && onAddFiles && (
+            <IconButton
+              aria-label="Add photo or video"
+              onClick={() => fileRef.current?.click()}
+              sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
+            >
+              <AddPhotoAlternateOutlinedIcon />
+            </IconButton>
+          )}
+
+          {!editing && onAddFiles && (
+            <IconButton
+              aria-label="Add document"
+              onClick={() => documentRef.current?.click()}
+              sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET, ml: -0.5 }}
+            >
+              <AttachFileIcon />
+            </IconButton>
+          )}
+
+          <InputBase
+            inputRef={inputRef}
+            value={value}
+            onChange={(event) => {
+              setValue(event.target.value);
+              if (!editing) onTyping();
+            }}
+            onKeyDown={onKeyDown}
+            onPaste={onPaste}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder="Message"
+            multiline
+            maxRows={6}
+            disabled={disabled}
+            inputProps={{ 'aria-label': 'Message' }}
+            // Inside the box, at its end, so the message gets the row's width and
+            // the only thing beside it is the photo button.
+            endAdornment={
+              <IconButton
+                aria-label="Add emoji"
+                onPointerEnter={() => void loadEmojiPicker().catch(() => {})}
+                onFocus={() => void loadEmojiPicker().catch(() => {})}
+                // Keeps the focus, and on a phone the keyboard, in the message box.
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={(event) => setEmojiAnchor(event.currentTarget)}
+                sx={{
+                  // Level with the last line as the box grows, and pulled into
+                  // its padding so it does not make a one-line box any taller.
+                  alignSelf: 'flex-end',
+                  width: 36,
+                  height: 36,
+                  // The theme gives every icon button a 44px minimum on a phone,
+                  // which made the box 52px against the 44px photo and Send
+                  // buttons beside it, and left them sitting low. Undone inside
+                  // the same query, or the theme's rule wins by coming later.
+                  [PHONE]: { minWidth: 36, minHeight: 36 },
+                  my: -0.5,
+                  mr: -1,
+                  ml: 0.5,
+                  color: ink.muted,
+                  bgcolor: 'transparent'
+                }}
+              >
+                <SentimentSatisfiedAltIcon fontSize="small" />
+              </IconButton>
             }
-          }}
-          sx={{
-            width: TOUCH_TARGET,
-            height: TOUCH_TARGET,
-            // A long press on a phone would otherwise select or preview the button.
-            WebkitTouchCallout: 'none',
-            userSelect: 'none',
-            color: '#fff',
-            bgcolor: accent,
-            '&:hover': { bgcolor: accent, filter: 'brightness(0.94)' },
-            '&.Mui-disabled': { bgcolor: surface.sunken, color: ink.muted }
-          }}
-        >
-          {editing ? <CheckIcon fontSize="small" /> : <SendIcon fontSize="small" />}
-        </IconButton>
-      </Box>
+            sx={{
+              flex: 1,
+              // As tall as the buttons beside it, so one line of text sits level
+              // with Send rather than a few pixels below its top. Longer messages
+              // still grow upwards from here.
+              minHeight: TOUCH_TARGET,
+              boxSizing: 'border-box',
+              px: 1.5,
+              py: 1,
+              borderRadius: 3,
+              bgcolor: surface.sunken,
+              // 16px or larger, or iOS Safari zooms the page on focus and never
+              // zooms back out.
+              fontSize: 16,
+              lineHeight: 1.4
+            }}
+          />
+
+          <IconButton
+            type="submit"
+            aria-label={editing ? 'Save edit' : 'Send'}
+            aria-haspopup={offerEffects ? 'menu' : undefined}
+            disabled={!canSend}
+            onPointerDown={startHold}
+            onPointerUp={cancelHold}
+            onPointerLeave={cancelHold}
+            onPointerCancel={cancelHold}
+            onContextMenu={(event) => {
+              if (!offerEffects) return;
+              event.preventDefault();
+              cancelHold();
+              setEffectAnchor(event.currentTarget);
+            }}
+            onClick={(event) => {
+              // The press that opened the menu ends in a click; it chose nothing yet.
+              if (held.current) {
+                event.preventDefault();
+                held.current = false;
+              }
+            }}
+            sx={{
+              width: TOUCH_TARGET,
+              height: TOUCH_TARGET,
+              // A long press on a phone would otherwise select or preview the button.
+              WebkitTouchCallout: 'none',
+              userSelect: 'none',
+              color: '#fff',
+              bgcolor: accent,
+              '&:hover': { bgcolor: accent, filter: 'brightness(0.94)' },
+              '&.Mui-disabled': { bgcolor: surface.sunken, color: ink.muted }
+            }}
+          >
+            {editing ? <CheckIcon fontSize="small" /> : <SendIcon fontSize="small" />}
+          </IconButton>
+        </Box>
+      )}
 
       {/* The full picker here rather than the six quick reactions: writing a
           message is where someone reaches for a specific emoji, while
@@ -498,6 +709,42 @@ export function Composer({
         onChange={pick}
         data-testid="document-input"
       />
+    </Box>
+  );
+}
+
+/**
+ * The microphone's loudness as a row of bars, newest on the right, so a
+ * person can see they are being heard.
+ */
+function LevelBars({ levels }: { levels: number[] }) {
+  return (
+    <Box
+      aria-hidden
+      sx={{
+        flex: 1,
+        minWidth: 0,
+        height: 24,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: '2px',
+        overflow: 'hidden'
+      }}
+    >
+      {levels.map((level, index) => (
+        <Box
+          key={index}
+          sx={{
+            flexShrink: 0,
+            width: 3,
+            height: `${Math.max(12, level * 100)}%`,
+            borderRadius: 1,
+            bgcolor: ink.muted,
+            opacity: 0.75
+          }}
+        />
+      ))}
     </Box>
   );
 }

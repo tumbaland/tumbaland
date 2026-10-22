@@ -52,6 +52,8 @@ export interface SendPayload {
   effect?: MessageEffect;
   /** "Not this one": keep this send out of the album. */
   skipAlbum?: boolean;
+  /** Some of its photos kept out of the album, the rest going in. */
+  skipAlbumFileIds?: string[];
 }
 
 function attachmentRequest(attachment: Attachment) {
@@ -188,25 +190,27 @@ export const chatApi = {
     return json.data;
   },
 
-  /** Takes a message's files, or one of them, back out of their album. They stay in chat. */
-  async removeFromAlbum(conversationId: string, messageId: string, fileId?: string): Promise<Message> {
-    const query = fileId ? `?fileId=${encodeURIComponent(fileId)}` : '';
+  /** Takes a message's files, or some of them, back out of their album. They stay in chat. */
+  async removeFromAlbum(conversationId: string, messageId: string, fileIds?: string[]): Promise<Message> {
+    const query = fileIds?.length
+      ? `?${fileIds.map((fileId) => `fileId=${encodeURIComponent(fileId)}`).join('&')}`
+      : '';
     const json = await client.delete<{ data: Message }>(
       `/api/chat/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/album${query}`
     );
     return json.data;
   },
 
-  /** Puts a message's files, or one of them, in another album. */
+  /** Puts a message's files, or some of them, in another album. */
   async placeInAlbum(
     conversationId: string,
     messageId: string,
     placement: AlbumPlacement,
-    fileId?: string
+    fileIds?: string[]
   ): Promise<Message> {
     const json = await client.put<{ data: Message }>(
       `/api/chat/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/album`,
-      { ...placement, ...(fileId ? { fileId } : {}) }
+      { ...placement, ...(fileIds?.length ? { fileIds } : {}) }
     );
     return json.data;
   },

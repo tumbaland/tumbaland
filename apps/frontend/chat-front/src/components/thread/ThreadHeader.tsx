@@ -5,10 +5,12 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CallOutlinedIcon from '@mui/icons-material/CallOutlined';
+import MicNoneOutlinedIcon from '@mui/icons-material/MicNoneOutlined';
 import type { ReactNode } from 'react';
 import { brand, ink, surface } from '@tumbaland/frontend-core';
 import type { ConversationMember, Presence } from '../../types';
@@ -33,6 +35,13 @@ export interface ThreadHeaderProps {
   lastSeen?: Record<string, string>;
   /** Given for a two-person conversation: calls the other person. */
   onCall?: () => void;
+  /**
+   * Starts a voice message; the recording itself shows in the composer.
+   * Absent where the browser cannot record.
+   */
+  onRecordVoice?: () => void;
+  /** True while one cannot start: one is being recorded or sent, or an edit has the box. */
+  recordingVoice?: boolean;
 }
 
 /** "Active 5 min ago" has to keep counting while the thread stays open. */
@@ -96,7 +105,9 @@ export function ThreadHeader({
   background = surface.paper,
   accent = brand.pinkInk,
   lastSeen,
-  onCall
+  onCall,
+  onRecordVoice,
+  recordingVoice = false
 }: ThreadHeaderProps) {
   const now = useMinuteClock();
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -158,23 +169,45 @@ export function ThreadHeader({
         )}
       </Box>
 
+      {/* A mic and a phone side by side read alike; the hover text tells the
+          recorded message from the live call. */}
+      {onRecordVoice && (
+        <Tooltip title="Voice message" describeChild>
+          {/* A span, because a disabled button fires no hover for the tooltip. */}
+          <span>
+            <IconButton
+              size="small"
+              aria-label="Record voice message"
+              onClick={onRecordVoice}
+              disabled={recordingVoice}
+            >
+              <MicNoneOutlinedIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
+      )}
+
       {onCall && (
-        <IconButton size="small" aria-label={`Call ${name || ''}`.trim()} onClick={onCall}>
-          <CallOutlinedIcon fontSize="small" />
-        </IconButton>
+        <Tooltip title={name ? `Call ${name}` : 'Call'} describeChild>
+          <IconButton size="small" aria-label={`Call ${name || ''}`.trim()} onClick={onCall}>
+            <CallOutlinedIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       )}
 
       {menu.length > 0 && (
         <>
-          <IconButton
-            size="small"
-            aria-label="Conversation options"
-            aria-haspopup="menu"
-            aria-expanded={Boolean(menuAnchor)}
-            onClick={(event) => setMenuAnchor(event.currentTarget)}
-          >
-            <MoreVertIcon fontSize="small" />
-          </IconButton>
+          <Tooltip title="More options" describeChild>
+            <IconButton
+              size="small"
+              aria-label="Conversation options"
+              aria-haspopup="menu"
+              aria-expanded={Boolean(menuAnchor)}
+              onClick={(event) => setMenuAnchor(event.currentTarget)}
+            >
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
           <Menu
             anchorEl={menuAnchor}
             open={Boolean(menuAnchor)}

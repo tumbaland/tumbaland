@@ -11,9 +11,11 @@ import type { ConversationMember, ReadReceipt, ThreadMessage } from '../../types
 import { CollageCard } from './CollageCard';
 import { ReminderCard } from './ReminderCard';
 import { DaySeparator } from './DaySeparator';
-import { MessageBubble } from './MessageBubble';
+import { MessageBubble, type QuoteView } from './MessageBubble';
+import { messageSummary } from '../../services/summary';
 import { SeenMarker, placeSeenMarkers } from './SeenMarker';
 import { clockTime } from './clock';
+import { chatColors } from './themes';
 
 export interface MessageListProps {
   messages: ThreadMessage[];
@@ -32,6 +34,10 @@ export interface MessageListProps {
   onOpenCollage?: (collageId: string) => void;
   /** A reminder card's Open: the plan in the journal's calendar. */
   onOpenPlan?: (planId: string) => void;
+  /** Starts a reply to a message. */
+  onReply?: (messageId: string) => void;
+  /** A tap on a reply's quote: brings the original into view, loading back to it if need be. */
+  onOpenQuote?: (messageId: string, createdAt: string) => void;
   /** Your own bubbles' colour, from the conversation's theme. */
   accent?: string;
   /** For senders' pictures and the "seen" markers. */
@@ -66,15 +72,36 @@ function SystemLine({ message }: { message: ThreadMessage }) {
     <Typography
       variant="caption"
       component="p"
-      sx={{ textAlign: 'center', color: ink.muted, my: 1.5, px: 2 }}
+      sx={{ textAlign: 'center', color: ink.muted, textShadow: chatColors.metaHalo, my: 1.5, px: 2 }}
     >
       {message.body} · {clockTime(message.createdAt)}
     </Typography>
   );
 }
 
+/** What a double tap on a message sends. */
+const LOVE = '❤️';
+/** How long a heart is given to reach the server before another double tap counts. */
+const LOVE_SETTLE_MS = 2000;
+
 /** Consecutive messages from one person within two minutes are grouped. */
 const GROUP_WINDOW_MS = 2 * 60 * 1000;
+
+/** Whether `next` carries on the group `message` is in: same person, same day, within the window. */
+function continues(message: ThreadMessage, next: ThreadMessage | undefined): boolean {
+  return (
+    Boolean(next) &&
+    message.kind !== 'system' &&
+    message.kind !== 'collage' &&
+    message.kind !== 'reminder' &&
+    next!.kind !== 'system' &&
+    next!.kind !== 'collage' &&
+    next!.kind !== 'reminder' &&
+    next!.senderId === message.senderId &&
+    sameDay(message.createdAt, next!.createdAt) &&
+    new Date(next!.createdAt).getTime() - new Date(message.createdAt).getTime() <= GROUP_WINDOW_MS
+  );
+}
 
 export function MessageList({
   messages,
@@ -93,6 +120,8 @@ export function MessageList({
   onOpenPlan,
   accent,
   members = NO_MEMBERS,
+  onReply,
+  onOpenQuote,
   reads = NO_READS,
   focus = null
 }: MessageListProps) {
@@ -133,6 +162,49 @@ export function MessageList({
   // name changed on the account page shows on old messages too.
   const names = useMemo(() => new Map(members.map((member) => [member.userId, member.name])), [members]);
   const seen = useMemo(() => placeSeenMarkers(messages, reads, members), [messages, reads, members]);
+  // Between two people, the side a bubble is on already says whose it is, and
+  // the header names the other one.
+  const direct = members.length <= 2;
+
+  /**
+   * A double-tapped message gets a heart. Only ever adds one: a reaction
+   * toggles, and a second double tap taking the heart off would be a surprise.
+   */
+  const loving = useRef(new Set<string>());
+  const love = (messageId: string) => {
+    const target = byId.get(messageId);
+    const already = target?.reactions.some((reaction) => reaction.userId === currentUserId && reaction.emoji === LOVE);
+    // Reactions are not shown until the server answers, so a second double tap
+    // in that time would still see none and toggle the first one off.
+    if (already || loving.current.has(messageId)) return;
+    loving.current.add(messageId);
+    setTimeout(() => loving.current.delete(messageId), LOVE_SETTLE_MS);
+    onReact(messageId, LOVE);
+  };
+  const byId = useMemo(() => new Map(messages.map((message) => [message.id, message])), [messages]);
+
+  /**
+   * What a reply quotes. The original itself when it is loaded, so an edit or
+   * an unsend shows at once; the copy the server keeps on the reply when it is
+   * further back than the thread has loaded.
+   */
+  const quoteFor = (message: ThreadMessage): QuoteView | null => {
+    if (!message.replyTo) return null;
+    const parent = byId.get(message.replyTo);
+    const kept = message.quote;
+    if (!parent && !kept) return { name: '', text: 'An earlier message', unsent: false };
+    const senderId = parent?.senderId ?? kept!.senderId;
+    const name =
+      senderId === currentUserId ? 'You' : names.get(senderId) || parent?.senderName || kept?.senderName || '';
+    const unsent = parent ? Boolean(parent.deletedAt) : Boolean(kept?.deleted);
+    const createdAt = parent?.createdAt ?? kept!.createdAt;
+    return {
+      name,
+      text: parent ? messageSummary(parent) : kept!.text,
+      unsent,
+      onOpen: !unsent && onOpenQuote ? () => onOpenQuote(message.replyTo!, createdAt) : undefined
+    };
+  };
   const [atBottom, setAtBottom] = useState(true);
 
   /**
@@ -341,14 +413,9 @@ export function MessageList({
               );
             }
 
-            const showSender =
-              newDay ||
-              !previous ||
-              previous.kind === 'system' ||
-              previous.kind === 'collage' ||
-              previous.kind === 'reminder' ||
-              previous.senderId !== message.senderId ||
-              new Date(message.createdAt).getTime() - new Date(previous.createdAt).getTime() > GROUP_WINDOW_MS;
+            const showSender = !previous || !continues(previous, message);
+            // A run of messages sent together is timed once, under its last.
+            const showTime = !continues(message, messages[index + 1]);
 
             return (
               <Box key={message.clientId || message.id} {...rowProps(message)}>
@@ -357,6 +424,8 @@ export function MessageList({
                   message={message}
                   mine={message.senderId === currentUserId}
                   showSender={showSender}
+                  showName={!direct}
+                  showTime={showTime}
                   onReact={onReact}
                   onRetry={onRetry}
                   onPickEmoji={onPickEmoji}
@@ -365,6 +434,9 @@ export function MessageList({
                   onEditAlbum={onEditAlbum}
                   onRemoveFromAlbum={onRemoveFromAlbum}
                   accent={accent}
+                  quote={quoteFor(message)}
+                  onReply={onReply}
+                  onLove={love}
                   senderPicture={pictures.get(message.senderId)}
                   senderName={names.get(message.senderId)}
                 />

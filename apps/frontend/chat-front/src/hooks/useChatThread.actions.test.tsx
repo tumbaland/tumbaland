@@ -344,6 +344,17 @@ describe('sending', () => {
     expect(sent[0]?.delivery).toBe('sent');
   });
 
+  it('names the photos that stay out of the album', async () => {
+    api.sendMessage.mockResolvedValue(message(3, { kind: 'media', clientId: 'client-x' }));
+    const { result } = await openThread();
+    const attachments = ['f1', 'f2'].map((fileId) => ({ fileId, mimetype: 'image/jpeg', sizeBytes: 1 }));
+
+    await act(() => result.current.send('', attachments, { skipAlbum: false, skipAlbumFileIds: ['f2'] }));
+
+    expect(api.sendMessage).toHaveBeenCalledWith('c1', expect.objectContaining({ skipAlbumFileIds: ['f2'] }));
+    expect(api.sendMessage.mock.calls[0]![1]).not.toHaveProperty('skipAlbum');
+  });
+
   it('sends a message that is only a photo', async () => {
     api.sendMessage.mockResolvedValue(message(3, { kind: 'media', clientId: 'client-x' }));
     const { result } = await openThread();
@@ -465,12 +476,12 @@ describe('albums, collages and appearance', () => {
     api.placeInAlbum.mockResolvedValue(message(2, { body: 'in album' }));
     const { result } = await openThread();
 
-    await act(() => result.current.removeFromAlbum('m2', 'f1'));
-    expect(api.removeFromAlbum).toHaveBeenCalledWith('c1', 'm2', 'f1');
+    await act(() => result.current.removeFromAlbum('m2', ['f1']));
+    expect(api.removeFromAlbum).toHaveBeenCalledWith('c1', 'm2', ['f1']);
     expect(result.current.messages.find((m) => m.id === 'm2')?.body).toBe('out of album');
 
-    await act(() => result.current.placeInAlbum('m2', { albumId: 'a2' } as never, 'f1'));
-    expect(api.placeInAlbum).toHaveBeenCalledWith('c1', 'm2', { albumId: 'a2' }, 'f1');
+    await act(() => result.current.placeInAlbum('m2', { albumId: 'a2' } as never, ['f1']));
+    expect(api.placeInAlbum).toHaveBeenCalledWith('c1', 'm2', { albumId: 'a2' }, ['f1']);
     expect(result.current.messages.find((m) => m.id === 'm2')?.body).toBe('in album');
   });
 });

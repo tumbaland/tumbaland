@@ -236,6 +236,19 @@ describe('incoming events', () => {
     expect(state.messages[0]!.deletedAt).toBeTruthy();
   });
 
+  it('takes an unsent message\u2019s words out of the replies that quote it', () => {
+    const reply = message({
+      id: 'm2',
+      clientId: 'c2',
+      replyTo: 'm1',
+      quote: { senderId: 'u-tom', senderName: 'Tom', text: 'oops', createdAt: '2026-09-21T10:00:00.000Z' }
+    });
+
+    const state = threadReducer(stateWith([message(), reply]), { type: 'removed', id: 'm1' });
+
+    expect(state.messages[1]!.quote).toMatchObject({ text: '', deleted: true });
+  });
+
   it('applies a reaction through the update path', () => {
     const state = threadReducer(stateWith([message()]), {
       type: 'updated',

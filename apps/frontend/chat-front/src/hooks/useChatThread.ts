@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useInsertionEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { logger } from '@tumbaland/frontend-core';
 import { chatApi, newClientId } from '../services/chatApi';
+import { messageSummary } from '../services/summary';
 import { initialThreadState, lastStoredMessage, threadReducer } from './threadReducer';
 import { useChatStream, type ConnectionState } from './useChatStream';
 import { namesTyping, useTypingTracker } from './useTypingTracker';
@@ -11,10 +12,10 @@ import type {
   AlbumPlacement,
   Appearance,
   Message,
-  MessageEffect,
   MessagePage,
   PhotoAlbum,
   PhotoAlbumChoice,
+  Quote,
   Presence,
   ReadPayload,
   ReadReceipt,
@@ -69,8 +70,9 @@ export interface UseChatThreadResult {
    * card. `clientId` is kept across retries, so a retry cannot make a second.
    */
   startCollage: (title: string, clientId: string) => Promise<Message | null>;
-  removeFromAlbum: (messageId: string, fileId?: string) => Promise<void>;
-  placeInAlbum: (messageId: string, placement: AlbumPlacement, fileId?: string) => Promise<void>;
+  /** Some of a message's photos (`fileIds`), or all of them. */
+  removeFromAlbum: (messageId: string, fileIds?: string[]) => Promise<void>;
+  placeInAlbum: (messageId: string, placement: AlbumPlacement, fileIds?: string[]) => Promise<void>;
   send: (body: string, attachments?: Attachment[], options?: SendOptions) => Promise<void>;
   retry: (clientId: string) => Promise<void>;
   loadOlder: () => Promise<void>;
@@ -114,7 +116,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   const lastTypingSent = useRef(0);
   /** Bodies kept by clientId so a failed send can be retried unchanged. */
   const outbox = useRef(
-    new Map<string, { body: string; attachments: Attachment[]; skipAlbum: boolean; effect?: MessageEffect }>()
+    new Map<string, { body: string; attachments: Attachment[]; options: SendOptions; quote: Quote | null }>()
   );
 
   const load = useCallback(async () => {
@@ -327,15 +329,18 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   }, [conversationId, newestId]);
 
   const deliver = useCallback(
-    async (clientId: string, body: string, attachments: Attachment[], skipAlbum = false, effect?: MessageEffect) => {
+    async (clientId: string, body: string, attachments: Attachment[], options: SendOptions) => {
       if (!conversationId) return;
+      const { skipAlbum, skipAlbumFileIds, effect, replyTo } = options;
       try {
         const stored = await chatApi.sendMessage(conversationId, {
           clientId,
           body,
           attachments,
           ...(skipAlbum ? { skipAlbum } : {}),
-          ...(effect ? { effect } : {})
+          ...(skipAlbumFileIds?.length ? { skipAlbumFileIds } : {}),
+          ...(effect ? { effect } : {}),
+          ...(replyTo ? { replyTo } : {})
         });
         dispatch({ type: 'confirmed', clientId, message: stored });
         outbox.current.delete(clientId);
@@ -354,9 +359,18 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
       if (!trimmed && attachments.length === 0) return;
 
       const clientId = newClientId();
-      const skipAlbum = Boolean(options.skipAlbum);
-      const { effect } = options;
-      outbox.current.set(clientId, { body: trimmed, attachments, skipAlbum, effect });
+      const { effect, replyTo } = options;
+      // Drawn from the message on screen until the server's copy arrives.
+      const parent = replyTo ? latestState.current.messages.find((message) => message.id === replyTo) : undefined;
+      const quote: Quote | null = parent
+        ? {
+            senderId: parent.senderId,
+            senderName: parent.senderName,
+            text: messageSummary(parent),
+            createdAt: parent.createdAt
+          }
+        : null;
+      outbox.current.set(clientId, { body: trimmed, attachments, options, quote });
 
       // Shown immediately, with the id it will keep. The server's copy
       // replaces it by clientId, so it never appears twice and never jumps.
@@ -371,7 +385,8 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
           kind: attachments.length > 0 ? 'media' : 'text',
           body: trimmed,
           attachments,
-          replyTo: null,
+          replyTo: replyTo ?? null,
+          quote,
           effect: effect ?? null,
           reactions: [],
           clientId,
@@ -382,7 +397,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
         }
       });
 
-      await deliver(clientId, trimmed, attachments, skipAlbum, effect);
+      await deliver(clientId, trimmed, attachments, options);
     },
     [conversationId, currentUserId, deliver]
   );
@@ -407,8 +422,9 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
           kind: queued.attachments.length > 0 ? 'media' : 'text',
           body: queued.body,
           attachments: queued.attachments,
-          replyTo: null,
-          effect: queued.effect ?? null,
+          replyTo: queued.options.replyTo ?? null,
+          quote: queued.quote,
+          effect: queued.options.effect ?? null,
           reactions: [],
           clientId,
           editedAt: null,
@@ -417,7 +433,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
           delivery: 'pending'
         }
       });
-      await deliver(clientId, queued.body, queued.attachments, queued.skipAlbum, queued.effect);
+      await deliver(clientId, queued.body, queued.attachments, queued.options);
     },
     [conversationId, currentUserId, deliver]
   );
@@ -482,17 +498,17 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   );
 
   const removeFromAlbum = useCallback(
-    async (messageId: string, fileId?: string) => {
+    async (messageId: string, fileIds?: string[]) => {
       if (!conversationId) return;
-      dispatch({ type: 'updated', message: await chatApi.removeFromAlbum(conversationId, messageId, fileId) });
+      dispatch({ type: 'updated', message: await chatApi.removeFromAlbum(conversationId, messageId, fileIds) });
     },
     [conversationId]
   );
 
   const placeInAlbum = useCallback(
-    async (messageId: string, placement: AlbumPlacement, fileId?: string) => {
+    async (messageId: string, placement: AlbumPlacement, fileIds?: string[]) => {
       if (!conversationId) return;
-      dispatch({ type: 'updated', message: await chatApi.placeInAlbum(conversationId, messageId, placement, fileId) });
+      dispatch({ type: 'updated', message: await chatApi.placeInAlbum(conversationId, messageId, placement, fileIds) });
     },
     [conversationId]
   );

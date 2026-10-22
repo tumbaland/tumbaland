@@ -4,6 +4,7 @@ import { ink } from '@tumbaland/frontend-core';
 import type { ConversationMember, ReadReceipt, ThreadMessage } from '../../types';
 import { MemberAvatar } from './MemberAvatar';
 import { whenLabel } from './clock';
+import { chatColors } from './themes';
 
 export interface Seer {
   userId: string;
@@ -70,7 +71,7 @@ export function SeenMarker({ seers }: { seers: Seer[] }) {
       {seers.map((seer) => (
         <MemberAvatar key={seer.userId} name={seer.name} picture={seer.picture} size={16} />
       ))}
-      <Typography variant="caption" sx={{ color: ink.muted, fontSize: 11 }} aria-hidden>
+      <Typography variant="caption" sx={{ color: ink.muted, fontSize: 11, textShadow: chatColors.metaHalo }} aria-hidden>
         Seen {whenLabel(latest)}
       </Typography>
     </Box>

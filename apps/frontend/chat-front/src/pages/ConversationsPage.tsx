@@ -15,7 +15,7 @@ import { appPath } from '../appBase';
 import { chatApi } from '../services/chatApi';
 import { dayLabel } from '../components/thread/DaySeparator';
 import { PresenceDot } from '../components/thread/PresenceDot';
-import { isDocumentType } from '../services/documents';
+import { messageSummary } from '../services/summary';
 import { useChatStream } from '../hooks/useChatStream';
 import { namesTyping, useTypingTracker } from '../hooks/useTypingTracker';
 import type { ChatEvent, Conversation, Message, Presence, TypingPayload } from '../types';
@@ -37,15 +37,7 @@ function isGroup(conversation: Conversation, currentUserId: string): boolean {
 /** The list's one-line summary of a message, matching what the server stores. */
 function previewOf(message: Message): string {
   // As the server words it, so the line does not change on the next reload.
-  if (message.collage) return `Collage: ${message.collage.title}`;
-  if (message.plan) return `Reminder: ${message.plan.title}`;
-  if (message.body.trim()) return message.body.trim();
-  if (message.attachments.length === 0) return '';
-  const [only] = message.attachments;
-  if (only && message.attachments.length === 1) {
-    return isDocumentType(only.mimetype) ? 'Document' : only.mimetype.startsWith('video/') ? 'Video' : 'Photo';
-  }
-  return `${message.attachments.length} attachments`;
+  return messageSummary(message);
 }
 
 /** Whether the other person in a direct message is online right now. */

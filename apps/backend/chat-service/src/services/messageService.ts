@@ -2,8 +2,16 @@ import { randomUUID } from 'crypto';
 import { Types } from 'mongoose';
 import { BadRequestError, ForbiddenError, NotFoundError, logger } from '@tumbaland/backend-core';
 import { Conversation, IConversation } from '../models/Conversation';
-import { IAttachment, ICollageCard, IMessage, IPlanCard, Message, MessageEffect } from '../models/Message';
-import { attachmentNoun, belongsToConversation, bytesOf, fileIdsOf, folderFor, withDownloadUrls, withStoredSizes } from './attachmentService';
+import { IAttachment, ICollageCard, IMessage, IPlanCard, IQuote, Message, MessageEffect } from '../models/Message';
+import {
+  attachmentNoun,
+  belongsToConversation,
+  bytesOf,
+  fileIdsOf,
+  folderFor,
+  withDownloadUrls,
+  withStoredSizes
+} from './attachmentService';
 import { deleteFolder } from './fileServiceClient';
 import { recordStoredBytes, releaseStoredBytes } from './storageUsage';
 import { ReadState } from '../models/ReadState';
@@ -38,6 +46,7 @@ export interface MessageView {
   body: string;
   attachments: AttachmentView[];
   replyTo: string | null;
+  quote: IQuote | null;
   effect: MessageEffect | null;
   collage: ICollageCard | null;
   plan: IPlanCard | null;
@@ -65,6 +74,7 @@ export function toView(document: IMessage): MessageView {
     body: message.deletedAt ? '' : message.body,
     attachments: message.deletedAt ? [] : message.attachments,
     replyTo: message.replyTo ?? null,
+    quote: message.deletedAt ? null : (message.quote ?? null),
     effect: message.deletedAt ? null : (message.effect ?? null),
     collage: message.deletedAt ? null : (message.collage ?? null),
     plan: message.deletedAt ? null : (message.plan ?? null),
@@ -74,6 +84,17 @@ export function toView(document: IMessage): MessageView {
     deletedAt: message.deletedAt ?? null,
     createdAt: message.createdAt
   };
+}
+
+/** Longest quote a reply keeps of the message it answers. */
+const QUOTE_LENGTH = 200;
+
+/** What a reply shows of `message`: a line of its text, or what it carried. */
+export function quoteText(message: Pick<IMessage, 'body' | 'attachments' | 'collage' | 'plan' | 'deletedAt'>): string {
+  if (message.deletedAt) return '';
+  if (message.collage) return `Collage: ${message.collage.title}`;
+  if (message.plan) return `Reminder: ${message.plan.title}`;
+  return preview(message.body, message.attachments).slice(0, QUOTE_LENGTH);
 }
 
 /** A one-line summary for the conversation list. */
@@ -92,6 +113,8 @@ export interface SendInput {
   effect?: MessageEffect | null;
   /** "Not this one" on the photo tray: keep this send out of the album. */
   skipAlbum?: boolean;
+  /** Some of its photos kept out of the album, the rest going in. */
+  skipAlbumFileIds?: string[];
 }
 
 export interface SendResult {
@@ -130,6 +153,7 @@ export async function sendMessage(
     throw new BadRequestError('That file does not belong to this conversation');
   }
 
+  let quote: IQuote | null = null;
   if (input.replyTo) {
     if (!Types.ObjectId.isValid(input.replyTo)) {
       throw new BadRequestError('replyTo is not a message id');
@@ -143,6 +167,15 @@ export async function sendMessage(
     if (!parent) {
       throw new BadRequestError('The message being replied to is not in this conversation');
     }
+    if (parent.deletedAt) {
+      throw new BadRequestError('That message was unsent');
+    }
+    quote = {
+      senderId: parent.senderId,
+      senderName: parent.senderName,
+      text: quoteText(parent),
+      createdAt: parent.createdAt
+    };
   }
 
   // Charged by what is really stored, not by what the client says it sent.
@@ -162,6 +195,7 @@ export async function sendMessage(
       body,
       attachments,
       replyTo: input.replyTo ?? null,
+      quote,
       effect: input.effect ?? null,
       clientId: input.clientId
     });
@@ -185,7 +219,7 @@ export async function sendMessage(
   const view = await announceNewMessage(person, conversation, message, preview(body, attachments));
 
   // After the reply, like the push: Album being slow must not hold up a send.
-  if (!input.skipAlbum) void saveToAlbum(conversation, message);
+  if (!input.skipAlbum) void saveToAlbum(conversation, message, input.skipAlbumFileIds);
 
   return { message: view, created };
 }
@@ -350,6 +384,9 @@ export async function editMessage(
   message.editedAt = new Date();
   await message.save();
   await refreshPreview(conversationId, message);
+  // Replies quote what it says now. One that is open shows the edit from the
+  // message itself; this is for the ones read after.
+  await Message.updateMany({ conversationId, replyTo: messageId }, { $set: { 'quote.text': quoteText(message) } });
 
   const view = (await withDownloadUrls([toView(message)]))[0]!;
   publishToGroup(conversation.groupId, {
@@ -377,6 +414,11 @@ export async function deleteMessage(
   message.deletedAt = new Date();
   await message.save();
   await refreshPreview(conversationId, message);
+  // An unsent message is gone from the replies that quoted it too.
+  await Message.updateMany(
+    { conversationId, replyTo: messageId },
+    { $set: { 'quote.text': '', 'quote.deleted': true } }
+  );
 
   // Before the files go: an album entry, or the chat background, must never
   // point at a deleted file.

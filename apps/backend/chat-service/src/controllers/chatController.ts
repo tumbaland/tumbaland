@@ -31,7 +31,14 @@ async function withPresence<T extends { members: Array<{ userId: string }> }>(
     presence: presence.filter((entry) => summary.members.some((member) => member.userId === entry.userId))
   }));
 }
-import { MAX_DOCUMENT_BYTES, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, isDocumentType } from '../validation/schemas';
+import {
+  MAX_AUDIO_BYTES,
+  MAX_DOCUMENT_BYTES,
+  MAX_IMAGE_BYTES,
+  MAX_VIDEO_BYTES,
+  isAudioType,
+  isDocumentType
+} from '../validation/schemas';
 import { BadRequestError } from '@tumbaland/backend-core';
 
 export const listConversations = async (req: Request, res: Response): Promise<void> => {
@@ -169,16 +176,26 @@ export const setAppearance = async (req: Request, res: Response): Promise<void> 
 export const removeFromAlbum = async (req: Request, res: Response): Promise<void> => {
   const person = caller(req);
   const conversation = await requireConversation(person, req.params.id as string);
-  const fileId = (req.query.fileId as string | undefined) || undefined;
-  sendSuccess(res, await photoAlbums.removeFromAlbum(conversation, req.params.messageId as string, fileId));
+  // `?fileId=a&fileId=b` for some of its photos; none for all of them.
+  const fileIds = [req.query.fileId]
+    .flat()
+    .filter((value): value is string => typeof value === 'string' && value !== '');
+  sendSuccess(res, await photoAlbums.removeFromAlbum(conversation, req.params.messageId as string, fileIds));
 };
 
-/** One message's photos, or one photo (`fileId`), into another album. */
+/** One message's photos, or some of them (`fileIds`, or one `fileId`), into another album. */
 export const placeInAlbum = async (req: Request, res: Response): Promise<void> => {
   const person = caller(req);
   const conversation = await requireConversation(person, req.params.id as string);
-  const { fileId, ...placement } = req.body as photoAlbums.AlbumPlacement & { fileId?: string };
-  sendSuccess(res, await photoAlbums.placeInAlbum(person, conversation, req.params.messageId as string, placement, fileId));
+  const { fileId, fileIds, ...placement } = req.body as photoAlbums.AlbumPlacement & {
+    fileId?: string;
+    fileIds?: string[];
+  };
+  const targets = fileIds ?? (fileId ? [fileId] : undefined);
+  sendSuccess(
+    res,
+    await photoAlbums.placeInAlbum(person, conversation, req.params.messageId as string, placement, targets)
+  );
 };
 
 export const markRead = async (req: Request, res: Response): Promise<void> => {
@@ -265,12 +282,14 @@ export const attachmentUploadUrl = async (req: Request, res: Response): Promise<
   };
 
   // Per-file ceilings, checked server side. The schema's allowlist already
-  // rejects anything that is not an image, a video or a document.
+  // rejects anything that is not an image, a video, a voice message or a document.
   const limit = mimetype.startsWith('video/')
     ? MAX_VIDEO_BYTES
     : isDocumentType(mimetype)
       ? MAX_DOCUMENT_BYTES
-      : MAX_IMAGE_BYTES;
+      : isAudioType(mimetype)
+        ? MAX_AUDIO_BYTES
+        : MAX_IMAGE_BYTES;
   if (sizeBytes > limit) {
     throw new BadRequestError(
       `That file is too large. The limit is ${Math.floor(limit / (1024 * 1024))} MB.`

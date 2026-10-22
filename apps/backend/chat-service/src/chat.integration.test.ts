@@ -632,6 +632,20 @@ describe('the conversation list', () => {
 
     expect(res.body.data[0].lastMessagePreview).toBe('Photo');
   });
+
+  it('calls a recording a voice message', async () => {
+    const id = await conversationInG1();
+    await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({
+        clientId: clientId(),
+        attachments: [{ fileId: `chat/g1/${id}/v/original.m4a`, mimetype: 'audio/mp4', sizeBytes: 1000, durationMs: 3000 }]
+      });
+
+    const res = await as(IRJA).get('/api/chat/conversations');
+
+    expect(res.body.data[0].lastMessagePreview).toBe('Voice message');
+  });
 });
 
 describe('replies', () => {
@@ -657,6 +671,66 @@ describe('replies', () => {
     const res = await as(TOM)
       .post(`/api/chat/conversations/${first}/messages`)
       .send({ clientId: clientId(), body: 'a', replyTo: parent.body.data.id });
+
+    expect(res.status).toBe(400);
+  });
+
+  const reply = async (id: string, parentId: string) =>
+    as(IRJA).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'yes', replyTo: parentId });
+
+  it('quotes the message it answers, so it reads even when that one is not loaded', async () => {
+    const id = await conversationInG1();
+    const parent = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'dinner at 7?' });
+
+    const res = await reply(id, parent.body.data.id);
+
+    expect(res.body.data.quote).toMatchObject({ senderId: TOM.id, senderName: TOM.name, text: 'dinner at 7?' });
+    const page = await as(TOM).get(`/api/chat/conversations/${id}/messages`);
+    expect(page.body.data.messages.find((m: { body: string }) => m.body === 'yes').quote).toMatchObject({ text: 'dinner at 7?' });
+  });
+
+  it('quotes a voice message by what it is', async () => {
+    const id = await conversationInG1();
+    const parent = await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({
+        clientId: clientId(),
+        attachments: [{ fileId: `chat/g1/${id}/v/original.m4a`, mimetype: 'audio/mp4', sizeBytes: 100, durationMs: 2000 }]
+      });
+
+    const res = await reply(id, parent.body.data.id);
+
+    expect(res.body.data.quote.text).toBe('Voice message');
+  });
+
+  it('follows an edit of the message it quotes', async () => {
+    const id = await conversationInG1();
+    const parent = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'dinner at 7?' });
+    await reply(id, parent.body.data.id);
+
+    await as(TOM).patch(`/api/chat/conversations/${id}/messages/${parent.body.data.id}`).send({ body: 'dinner at 8?' });
+
+    const page = await as(IRJA).get(`/api/chat/conversations/${id}/messages`);
+    expect(page.body.data.messages.find((m: { body: string }) => m.body === 'yes').quote.text).toBe('dinner at 8?');
+  });
+
+  it('forgets the words of a quoted message once it is unsent', async () => {
+    const id = await conversationInG1();
+    const parent = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'oops' });
+    await reply(id, parent.body.data.id);
+
+    await as(TOM).delete(`/api/chat/conversations/${id}/messages/${parent.body.data.id}`);
+
+    const page = await as(IRJA).get(`/api/chat/conversations/${id}/messages`);
+    expect(page.body.data.messages.find((m: { body: string }) => m.body === 'yes').quote).toMatchObject({ text: '', deleted: true });
+  });
+
+  it('refuses a reply to a message already unsent', async () => {
+    const id = await conversationInG1();
+    const parent = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'oops' });
+    await as(TOM).delete(`/api/chat/conversations/${id}/messages/${parent.body.data.id}`);
+
+    const res = await reply(id, parent.body.data.id);
 
     expect(res.status).toBe(400);
   });
@@ -859,7 +933,7 @@ describe('attachments', () => {
     ['application/octet-stream'],
     ['application/zip'],
     ['application/x-msdownload']
-  ])('refuses %s, so only images, video and documents can reach storage', async (mimetype) => {
+  ])('refuses %s, so only images, video, voice and documents can reach storage', async (mimetype) => {
     const id = await conversationInG1();
 
     const res = await as(TOM)
@@ -883,6 +957,32 @@ describe('attachments', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.data.posterUploadFileId).toBeNull();
+  });
+
+  it.each([
+    ['voice.weba', 'audio/webm'],
+    ['voice.m4a', 'audio/mp4'],
+    ['voice.ogg', 'audio/ogg']
+  ])('allows the voice message %s, with no poster path', async (filename, mimetype) => {
+    const id = await conversationInG1();
+
+    const res = await as(TOM)
+      .post(`/api/chat/conversations/${id}/attachments/upload-url`)
+      .send({ filename, mimetype, sizeBytes: 400_000 });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.posterUploadFileId).toBeNull();
+  });
+
+  it('refuses a voice message over its ceiling', async () => {
+    const id = await conversationInG1();
+
+    const res = await as(TOM)
+      .post(`/api/chat/conversations/${id}/attachments/upload-url`)
+      .send({ filename: 'voice.weba', mimetype: 'audio/webm', sizeBytes: 20 * 1024 * 1024 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/too large/);
   });
 
   it('refuses a document over its ceiling', async () => {
@@ -1494,11 +1594,41 @@ describe('saving photos to Album', () => {
     );
   });
 
+  it('leaves out only the photos the sender unticked', async () => {
+    const id = await conversationInG1();
+    await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
+    const kept = photo(id, 'kept');
+    const left = photo(id, 'left');
+
+    await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({ clientId: clientId(), attachments: [kept, left], skipAlbumFileIds: [left.fileId] });
+    await settle();
+
+    expect(albumCalls.addChatPhoto).toHaveBeenCalledTimes(1);
+    expect(albumCalls.addChatPhoto).toHaveBeenCalledWith(expect.objectContaining({ fileId: kept.fileId }));
+  });
+
   it('leaves out a send marked "not this one"', async () => {
     const id = await conversationInG1();
     await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
 
     await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), attachments: [photo(id)], skipAlbum: true });
+    await settle();
+
+    expect(albumCalls.addChatPhoto).not.toHaveBeenCalled();
+  });
+
+  it('keeps a voice message out of the album', async () => {
+    const id = await conversationInG1();
+    await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
+
+    await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({
+        clientId: clientId(),
+        attachments: [{ fileId: `chat/g1/${id}/v/original.weba`, mimetype: 'audio/webm', sizeBytes: 100, durationMs: 4200 }]
+      });
     await settle();
 
     expect(albumCalls.addChatPhoto).not.toHaveBeenCalled();
@@ -1559,7 +1689,7 @@ describe('saving photos to Album', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.attachments[0]).toMatchObject({ albumId: null });
-    expect(albumCalls.removeChatPhotos).toHaveBeenCalledWith(sent.body.data.id, undefined);
+    expect(albumCalls.removeChatPhotos).toHaveBeenCalledWith(sent.body.data.id);
     const stored = await Message.findById(sent.body.data.id);
     expect(stored!.attachments[0]).toMatchObject({ albumId: null, albumName: null });
   });
@@ -1639,6 +1769,38 @@ describe('changing a sent photo’s album', () => {
     expect(albumCalls.removeChatPhotos).toHaveBeenCalledWith(messageId, file(id, 'def').fileId);
     const stored = await Message.findById(messageId);
     expect(stored!.attachments.map((attachment) => attachment.albumName)).toEqual(['Rome', null]);
+  });
+
+  it('moves some of a message\u2019s photos in one go, creating a new album once', async () => {
+    const { id, messageId } = await twoPhotosInRome();
+
+    const res = await as(TOM)
+      .put(`/api/chat/conversations/${id}/messages/${messageId}/album`)
+      .send({ newAlbumName: 'Best of Rome', fileIds: [file(id, 'def').fileId] });
+
+    expect(res.status).toBe(200);
+    expect(albumCalls.createAlbum).toHaveBeenCalledTimes(1);
+    expect(albumCalls.moveChatPhotos).toHaveBeenCalledWith(messageId, expect.objectContaining({ fileIds: [file(id, 'def').fileId] }));
+    const stored = await Message.findById(messageId);
+    expect(stored!.attachments[0]!.albumName).toBe('Rome');
+  });
+
+  it('takes out several photos, and leaves the rest', async () => {
+    const id = await conversationInG1();
+    await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
+    const sent = await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({ clientId: clientId(), attachments: [file(id, 'a'), file(id, 'b'), file(id, 'c')] });
+    await settle();
+    jest.clearAllMocks();
+
+    await as(TOM).delete(
+      `/api/chat/conversations/${id}/messages/${sent.body.data.id}/album?fileId=${file(id, 'a').fileId}&fileId=${file(id, 'c').fileId}`
+    );
+
+    expect(albumCalls.removeChatPhotos).toHaveBeenCalledTimes(2);
+    const stored = await Message.findById(sent.body.data.id);
+    expect(stored!.attachments.map((attachment) => attachment.albumName)).toEqual([null, 'Rome', null]);
   });
 
   it('refuses a file that is not on the message', async () => {

@@ -8,8 +8,11 @@ import type { PhotoAlbum } from '../../types';
 
 export interface AlbumDestinationProps {
   photoAlbum: PhotoAlbum;
-  /** "Not this one", for the send being composed. */
+  /** "Not this one", for the send being composed: none of its photos go. */
   skip: boolean;
+  /** How many of the tray's photos go, of how many, when some were left out one by one. */
+  going?: number;
+  total?: number;
   onToggleSkip: () => void;
   onChoose: () => void;
   onTurnOff: () => void;
@@ -21,7 +24,15 @@ export interface AlbumDestinationProps {
  * Always visible while there are photos to send, which is also how someone
  * notices they are still sending to "Rome" a week after getting home.
  */
-export function AlbumDestination({ photoAlbum, skip, onToggleSkip, onChoose, onTurnOff }: AlbumDestinationProps) {
+export function AlbumDestination({
+  photoAlbum,
+  skip,
+  going,
+  total,
+  onToggleSkip,
+  onChoose,
+  onTurnOff
+}: AlbumDestinationProps) {
   if (photoAlbum.mode === 'unset') {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, px: 2, pt: 1 }}>
@@ -39,7 +50,14 @@ export function AlbumDestination({ photoAlbum, skip, onToggleSkip, onChoose, onT
     );
   }
 
-  const label = photoAlbum.mode === 'album' ? `Adding to ${photoAlbum.albumName ?? 'album'}` : 'Not saving to Album';
+  const albumName = photoAlbum.albumName ?? 'album';
+  const some = going !== undefined && total !== undefined && going > 0 && going < total;
+  const label =
+    photoAlbum.mode !== 'album'
+      ? 'Not saving to Album'
+      : some
+        ? `Adding ${going} of ${total} to ${albumName}`
+        : `Adding to ${albumName}`;
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, pt: 1 }}>
