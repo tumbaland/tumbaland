@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.538](https://github.com/tumbaland/tumbaland/compare/app-v0.0.537...app-v0.0.538) (2026-10-22)
+
+### Features
+
+* **chat:** share where you are live or as a pin, with saved places ([#84](https://github.com/tumbaland/tumbaland/issues/84)) ([da25d98](https://github.com/tumbaland/tumbaland/commit/da25d98c50cd6905c9475edbee61c3785d87feb9))
+
 ## [0.0.537](https://github.com/tumbaland/tumbaland/compare/app-v0.0.536...app-v0.0.537) (2026-10-22)
 
 ### Features
