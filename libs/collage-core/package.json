@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/collage-core",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "What a collage is and how it is drawn, shared by the Tumbaland editor and server",
   "author": "Tumbaland",
   "license": "MIT",
