@@ -1,4 +1,13 @@
 # Tumbalog
+## [0.0.539](https://github.com/tumbaland/tumbaland/compare/app-v0.0.538...app-v0.0.539) (2026-10-23)
+
+### Chores
+
+* **deps:** upgrade dependencies and clear all audit warnings ([#85](https://github.com/tumbaland/tumbaland/issues/85)) ([5a537f2](https://github.com/tumbaland/tumbaland/commit/5a537f2053d80b4062977241fa079e6bfc7840a0))
+* **release:** @tumbaland/backend-core 1.48.1 ([f4d57c3](https://github.com/tumbaland/tumbaland/commit/f4d57c3f34d0a4dfad285629fe13054a6c8a374c))
+* **release:** @tumbaland/collage-core 1.1.1 ([bf9b065](https://github.com/tumbaland/tumbaland/commit/bf9b065882dc6e40319827f6cc52a0ccfa3c7a29))
+* **release:** @tumbaland/frontend-core 1.21.2 ([d19d5c0](https://github.com/tumbaland/tumbaland/commit/d19d5c025a8d8d8b3f1f12973cf901189db6db64))
+
 ## [0.0.538](https://github.com/tumbaland/tumbaland/compare/app-v0.0.537...app-v0.0.538) (2026-10-22)
 
 ### Features
