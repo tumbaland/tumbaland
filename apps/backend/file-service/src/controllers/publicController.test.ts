@@ -63,15 +63,22 @@ describe('PUT /files/upload/:fileId (uploadPublic)', () => {
     process.env.FILE_SERVICE_MAX_UPLOAD_BYTES = '10';
     const fileId = 'group/album/chunked.mp4';
 
-    // Chunked, so there is no Content-Length to refuse up front.
-    const req = request(app)
-      .put(`/files/upload/${fileId}?${signedQuery('upload', fileId)}`)
-      .set('Transfer-Encoding', 'chunked');
-    req.write(Buffer.alloc(8));
-    req.write(Buffer.alloc(8));
-    const res = await req;
+    // Writing before the request is sent needs a server that is already
+    // listening: supertest only starts its own once the request goes out.
+    const server = app.listen(0);
+    try {
+      // Chunked, so there is no Content-Length to refuse up front.
+      const req = request(server)
+        .put(`/files/upload/${fileId}?${signedQuery('upload', fileId)}`)
+        .set('Transfer-Encoding', 'chunked');
+      req.write(Buffer.alloc(8));
+      req.write(Buffer.alloc(8));
+      const res = await req;
 
-    expect(res.status).toBe(413);
+      expect(res.status).toBe(413);
+    } finally {
+      server.close();
+    }
     expect(fs.readdirSync(path.join(dataDir, 'group/album'))).toEqual([]);
   });
 

@@ -8,6 +8,7 @@
  * they cannot use. The concurrency tests below are meaningless without a real
  * server — they are the whole reason the atomic reserve is written the way it is.
  */
+import os from 'os';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
@@ -41,7 +42,8 @@ function entitlements(overrides: Partial<Entitlements> = {}): Entitlements {
 
 beforeAll(async () => {
   mongod = await MongoMemoryServer.create();
-  await mongoose.connect(mongod.getUri());
+  // The driver loads `os` with a dynamic import, which Jest's sandbox refuses, so it is handed over.
+  await mongoose.connect(mongod.getUri(), { runtimeAdapters: { os } });
 });
 
 afterAll(async () => {

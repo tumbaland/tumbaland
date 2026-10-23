@@ -121,7 +121,7 @@ describe('ThreadHeader', () => {
       />
     );
 
-    expect(container.firstElementChild).toHaveStyle({ background: 'rgb(219, 234, 254)' });
+    expect(container.firstElementChild).toHaveStyle({ backgroundColor: 'rgb(219, 234, 254)' });
     expect(screen.getByText('typing…')).toHaveStyle({ color: 'rgb(29, 78, 216)' });
   });
 

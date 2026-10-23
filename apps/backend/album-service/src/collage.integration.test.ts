@@ -16,6 +16,7 @@ jest.mock('./services/fileServiceClient', () => ({
   generateFileId: jest.fn()
 }));
 
+import os from 'os';
 import mongoose from 'mongoose';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
@@ -33,7 +34,8 @@ const STRANGER = token({ id: 'u-x', groups: ['g9'] });
 
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
-  await mongoose.connect(mongo.getUri());
+  // The driver loads `os` with a dynamic import, which Jest's sandbox refuses, so it is handed over.
+  await mongoose.connect(mongo.getUri(), { runtimeAdapters: { os } });
 }, 60_000);
 
 afterAll(async () => {
