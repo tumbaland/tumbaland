@@ -33,6 +33,8 @@ beforeEach(() => {
   mockedPost.mockResolvedValue(true);
 });
 
+afterEach(() => jest.useRealTimers());
+
 it('claims each due plan before sending it, and sends it to the group’s chat', async () => {
   const plan = duePlan();
   claim.mockResolvedValueOnce(plan).mockResolvedValueOnce(null);
@@ -97,7 +99,31 @@ it('stops after a bounded number in one run', async () => {
   expect(result.sent).toBe(50);
 });
 
+/**
+ * Only the clock is frozen: the plan's dates are fixed, so "now" must be too,
+ * or the test changes meaning as the calendar passes them. Timers stay real
+ * for the database and promise code under test.
+ */
+const freezeClockAt = (now: Date) =>
+  jest.useFakeTimers({
+    now,
+    doNotFake: [
+      'nextTick',
+      'setImmediate',
+      'clearImmediate',
+      'setTimeout',
+      'clearTimeout',
+      'setInterval',
+      'clearInterval',
+      'queueMicrotask',
+      'hrtime',
+      'performance'
+    ]
+  });
+
 it('runs every minute, and never two runs at once', async () => {
+  // The scheduler reads the clock itself; at the real time the plan here would be days late and dropped.
+  freezeClockAt(NOW);
   startReminderScheduler();
   const [[expression, task]] = (cron.schedule as jest.Mock).mock.calls;
   expect(expression).toBe('* * * * *');

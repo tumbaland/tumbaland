@@ -26,6 +26,7 @@ jest.mock('./services/storageUsage', () => ({
   storageActor: () => ({ userId: 'u-tom' })
 }));
 
+import os from 'os';
 import mongoose from 'mongoose';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
@@ -48,7 +49,8 @@ const asTom = () => `Bearer ${jwt.sign(TOM, 'test-secret', { expiresIn: '1h' })}
 
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
-  await mongoose.connect(mongo.getUri());
+  // The driver loads `os` with a dynamic import, which Jest's sandbox refuses, so it is handed over.
+  await mongoose.connect(mongo.getUri(), { runtimeAdapters: { os } });
 }, 60_000);
 
 afterAll(async () => {

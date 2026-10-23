@@ -60,6 +60,7 @@ jest.mock('./services/storageUsage', () => ({
   releaseStoredBytes: (...args: unknown[]) => releaseStoredBytes(...args)
 }));
 
+import os from 'os';
 import mongoose from 'mongoose';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
@@ -111,7 +112,8 @@ const as = (user: typeof TOM) => {
 
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
-  await mongoose.connect(mongo.getUri());
+  // The driver loads `os` with a dynamic import, which Jest's sandbox refuses, so it is handed over.
+  await mongoose.connect(mongo.getUri(), { runtimeAdapters: { os } });
   // The unique { conversationId, clientId } index is the idempotency
   // mechanism. Mongoose builds indexes in the background on first use, so the
   // tests below would race it without this.

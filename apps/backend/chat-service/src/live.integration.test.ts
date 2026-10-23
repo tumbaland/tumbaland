@@ -13,6 +13,7 @@ jest.mock('./services/pushService', () => ({
   sendToUsers: (...args: unknown[]) => (sendToUsers as jest.Mock)(...args)
 }));
 
+import os from 'os';
 import mongoose from 'mongoose';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
@@ -55,7 +56,8 @@ const as = (user: typeof TOM) => {
 
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
-  await mongoose.connect(mongo.getUri());
+  // The driver loads `os` with a dynamic import, which Jest's sandbox refuses, so it is handed over.
+  await mongoose.connect(mongo.getUri(), { runtimeAdapters: { os } });
   await Conversation.syncIndexes();
   await LiveLocation.syncIndexes();
 }, 60_000);

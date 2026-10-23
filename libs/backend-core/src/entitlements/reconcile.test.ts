@@ -3,6 +3,7 @@ jest.mock('../logging/logger', () => ({
   default: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn(), http: jest.fn() }
 }));
 
+import os from 'os';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import logger from '../logging/logger';
@@ -30,7 +31,8 @@ const db = () => mongoose.connection.db!;
 
 beforeAll(async () => {
   mongod = await MongoMemoryServer.create();
-  await mongoose.connect(mongod.getUri());
+  // The driver loads `os` with a dynamic import, which Jest's sandbox refuses, so it is handed over.
+  await mongoose.connect(mongod.getUri(), { runtimeAdapters: { os } });
 });
 
 afterAll(async () => {

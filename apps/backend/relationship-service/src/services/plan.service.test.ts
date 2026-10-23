@@ -215,8 +215,34 @@ describe('listPlans', () => {
   });
 });
 
+/**
+ * Only the clock is frozen: the plan's dates are fixed, so "now" must be too,
+ * or the test changes meaning as the calendar passes them. Timers stay real
+ * for the database and promise code under test.
+ */
+const freezeClockAt = (now: Date) =>
+  jest.useFakeTimers({
+    now,
+    doNotFake: [
+      'nextTick',
+      'setImmediate',
+      'clearImmediate',
+      'setTimeout',
+      'clearTimeout',
+      'setInterval',
+      'clearInterval',
+      'queueMicrotask',
+      'hrtime',
+      'performance'
+    ]
+  });
+
 describe('updatePlan', () => {
+  afterEach(() => jest.useRealTimers());
+
   it('reschedules the reminder when the plan moves, even one already sent', async () => {
+    // Moved to a day that is still ahead, as it was when this was written.
+    freezeClockAt(NOW);
     const existing = storedPlan({ remindedAt: new Date('2026-10-16T15:00:00Z') });
     const findOne = jest.spyOn(Plan, 'findOne').mockResolvedValue(existing);
 

@@ -8,6 +8,7 @@
  * event, an update whose before-image was read after the write, a delete whose
  * snapshot came back empty — passes a mocked test and fails a real one.
  */
+import os from 'os';
 import mongoose, { Schema } from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
@@ -73,7 +74,8 @@ const events = () => AuditEvent.find().sort({ _id: 1 }).lean();
 
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
-  await mongoose.connect(mongo.getUri());
+  // The driver loads `os` with a dynamic import, which Jest's sandbox refuses, so it is handed over.
+  await mongoose.connect(mongo.getUri(), { runtimeAdapters: { os } });
 });
 
 afterAll(async () => {

@@ -53,15 +53,15 @@ describe('LandingNav', () => {
 
     renderNav();
     const bar = screen.getByRole('navigation', { name: 'Site' });
-    expect(bar).toHaveStyle({ background: 'transparent' });
+    expect(bar).toHaveStyle({ backgroundColor: 'rgba(0, 0, 0, 0)' });
 
     // The top of the page has left the viewport.
     notify!([{ isIntersecting: false }]);
 
-    await waitFor(() => expect(bar).not.toHaveStyle({ background: 'transparent' }));
+    await waitFor(() => expect(bar).not.toHaveStyle({ backgroundColor: 'rgba(0, 0, 0, 0)' }));
 
     notify!([{ isIntersecting: true }]);
-    await waitFor(() => expect(bar).toHaveStyle({ background: 'transparent' }));
+    await waitFor(() => expect(bar).toHaveStyle({ backgroundColor: 'rgba(0, 0, 0, 0)' }));
 
     vi.unstubAllGlobals();
   });

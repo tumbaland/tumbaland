@@ -10,6 +10,7 @@ process.env.SERVICE_NAME = 'relationship-service';
  * mounted in the wrong order, a context that does not survive the controller's
  * awaits, a plugin applied to a model the route does not use.
  */
+import os from 'os';
 import express from 'express';
 import mongoose from 'mongoose';
 import request from 'supertest';
@@ -76,7 +77,8 @@ const trail = () => AuditEvent.find().sort({ _id: 1 }).lean();
 
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
-  await mongoose.connect(mongo.getUri());
+  // The driver loads `os` with a dynamic import, which Jest's sandbox refuses, so it is handed over.
+  await mongoose.connect(mongo.getUri(), { runtimeAdapters: { os } });
 });
 
 afterAll(async () => {

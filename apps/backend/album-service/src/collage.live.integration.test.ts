@@ -21,6 +21,7 @@ jest.mock('./services/chatClient', () => ({
   reportCollageActivity: (...args: unknown[]) => reportCollageActivity(...(args as []))
 }));
 
+import os from 'os';
 import http from 'http';
 import { AddressInfo } from 'net';
 import mongoose from 'mongoose';
@@ -46,7 +47,8 @@ const STRANGER = token({ id: 'u-x', name: 'X', groups: ['g9'] });
 
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
-  await mongoose.connect(mongo.getUri());
+  // The driver loads `os` with a dynamic import, which Jest's sandbox refuses, so it is handed over.
+  await mongoose.connect(mongo.getUri(), { runtimeAdapters: { os } });
   server = app.listen(0);
   port = (server.address() as AddressInfo).port;
 }, 60_000);
