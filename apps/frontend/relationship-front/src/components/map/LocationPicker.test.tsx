@@ -9,9 +9,10 @@ let mapClick: ((event: { latlng: { lat: number; lng: number } }) => void) | unde
 let markerDragEnd: ((event: { target: { getLatLng: () => { lat: number; lng: number } } }) => void) | undefined;
 let lastMarkerPosition: [number, number] | undefined;
 
+// The background is MapLibre, which needs WebGL; it has tests of its own.
+vi.mock('./MapTiles', () => ({ MapTiles: () => <div data-testid="tiles" /> }));
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children?: React.ReactNode }) => <div data-testid="map">{children}</div>,
-  TileLayer: () => <div data-testid="tiles" />,
   Marker: ({
     position,
     eventHandlers

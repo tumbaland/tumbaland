@@ -3,12 +3,13 @@ import { Autocomplete, Box, Button, CircularProgress, IconButton, TextField, Too
 import PlaceIcon from '@mui/icons-material/Place';
 import ClearIcon from '@mui/icons-material/Clear';
 import HistoryIcon from '@mui/icons-material/History';
-import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, useMapEvents } from 'react-leaflet';
 import type { LeafletMouseEvent, Marker as LeafletMarker } from 'leaflet';
 import { ensureLeafletStyles } from './leafletStyles';
 import { ActivityLocation, Place } from '../../services/types';
 import { GeocodeResult, searchPlaces } from '../../services/geocoding';
-import { PLACE_ZOOM, TILE_ATTRIBUTION, TILE_URL, WORLD_CENTER, WORLD_ZOOM, pinIcon } from './mapConfig';
+import { MapTiles } from './MapTiles';
+import { PLACE_ZOOM, WORLD_CENTER, WORLD_ZOOM, pinIcon } from './mapConfig';
 
 // The stylesheet has to reach the shell's document too; see leafletStyles.
 ensureLeafletStyles();
@@ -237,7 +238,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ value, onChange, savedP
           }}
         >
           <MapContainer center={center} zoom={zoom} scrollWheelZoom={false} attributionControl>
-            <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />
+            <MapTiles />
             <ClickToPlace onPick={movePin} />
             {value && (
               <Marker

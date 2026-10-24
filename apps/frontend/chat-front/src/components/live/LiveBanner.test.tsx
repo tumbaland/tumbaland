@@ -117,4 +117,42 @@ describe('LiveBanner', () => {
     );
     expect(screen.getByText('You are sharing where you are')).toBeInTheDocument();
   });
+
+  it('offers to share yours while only the other is sharing', async () => {
+    const onShareOwn = vi.fn();
+    const { rerender } = renderBanner([share()], { onShareOwn });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Share mine' }));
+    expect(onShareOwn).toHaveBeenCalled();
+
+    rerender(
+      <LiveBanner
+        shares={[share(), share({ userId: 'u-tom', name: 'Tom' })]}
+        currentUserId="u-tom"
+        sending
+        onOpenOwn={() => {}}
+        onStopOwn={() => {}}
+        onOpenOther={() => {}}
+        onShareOwn={onShareOwn}
+      />
+    );
+    expect(screen.queryByRole('button', { name: 'Share mine' })).not.toBeInTheDocument();
+  });
+
+  it('offers to share yours once, however many others are sharing', () => {
+    renderBanner([share(), share({ userId: 'u-mari', name: 'Mari' })], { onShareOwn: () => {} });
+    expect(screen.getAllByRole('button', { name: 'Share mine' })).toHaveLength(1);
+  });
+
+  it('says how far apart you are now while you both share', () => {
+    renderBanner([
+      share({ watchers: [{ userId: 'u-tom', name: 'Tom', radiusM: 1000, distanceM: 3200, notified: false }] }),
+      share({
+        userId: 'u-tom',
+        name: 'Tom',
+        position: { lat: 59.41, lng: 24.7, accuracy: 8, heading: null, speed: null, at: new Date().toISOString() }
+      })
+    ]);
+    expect(screen.getByText('Irja is sharing live · 1.1 km away · just now')).toBeInTheDocument();
+  });
 });

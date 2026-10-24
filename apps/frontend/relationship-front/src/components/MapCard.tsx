@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Card, CardContent, Chip, CircularProgress, MenuItem, TextField, Typography } from '@mui/material';
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
+import { MapContainer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { ensureLeafletStyles } from './map/leafletStyles';
 import { useTenantFilter } from '@tumbaland/frontend-core';
@@ -8,7 +8,8 @@ import { logger } from '@tumbaland/frontend-core';
 import { ActivityType, Place } from '../services/types';
 import { getPlaces } from '../services/places';
 import { getActivityTypes } from '../services/activityTypes';
-import { PLACE_ZOOM, TILE_ATTRIBUTION, TILE_URL, WORLD_CENTER, WORLD_ZOOM, pinIcon } from './map/mapConfig';
+import { MapTiles } from './map/MapTiles';
+import { PLACE_ZOOM, WORLD_CENTER, WORLD_ZOOM, pinIcon } from './map/mapConfig';
 import PlacePopup from './map/PlacePopup';
 import { localDayKey } from '../utils/dates';
 
@@ -261,7 +262,7 @@ const MapCard: React.FC = () => {
               style={{ height: '100%', width: '100%' }}
               scrollWheelZoom
             >
-              <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />
+              <MapTiles />
               <FitToPlaces places={places} />
               {places.map((place) => (
                 <Marker

@@ -140,6 +140,7 @@ function ThreadContent({ conversationId, onBack, acceptShared }: ThreadPageProps
         conversationId={conversationId}
         currentUserId={currentUserId}
         shares={thread.live}
+        members={thread.members}
         location={location}
       />
 

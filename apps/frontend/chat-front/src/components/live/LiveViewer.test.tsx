@@ -2,7 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-vi.mock('./LiveMap', () => ({ default: () => <div data-testid="live-map" /> }));
+vi.mock('./LiveMap', () => ({
+  default: ({ points }: { points: Array<{ id: string; label: string }> }) => (
+    <div data-testid="live-map">
+      {points.map((point) => (
+        <span key={point.id} data-testid={`point-${point.id}`}>
+          {point.label}
+        </span>
+      ))}
+    </div>
+  )
+}));
 const api = vi.hoisted(() => ({ watchLive: vi.fn(), unwatchLive: vi.fn() }));
 vi.mock('../../services/chatApi', () => ({ chatApi: api }));
 const where = vi.hoisted(() => ({ currentPosition: vi.fn() }));
@@ -34,18 +44,22 @@ const share = (overrides: Partial<LiveShare> = {}): LiveShare => ({
   ...overrides
 });
 
-const open = (props: Partial<Parameters<typeof LiveViewer>[0]> = {}) =>
-  render(
+const open = (props: Partial<Parameters<typeof LiveViewer>[0]> = {}) => {
+  const watched = props.share ?? share();
+  return render(
     <LiveViewer
       open
       onClose={() => {}}
       conversationId="c1"
-      share={share()}
+      share={watched}
+      shares={[watched]}
+      members={[]}
       currentUserId="u-irja"
       onShareChange={() => {}}
       {...props}
     />
   );
+};
 
 beforeEach(() => {
   api.watchLive.mockReset();
@@ -85,7 +99,7 @@ describe('LiveViewer', () => {
         destination: { lat: 59.5, lng: 24.8, label: 'Home', distanceM: 8100 }
       })
     });
-    expect(screen.getByText(/^Tom: Kaupmehe 7/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Tom: Kaupmehe 7/ })).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('8.1 km to Home');
   });
 
@@ -177,7 +191,8 @@ describe('LiveViewer', () => {
   it('names a pin sent without a name by its address, and gives directions to it', () => {
     open({ share: share({ fixed: true, pinLabel: null }) });
 
-    expect(screen.getByText(/^Tom: Kaupmehe 7, Tallinn/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Tom: Kaupmehe 7, Tallinn/ })).toBeInTheDocument();
+    expect(screen.getByTestId('point-u-tom')).toHaveTextContent('Tom: Kaupmehe 7, Tallinn');
     const directions = screen.getByRole('link', { name: 'Get directions' });
     expect(directions).toHaveAttribute('href', 'https://www.google.com/maps/dir/?api=1&destination=59.4,24.7');
     expect(directions).toHaveAttribute('target', '_blank');
@@ -186,5 +201,50 @@ describe('LiveViewer', () => {
   it('offers no directions to someone still driving', () => {
     open();
     expect(screen.queryByRole('link', { name: 'Get directions' })).not.toBeInTheDocument();
+  });
+
+  it('shows you on the map beside them, and how far apart you are now, when you share too', async () => {
+    const mine = share({
+      userId: 'u-irja',
+      name: 'Irja',
+      position: { lat: 59.41, lng: 24.7, accuracy: 8, heading: null, speed: null, at: new Date().toISOString() }
+    });
+    // Asked to be told from somewhere else earlier: the live distance wins over that one.
+    const theirs = share({
+      watchers: [{ userId: 'u-irja', name: 'Irja', radiusM: 1000, distanceM: 3200, notified: false }]
+    });
+    open({ share: theirs, shares: [theirs, mine] });
+
+    expect(await screen.findByTestId('point-u-tom')).toHaveTextContent('Tom');
+    expect(screen.getByTestId('point-me')).toHaveTextContent('You');
+    expect(screen.getByRole('heading')).toHaveTextContent('Tom · 1.1 km away');
+  });
+
+  it('shows only them when you are not sharing', async () => {
+    open();
+
+    expect(await screen.findByTestId('point-u-tom')).toBeInTheDocument();
+    expect(screen.queryByTestId('point-me')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading')).not.toHaveTextContent('away');
+  });
+
+  it('does not tell how far apart when your own position has gone stale', async () => {
+    const mine = share({
+      userId: 'u-irja',
+      name: 'Irja',
+      position: {
+        lat: 59.41,
+        lng: 24.7,
+        accuracy: 8,
+        heading: null,
+        speed: null,
+        at: new Date(Date.now() - 5 * 60_000).toISOString()
+      }
+    });
+    const theirs = share();
+    open({ share: theirs, shares: [theirs, mine] });
+
+    await screen.findByTestId('point-me');
+    expect(screen.getByRole('heading')).not.toHaveTextContent('away');
   });
 });

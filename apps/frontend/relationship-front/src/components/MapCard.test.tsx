@@ -22,9 +22,10 @@ const fakeMap = {
   getContainer: () => document.createElement('div')
 };
 
+// The background is MapLibre, which needs WebGL; it has tests of its own.
+vi.mock('./map/MapTiles', () => ({ MapTiles: () => <div data-testid="tiles" /> }));
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children?: React.ReactNode }) => <div data-testid="map">{children}</div>,
-  TileLayer: () => <div data-testid="tiles" />,
   Marker: ({ position, children }: { position: [number, number]; children?: React.ReactNode }) => {
     fittedPositions.push(position);
     return <div data-testid="marker">{children}</div>;

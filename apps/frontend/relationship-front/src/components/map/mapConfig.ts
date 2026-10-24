@@ -1,13 +1,5 @@
 import L from 'leaflet';
 
-/**
- * OpenStreetMap's standard tile server. Attribution is required by its tile
- * usage policy and is rendered by every map in the app.
- */
-export const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-export const TILE_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
-
 /** World view, used when a scope has no places to centre on yet. */
 export const WORLD_CENTER: [number, number] = [20, 0];
 export const WORLD_ZOOM = 2;

@@ -27,7 +27,8 @@ import {
   formatDistance,
   kmh
 } from '../../services/live';
-import type { LiveShare, PickedPlace, SavedPlace } from '../../types';
+import { apartBetween, buildLivePoints } from '../../services/liveMap';
+import type { ConversationMember, LiveShare, PickedPlace, SavedPlace } from '../../types';
 import type { MapPoint } from './LiveMap';
 import { PlaceField, type PlaceOption } from './PlaceField';
 import { SavePlaceDialog } from './SavePlaceDialog';
@@ -44,6 +45,10 @@ export interface DriveScreenProps {
   drive: UseDriveShareResult;
   /** The caller's own share, as the server has it: there after a reload even before sending resumes. */
   share: LiveShare | null;
+  /** Everyone sharing in the conversation, the caller included, so the others are on the map too. */
+  shares: LiveShare[];
+  members: ConversationMember[];
+  currentUserId: string;
   /** Who will see it: "Irja". */
   audience: string;
 }
@@ -125,7 +130,17 @@ const savedAt = (places: SavedPlace[], point: { lat: number; lng: number } | nul
  * from saved places. Then either a pin ("come and get me here"), or their
  * position live while they drive.
  */
-export function DriveScreen({ open, onClose, conversationId, drive, share, audience }: DriveScreenProps) {
+export function DriveScreen({
+  open,
+  onClose,
+  conversationId,
+  drive,
+  share,
+  shares,
+  members,
+  currentUserId,
+  audience
+}: DriveScreenProps) {
   const theme = useTheme();
   const phone = useMediaQuery(theme.breakpoints.down('sm'));
   const now = useNow(1000);
@@ -269,6 +284,17 @@ export function DriveScreen({ open, onClose, conversationId, drive, share, audie
   const destination = to ? { lat: to.lat, lng: to.lng, label: toName } : null;
   const bottom = phone ? 'calc(16px + env(safe-area-inset-bottom))' : 2;
   const shown = drive.position ?? share?.position ?? null;
+  const self = members.find((member) => member.userId === currentUserId);
+  const everyone = (ownPosition: Parameters<typeof buildLivePoints>[1]['ownPosition']) =>
+    buildLivePoints(shares, { members, currentUserId, now, ownPosition });
+  /** How far each of the others sharing is from this phone, while both are somewhere recent. */
+  const apart =
+    drive.position && now - drive.position.at <= STALE_MS
+      ? shares
+          .filter((other) => other.userId !== currentUserId)
+          .map((other) => ({ other, metres: apartBetween(drive.position, other, now) }))
+          .filter((entry): entry is { other: LiveShare; metres: number } => entry.metres !== null)
+      : [];
 
   return (
     <Dialog
@@ -305,12 +331,7 @@ export function DriveScreen({ open, onClose, conversationId, drive, share, audie
         {live && drive.position ? (
           <>
             <MapArea>
-              <LiveMap
-                points={[
-                  { id: 'me', ...drive.position, color: PERSON_COLOR, label: 'You' },
-                  ...(share?.destination ? [destinationPoint(share.destination)] : [])
-                ]}
-              />
+              <LiveMap points={everyone(drive.position)} />
             </MapArea>
             <Box sx={{ px: 2, pt: 1.5, pb: bottom, display: 'grid', gap: 1 }}>
               <Typography variant="body2" role="status" sx={{ color: drive.sendFailing ? 'error.main' : ink.body }}>
@@ -323,6 +344,7 @@ export function DriveScreen({ open, onClose, conversationId, drive, share, audie
                   share?.destination?.distanceM !== null && share?.destination?.distanceM !== undefined
                     ? `${formatDistance(share.destination.distanceM)} to ${share.destination.label || 'go'}`
                     : null,
+                  ...apart.map(({ other, metres }) => `${other.name || 'They'} is ${formatDistance(metres)} away`),
                   drive.position.speed && drive.position.speed > 1 ? `${kmh(drive.position.speed)} km/h` : null
                 ]
                   .filter(Boolean)
@@ -348,12 +370,7 @@ export function DriveScreen({ open, onClose, conversationId, drive, share, audie
           <>
             <MapArea>
               {shown ? (
-                <LiveMap
-                  points={[
-                    { id: 'me', lat: shown.lat, lng: shown.lng, color: PERSON_COLOR, label: share?.pinLabel || 'You' },
-                    ...(share?.destination ? [destinationPoint(share.destination)] : [])
-                  ]}
-                />
+                <LiveMap points={everyone({ lat: shown.lat, lng: shown.lng })} />
               ) : (
                 <Centred>
                   <CircularProgress />
@@ -407,6 +424,8 @@ export function DriveScreen({ open, onClose, conversationId, drive, share, audie
                           accuracy: from ? null : here?.coords.accuracy,
                           color: PERSON_COLOR,
                           label: 'You',
+                          picture: self?.picture ?? null,
+                          initial: (self?.name || 'You').trim().charAt(0).toUpperCase(),
                           onMove: (point: { lat: number; lng: number }) => movePoint('from', point)
                         }
                       ]
@@ -418,7 +437,9 @@ export function DriveScreen({ open, onClose, conversationId, drive, share, audie
                           { onMove: (point) => movePoint('to', point), onClick: () => setTo(null) }
                         )
                       ]
-                    : [])
+                    : []),
+                  // The others, if they are sharing: where to go may be where they are.
+                  ...buildLivePoints(shares, { members, currentUserId, now, othersOnly: true })
                 ]}
                 follow={false}
                 focus={focus}
@@ -508,7 +529,9 @@ export function DriveScreen({ open, onClose, conversationId, drive, share, audie
               <Typography variant="caption" sx={{ color: ink.muted }}>
                 Tap the map to set {activeField === 'from' ? 'From' : 'To'}, or drag a dot to move it. Sharing ends
                 after four hours, or when you stop it.
-                {from ? '' : ' Live follows you while you drive, as long as Tumbaland stays on screen.'}
+                {from
+                  ? ' Live follows your phone, not the place you set, as long as Tumbaland stays on screen.'
+                  : ' Live follows you while you drive, as long as Tumbaland stays on screen.'}
               </Typography>
 
               <Box sx={{ display: 'flex', gap: 1 }}>
@@ -531,30 +554,26 @@ export function DriveScreen({ open, onClose, conversationId, drive, share, audie
                 >
                   Send pin
                 </Button>
-                {/* A place said by hand cannot be followed live: the GPS would move it straight back. */}
-                {!from && (
-                  <Button
-                    fullWidth
-                    size="large"
-                    variant="contained"
-                    disabled={!me || locating || drive.state === 'starting' || drive.state === 'stopping'}
-                    onClick={() =>
-                      void drive.start({
-                        destination,
-                        place: me && here ? { ...me, accuracy: here.coords.accuracy } : me
-                      })
-                    }
-                    startIcon={
-                      drive.state === 'starting' ? (
-                        <CircularProgress size={18} color="inherit" />
-                      ) : (
-                        <NearMeOutlinedIcon />
-                      )
-                    }
-                  >
-                    Share live
-                  </Button>
-                )}
+                {/* Live follows the phone, so it starts from the GPS even when From was set by hand,
+                    say by a stray drag of your own marker; it is never taken away for that. */}
+                <Button
+                  fullWidth
+                  size="large"
+                  variant={from ? 'outlined' : 'contained'}
+                  disabled={(locating && !gps) || drive.state === 'starting' || drive.state === 'stopping'}
+                  onClick={() =>
+                    void drive.start({
+                      destination,
+                      // Without a fix yet, starting asks the GPS itself.
+                      place: gps && here ? { ...gps, accuracy: here.coords.accuracy } : null
+                    })
+                  }
+                  startIcon={
+                    drive.state === 'starting' ? <CircularProgress size={18} color="inherit" /> : <NearMeOutlinedIcon />
+                  }
+                >
+                  Share live
+                </Button>
               </Box>
             </Box>
           </>
