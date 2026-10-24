@@ -1,4 +1,14 @@
 # Tumbalog
+## [0.0.542](https://github.com/tumbaland/tumbaland/compare/app-v0.0.541...app-v0.0.542) (2026-10-24)
+
+### Features
+
+* improve code quality ([7352957](https://github.com/tumbaland/tumbaland/commit/7352957ab4a89ca744a6619b16b8918b7894886c))
+
+### Chores
+
+* **release:** @tumbaland/frontend-core 1.23.0 ([0299ff3](https://github.com/tumbaland/tumbaland/commit/0299ff393a55d66100a4ba744f6bfaed8d55fca6))
+
 ## [0.0.541](https://github.com/tumbaland/tumbaland/compare/app-v0.0.540...app-v0.0.541) (2026-10-24)
 
 ### Features
