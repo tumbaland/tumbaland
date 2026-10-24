@@ -2,13 +2,10 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
-import { Circle, MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import { Circle, MapContainer, useMap, useMapEvents } from 'react-leaflet';
 import { ensureLeafletStyles } from './leafletStyles';
 import { LiveMapMarker } from './LiveMapMarker';
-
-/** OpenStreetMap's tiles, as the journal's map uses them. Attribution is required by its usage policy. */
-const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+import { MapTiles } from './MapTiles';
 
 /** Close enough to read the streets around a car. */
 const ZOOM = 15;
@@ -21,8 +18,13 @@ export interface MapPoint {
   accuracy?: number | null;
   color: string;
   label: string;
-  /** A person is a dot; a place is a pin standing on its point. */
+  /** A person is their photo; a place is a pin standing on its point. */
   kind?: 'person' | 'place';
+  /** A person's profile picture. Without one, their initial stands in. */
+  picture?: string | null;
+  initial?: string;
+  /** Not heard from for a while: shown faded, so a frozen phone is seen on the map. */
+  stale?: boolean;
   /** Makes it draggable: where it was dropped. */
   onMove?: (point: { lat: number; lng: number }) => void;
   /** A tap on it, such as taking a destination away. It does not reach the map beneath. */
@@ -113,11 +115,11 @@ export default function LiveMap({ points, follow = true, onMapClick, focus = nul
         width: '100%',
         height: '100%',
         '& .leaflet-container': { width: '100%', height: '100%', cursor: onMapClick ? 'crosshair' : undefined },
-        '& .tumbaland-live-dot, & .tumbaland-live-pin': { background: 'none', border: 'none' }
+        '& .tumbaland-live-dot, & .tumbaland-live-photo, & .tumbaland-live-pin': { background: 'none', border: 'none' }
       }}
     >
       <MapContainer center={first ? [first.lat, first.lng] : [20, 0]} zoom={first ? ZOOM : 2} attributionControl>
-        <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />
+        <MapTiles />
         {points.map((point) => (
           <Fragment key={point.id}>
             {point.accuracy && point.accuracy > 15 && point.accuracy < 2000 ? (

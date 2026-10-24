@@ -14,18 +14,9 @@ import DirectionsOutlinedIcon from '@mui/icons-material/DirectionsOutlined';
 import NotificationsActiveOutlinedIcon from '@mui/icons-material/NotificationsActiveOutlined';
 import { brand, ink, surface } from '@tumbaland/frontend-core';
 import { chatApi } from '../../services/chatApi';
-import {
-  DESTINATION_COLOR,
-  PERSON_COLOR,
-  RADII,
-  STALE_MS,
-  ageText,
-  currentPosition,
-  directionsUrl,
-  formatDistance,
-  kmh
-} from '../../services/live';
-import type { LiveShare } from '../../types';
+import { RADII, STALE_MS, ageText, currentPosition, directionsUrl, formatDistance, kmh } from '../../services/live';
+import { apartBetween, buildLivePoints, isStale } from '../../services/liveMap';
+import type { ConversationMember, LiveShare } from '../../types';
 import { useNow } from './useNow';
 import { placeText, usePlaceAt } from '../../hooks/usePlaceAt';
 import { loadLiveMap } from './loadLiveMap';
@@ -38,6 +29,9 @@ export interface LiveViewerProps {
   conversationId: string;
   /** The share being watched. */
   share: LiveShare;
+  /** Everyone sharing, the share being watched and the caller's own included, so both are on the map. */
+  shares: LiveShare[];
+  members: ConversationMember[];
   currentUserId: string;
   /** The share as the server answered, after asking to be told or not. */
   onShareChange: (share: LiveShare) => void;
@@ -48,7 +42,16 @@ export interface LiveViewerProps {
  * is, and "tell me when they are close", which is what saves standing at the
  * window. The waiter's own point goes to the server only, never to the sharer.
  */
-export function LiveViewer({ open, onClose, conversationId, share, currentUserId, onShareChange }: LiveViewerProps) {
+export function LiveViewer({
+  open,
+  onClose,
+  conversationId,
+  share,
+  shares,
+  members,
+  currentUserId,
+  onShareChange
+}: LiveViewerProps) {
   const theme = useTheme();
   const phone = useMediaQuery(theme.breakpoints.down('sm'));
   const now = useNow(1000);
@@ -69,6 +72,11 @@ export function LiveViewer({ open, onClose, conversationId, share, currentUserId
   // A pin sent before its address was known is named here instead.
   const pinAddress = usePlaceAt(share.fixed && !share.pinLabel && position ? position : null);
   const pinName = share.pinLabel || (pinAddress && position ? placeText(pinAddress, position) : null);
+  // The caller's own phone, if it is sharing too: both are on the map, and how far apart they are now
+  // says more than the distance from where the caller stood when they asked to be told.
+  const ownShare = shares.find((entry) => entry.userId === currentUserId);
+  const apart = ownShare && !isStale(ownShare, now) ? apartBetween(ownShare.position, share, now) : null;
+  const away = apart ?? mine?.distanceM ?? null;
 
   const watch = async (radiusM: number) => {
     setBusy(true);
@@ -126,9 +134,7 @@ export function LiveViewer({ open, onClose, conversationId, share, currentUserId
             <Typography variant="h6" noWrap sx={{ fontSize: 18 }}>
               {name}
               {share.fixed && pinName ? `: ${pinName}` : ''}
-              {mine?.distanceM !== null && mine?.distanceM !== undefined
-                ? ` · ${formatDistance(mine.distanceM)} away`
-                : ''}
+              {away !== null ? ` · ${formatDistance(away)} away` : ''}
             </Typography>
             <Typography
               variant="caption"
@@ -165,27 +171,12 @@ export function LiveViewer({ open, onClose, conversationId, share, currentUserId
               }
             >
               <LiveMap
-                points={[
-                  {
-                    id: share.userId,
-                    ...position,
-                    color: PERSON_COLOR,
-                    label: pinName || name,
-                    kind: share.fixed ? 'place' : 'person'
-                  },
-                  ...(share.destination
-                    ? [
-                        {
-                          id: 'destination',
-                          lat: share.destination.lat,
-                          lng: share.destination.lng,
-                          color: DESTINATION_COLOR,
-                          label: share.destination.label || 'Destination',
-                          kind: 'place' as const
-                        }
-                      ]
-                    : [])
-                ]}
+                points={buildLivePoints(shares, {
+                  members,
+                  currentUserId,
+                  now,
+                  labels: pinName ? { [share.userId]: pinName } : {}
+                })}
               />
             </Suspense>
           ) : (

@@ -68,7 +68,7 @@ vi.mock('../../services/chatApi', () => ({ chatApi: api }));
 
 import { DriveScreen } from './DriveScreen';
 import type { UseDriveShareResult } from '../../hooks/useDriveShare';
-import type { LiveShare, SavedPlace } from '../../types';
+import type { ConversationMember, LiveShare, SavedPlace } from '../../types';
 
 const drive = (overrides: Partial<UseDriveShareResult> = {}): UseDriveShareResult => ({
   state: 'idle',
@@ -99,9 +99,33 @@ const share = (overrides: Partial<LiveShare> = {}): LiveShare => ({
 const HOME: SavedPlace = { id: 'p-home', name: 'Home', lat: 59.5, lng: 24.8, address: 'Viru 4, Tallinn' };
 const here = { coords: { latitude: 59.4, longitude: 24.75, accuracy: 12 } } as GeolocationPosition;
 
+const IRJA: ConversationMember = {
+  userId: 'u-irja',
+  email: 'irja@example.com',
+  name: 'Irja',
+  picture: 'https://example.com/irja.jpg',
+  joinedAt: new Date().toISOString()
+};
+
+/** Where each test's map gets its people from; the caller's own share is on the list as the server has it. */
+const theMap = (props: Partial<Parameters<typeof DriveScreen>[0]> = {}) => ({
+  shares: props.share ? [props.share] : [],
+  members: [IRJA],
+  currentUserId: 'u-tom'
+});
+
 const open = (props: Partial<Parameters<typeof DriveScreen>[0]> = {}) =>
   render(
-    <DriveScreen open onClose={() => {}} conversationId="c1" drive={drive()} share={null} audience="Irja" {...props} />
+    <DriveScreen
+      open
+      onClose={() => {}}
+      conversationId="c1"
+      drive={drive()}
+      share={null}
+      audience="Irja"
+      {...theMap(props)}
+      {...props}
+    />
   );
 
 beforeEach(() => {
@@ -120,7 +144,14 @@ describe('choosing', () => {
       })
     );
     const start = vi.fn(async () => {});
-    const props = { onClose: () => {}, conversationId: 'c1', drive: drive({ start }), share: null, audience: 'Irja' };
+    const props = {
+      onClose: () => {},
+      conversationId: 'c1',
+      drive: drive({ start }),
+      share: null,
+      audience: 'Irja',
+      ...theMap()
+    };
     const { rerender } = render(<DriveScreen open {...props} />);
     rerender(<DriveScreen open={false} {...props} />);
     rerender(<DriveScreen open {...props} />);
@@ -241,21 +272,36 @@ describe('choosing', () => {
     expect(screen.queryByTestId('point-destination')).not.toBeInTheDocument();
   });
 
-  it('moves you by dragging your dot, which can only be a pin, until you go back to your location', async () => {
+  it('moves you by dragging your dot for a pin, while live still follows the phone', async () => {
     const start = vi.fn(async () => {});
     open({ drive: drive({ start }) });
 
     await userEvent.click(await screen.findByRole('button', { name: 'drag me' }));
 
     expect(screen.getByRole('button', { name: 'From: Viru 4, Tallinn. Change' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Share live' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Live follows your phone, not the place you set/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Send pin' }));
     expect(start).toHaveBeenCalledWith(
       expect.objectContaining({ place: { lat: 59.41, lng: 24.75, label: null }, pin: true })
     );
 
+    // A stray drag never takes live sharing away: it starts from where the phone is.
+    await userEvent.click(screen.getByRole('button', { name: 'Share live' }));
+    expect(start).toHaveBeenLastCalledWith({ destination: null, place: { lat: 59.4, lng: 24.75, accuracy: 12 } });
+
     await userEvent.click(screen.getByRole('button', { name: 'Clear from' }));
-    expect(screen.getByRole('button', { name: 'Share live' })).toBeInTheDocument();
+    expect(screen.getByText(/Live follows you while you drive/)).toBeInTheDocument();
+  });
+
+  it('starts live without a first fix by asking the GPS itself', async () => {
+    where.currentPosition.mockRejectedValue(new Error('Could not find where you are in time.'));
+    const start = vi.fn(async () => {});
+    open({ drive: drive({ start }) });
+
+    await screen.findByText(/Could not find where you are in time\./);
+    await userEvent.click(screen.getByRole('button', { name: 'Share live' }));
+
+    expect(start).toHaveBeenCalledWith({ destination: null, place: null });
   });
 
   it('says when the browser only guessed, and how to put it right', async () => {
@@ -354,7 +400,9 @@ describe('choosing', () => {
     expect(screen.getByTestId('point-me')).toBeInTheDocument();
     expect(screen.queryByTestId('point-destination')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Send pin' }));
-    expect(start).toHaveBeenCalledWith(expect.objectContaining({ place: { lat: 59.45, lng: 24.75, label: null }, pin: true }));
+    expect(start).toHaveBeenCalledWith(
+      expect.objectContaining({ place: { lat: 59.45, lng: 24.75, label: null }, pin: true })
+    );
   });
 
   it('says why it could not start', () => {
@@ -449,5 +497,71 @@ describe('sharing', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('Not getting through. Still trying');
     expect(screen.getByText('Irja has been told you are close')).toBeInTheDocument();
+  });
+});
+
+describe('when the other is sharing too', () => {
+  const irja = (overrides: Partial<LiveShare> = {}) =>
+    share({
+      userId: 'u-irja',
+      name: 'Irja',
+      position: { lat: 59.41, lng: 24.7, accuracy: 10, heading: null, speed: null, at: new Date().toISOString() },
+      ...overrides
+    });
+  const mine = (overrides: Partial<LiveShare> = {}) => share({ ...overrides });
+
+  it('puts them on the map beside you while you share live, and says how far apart you are', async () => {
+    open({
+      drive: drive({ state: 'sharing', position: { lat: 59.4, lng: 24.7, at: Date.now() } }),
+      share: mine(),
+      shares: [mine(), irja()]
+    });
+
+    expect(await screen.findByTestId('point-me')).toBeInTheDocument();
+    expect(screen.getByTestId('point-u-irja')).toHaveTextContent('Irja');
+    expect(screen.getByRole('status')).toHaveTextContent('Irja is 1.1 km away');
+  });
+
+  it('keeps their destination apart from yours', async () => {
+    open({
+      drive: drive({ state: 'sharing', position: { lat: 59.4, lng: 24.7, at: Date.now() } }),
+      share: mine({ destination: { lat: 59.45, lng: 24.75, label: 'Home', distanceM: 8100 } }),
+      shares: [
+        mine({ destination: { lat: 59.45, lng: 24.75, label: 'Home', distanceM: 8100 } }),
+        irja({ destination: { lat: 59.5, lng: 24.8, label: 'Store', distanceM: 100 } })
+      ]
+    });
+
+    expect(await screen.findByTestId('point-destination')).toHaveTextContent('Home');
+    expect(screen.getByTestId('point-destination:u-irja')).toHaveTextContent('Store');
+  });
+
+  it('does not tell a distance to a position that has gone stale', async () => {
+    const old = new Date(Date.now() - 5 * 60_000).toISOString();
+    open({
+      drive: drive({ state: 'sharing', position: { lat: 59.4, lng: 24.7, at: Date.now() } }),
+      share: mine(),
+      shares: [mine(), irja({ position: { ...irja().position!, at: old } })]
+    });
+
+    await screen.findByTestId('point-u-irja');
+    expect(screen.getByRole('status')).not.toHaveTextContent('away');
+  });
+
+  it('shows them while you are still choosing where to go, saying whose pin it is', async () => {
+    open({ shares: [irja({ fixed: true, pinLabel: 'The store' })] });
+
+    expect(await screen.findByTestId('point-u-irja')).toHaveTextContent('Irja: The store');
+  });
+
+  it('tells no distance from a GPS fix of your own that has gone old', async () => {
+    open({
+      drive: drive({ state: 'sharing', position: { lat: 59.4, lng: 24.7, at: Date.now() - 120_000 } }),
+      share: mine(),
+      shares: [mine(), irja()]
+    });
+
+    await screen.findByTestId('point-u-irja');
+    expect(screen.getByRole('status')).not.toHaveTextContent('away');
   });
 });

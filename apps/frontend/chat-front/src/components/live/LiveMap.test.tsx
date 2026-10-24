@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type L from 'leaflet';
 
 // Leaflet needs a real layout box, which jsdom cannot give it. The map is
 // stubbed down to what this component drives: the view it sets, a drag, a
@@ -57,7 +58,11 @@ vi.mock('react-leaflet', () => ({
   }
 }));
 
+// The background is MapLibre, which needs WebGL; it has tests of its own.
+vi.mock('./MapTiles', () => ({ MapTiles: () => null }));
+
 import LiveMap from './LiveMap';
+import type { MapPoint } from './LiveMap';
 
 const me = (lat: number, accuracy = 30) => ({ id: 'me', lat, lng: 24.7, accuracy, color: '#e91e63', label: 'Tom' });
 const destination = {
@@ -200,5 +205,54 @@ describe('LiveMap', () => {
     setView.mockClear();
     rerender(<LiveMap points={[me(59.4)]} follow={false} />);
     expect(setView).not.toHaveBeenCalled();
+  });
+
+  describe('who is who', () => {
+    const iconOf = (point: MapPoint) => {
+      render(<LiveMap points={[point]} follow={false} />);
+      return (markerFrames.at(-1)!.icon as L.DivIcon).options;
+    };
+
+    it('draws a person as their photo, with their initial underneath until it arrives', () => {
+      const options = iconOf({ ...me(59.4), picture: 'https://example.com/tom.jpg', initial: 'T' });
+      const html = options.html as HTMLElement;
+      expect(options.className).toBe('tumbaland-live-photo');
+      expect(html.querySelector('img')).toHaveAttribute('src', 'https://example.com/tom.jpg');
+      expect(html.textContent).toBe('T');
+    });
+
+    it('keeps the initial when there is no photo', () => {
+      const options = iconOf({ ...me(59.4), picture: null, initial: 'T' });
+      const html = options.html as HTMLElement;
+      expect(html.querySelector('img')).toBeNull();
+      expect(html.textContent).toBe('T');
+    });
+
+    it('drops a photo that fails to load, leaving the initial', () => {
+      const html = iconOf({ ...me(59.4), picture: 'https://example.com/gone.jpg', initial: 'T' }).html as HTMLElement;
+      const image = html.querySelector('img')!;
+      image.onerror?.(new Event('error'));
+      expect(html.querySelector('img')).toBeNull();
+      expect(html.textContent).toBe('T');
+    });
+
+    it('does not put a picture address into markup', () => {
+      const html = iconOf({ ...me(59.4), picture: '"><script>alert(1)</script>', initial: 'T' }).html as HTMLElement;
+      expect(html.querySelector('script')).toBeNull();
+    });
+
+    it('fades and greys someone who has not been heard from', () => {
+      const live = iconOf({ ...me(59.4), initial: 'T' }).html as HTMLElement;
+      expect(live.style.opacity).toBe('');
+      const stale = iconOf({ ...me(59.4), id: 'old', initial: 'T', stale: true }).html as HTMLElement;
+      expect(stale.style.opacity).toBe('0.65');
+      expect(stale.style.filter).toBe('grayscale(1)');
+    });
+
+    it('keeps places as pins', () => {
+      const options = iconOf(destination);
+      expect(options.className).toBe('tumbaland-live-pin');
+      expect(options.html).toContain('<svg');
+    });
   });
 });
