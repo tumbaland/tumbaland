@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.540](https://github.com/tumbaland/tumbaland/compare/app-v0.0.539...app-v0.0.540) (2026-10-24)
+
+### Features
+
+* **chat:** show both of you live on one map, with photos and a vector map ([#86](https://github.com/tumbaland/tumbaland/issues/86)) ([e6dc06a](https://github.com/tumbaland/tumbaland/commit/e6dc06a40286e769caebbaba722b6264f82dc0a6))
+
 ## [0.0.539](https://github.com/tumbaland/tumbaland/compare/app-v0.0.538...app-v0.0.539) (2026-10-23)
 
 ### Chores
