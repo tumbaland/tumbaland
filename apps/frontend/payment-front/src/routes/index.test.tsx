@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import { ReactNode } from 'react';
 import { vi } from 'vite-plus/test';
 
@@ -11,7 +11,6 @@ vi.mock('@tumbaland/frontend-core', async () => {
 });
 vi.mock('../pages/PaymentsPage', () => ({ default: () => <div>payments page</div> }));
 vi.mock('../pages/SubscriptionCheckoutPage', () => ({ default: () => <div>checkout page</div> }));
-vi.mock('../pages/TermsPage', () => ({ default: () => <div>terms page</div> }));
 
 import AppRoutes from './index';
 
@@ -32,14 +31,22 @@ it('serves the payments tabs on a nested tab path', () => {
   expect(screen.getByText('payments page')).toBeInTheDocument();
 });
 
-// The tabs route is a splat, so these static siblings only win because React
+// The tabs route is a splat, so the static checkout route only wins because React
 // Router ranks static segments above splats regardless of declaration order.
-it('ranks the static terms route above the tabs splat', () => {
-  renderAt('/terms');
-  expect(screen.getByText('terms page')).toBeInTheDocument();
-});
-
 it('ranks the static checkout route above the tabs splat', () => {
   renderAt('/subscription/checkout');
   expect(screen.getByText('checkout page')).toBeInTheDocument();
+});
+
+it("sends the old terms address on to the shell's single copy", () => {
+  // Mounted the way the shell mounts it, beside the shell's own /terms.
+  render(
+    <MemoryRouter initialEntries={['/payments/terms']}>
+      <Routes>
+        <Route path="/payments/*" element={<AppRoutes />} />
+        <Route path="/terms" element={<div>shell terms</div>} />
+      </Routes>
+    </MemoryRouter>
+  );
+  expect(screen.getByText('shell terms')).toBeInTheDocument();
 });

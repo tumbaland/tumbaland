@@ -149,6 +149,9 @@ jobs:
               - 'libs/backend-core/**'
             frontend-libs-changed: &frontend-libs-changed
               - 'libs/frontend-core/**'
+            # The jsdom setup every front's tests load from its src/test/setup.ts.
+            frontend-shared: &frontend-shared
+              - 'apps/frontend/vitest.setup.ts'
             # Shared by the collage editor, its server and the assistant's tools.
             collage-libs-changed: &collage-libs-changed
               - 'libs/collage-core/**'
@@ -197,39 +200,48 @@ jobs:
             apps/frontend/account-front:
               - *root-shared
               - *frontend-libs-changed
+              - *frontend-shared
               - 'apps/frontend/account-front/**'
             apps/frontend/album-front:
               - *root-shared
               - *frontend-libs-changed
+              - *frontend-shared
               - *collage-libs-changed
               - 'apps/frontend/album-front/**'
             apps/frontend/auth-front:
               - *root-shared
               - *frontend-libs-changed
+              - *frontend-shared
               - 'apps/frontend/auth-front/**'
             apps/frontend/chat-front:
               - *root-shared
               - *frontend-libs-changed
+              - *frontend-shared
               - 'apps/frontend/chat-front/**'
             apps/frontend/finance-front:
               - *root-shared
               - *frontend-libs-changed
+              - *frontend-shared
               - 'apps/frontend/finance-front/**'
             apps/frontend/group-front:
               - *root-shared
               - *frontend-libs-changed
+              - *frontend-shared
               - 'apps/frontend/group-front/**'
             apps/frontend/payment-front:
               - *root-shared
               - *frontend-libs-changed
+              - *frontend-shared
               - 'apps/frontend/payment-front/**'
             apps/frontend/relationship-front:
               - *root-shared
               - *frontend-libs-changed
+              - *frontend-shared
               - 'apps/frontend/relationship-front/**'
             apps/frontend/shell-front:
               - *root-shared
               - *frontend-libs-changed
+              - *frontend-shared
               - 'apps/frontend/shell-front/**'
             libs/backend-core:
               - *root-shared

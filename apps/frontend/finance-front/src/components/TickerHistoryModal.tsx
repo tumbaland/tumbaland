@@ -21,8 +21,8 @@ import {
   deleteTickerPriceHistory,
   fetchAllTickerPriceHistory
 } from '../services/tickerPriceHistoryService';
-import ConfirmationModal from './ConfirmationModal';
 import { localDayKey } from '../utils/dates';
+import { ConfirmationModal } from '@tumbaland/frontend-core';
 
 interface TickerHistoryModalProps {
   open: boolean;

@@ -13,7 +13,10 @@ describe('formatBytes', () => {
   });
 
   it('keeps fractions readable and drops noise from whole units', () => {
-    expect(formatBytes(1536)).toBe('1.50 KB');
+    expect(formatBytes(1536)).toBe('1.5 KB');
+    expect(formatBytes(1.07 * GB)).toBe('1.07 GB');
+    expect(formatBytes(12.34 * 1024 * 1024)).toBe('12.3 MB');
+    expect(formatBytes(2 * 1024 ** 4)).toBe('2 TB');
     expect(formatBytes(1024)).toBe('1 KB');
     expect(formatBytes(500)).toBe('500 B');
   });

@@ -1,3 +1,4 @@
+import { PipelineStage } from 'mongoose';
 import { buildAccessQuery } from '@tumbaland/backend-core';
 
 export interface ActivityMatchConditions {
@@ -36,6 +37,29 @@ export function accessQueryFor(filters: StatisticsFilters): Record<string, unkno
   }
   return {};
 }
+
+/**
+ * The entries in scope, within `year` when one is given. The year runs from UTC
+ * midnight to UTC midnight, because that is how entries are stored and how the
+ * aggregations bucket them.
+ */
+export function matchFor(year: number | undefined, filters: StatisticsFilters): ActivityMatchConditions {
+  const conditions: ActivityMatchConditions = {};
+  if (year) {
+    conditions.date = { $gte: new Date(Date.UTC(year, 0, 1)), $lt: new Date(Date.UTC(year + 1, 0, 1)) };
+  }
+  return Object.assign(conditions, accessQueryFor(filters));
+}
+
+/**
+ * The opening stages of a per-type aggregation: the entries `matchFor` picks,
+ * each joined to its type as `activityType`. An entry whose type is gone drops out.
+ */
+export const typedActivityStages = (year: number | undefined, filters: StatisticsFilters): PipelineStage[] => [
+  { $match: matchFor(year, filters) },
+  { $lookup: { from: 'activity_types', localField: 'typeId', foreignField: '_id', as: 'activityType' } },
+  { $unwind: '$activityType' }
+];
 
 export const MS_PER_DAY = 24 * 60 * 60 * 1000;
 

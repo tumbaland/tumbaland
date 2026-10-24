@@ -1,6 +1,6 @@
 import { PipelineStage } from 'mongoose';
 import { Activity } from '../../models/Activity';
-import { ActivityMatchConditions, StatisticsFilters, accessQueryFor } from './shared';
+import { StatisticsFilters, typedActivityStages } from './shared';
 
 interface CumulativeTimelineAggRow {
   _id: string;
@@ -27,41 +27,7 @@ export const getCumulativeTimelineData = async (
   year?: number,
   filters: StatisticsFilters = {}
 ): Promise<CumulativeTimelineData[]> => {
-  // Build aggregation pipeline
-  const pipeline: PipelineStage[] = [];
-
-  // Build match conditions
-  const matchConditions: ActivityMatchConditions = {};
-
-  // Add year filter if specified
-  if (year) {
-    const startDate = new Date(year, 0, 1);
-    const endDate = new Date(year + 1, 0, 1);
-    matchConditions.date = {
-      $gte: startDate,
-      $lt: endDate
-    };
-  }
-
-  Object.assign(matchConditions, accessQueryFor(filters));
-
-  // Add match stage
-  pipeline.push({ $match: matchConditions });
-
-  // Add lookup to populate activity types
-  pipeline.push({
-    $lookup: {
-      from: 'activity_types',
-      localField: 'typeId',
-      foreignField: '_id',
-      as: 'activityType'
-    }
-  });
-
-  // Unwind the activity type
-  pipeline.push({
-    $unwind: '$activityType'
-  });
+  const pipeline: PipelineStage[] = typedActivityStages(year, filters);
 
   // Group by date and get daily totals
   pipeline.push(
@@ -129,10 +95,11 @@ export const getCumulativeTimelineData = async (
     activityDataByDate.set(item._id, item);
   });
 
-  // Generate all dates in the range and fill missing dates
+  // Generate all dates in the range and fill missing dates. A year ends before
+  // the next one's 1 January; an open range runs through its last entry.
   const allDates: string[] = [];
   const currentDate = new Date(startDate);
-  while (currentDate <= endDate) {
+  while (year ? currentDate < endDate : currentDate <= endDate) {
     allDates.push(currentDate.toISOString().split('T')[0]);
     currentDate.setUTCDate(currentDate.getUTCDate() + 1);
   }

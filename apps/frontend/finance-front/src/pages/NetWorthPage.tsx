@@ -28,12 +28,11 @@ import {
   KeyboardArrowUp,
   Category as CategoryIcon
 } from '@mui/icons-material';
-import { useTenantFilter } from '@tumbaland/frontend-core';
+import { useTenantFilter, ConfirmationModal } from '@tumbaland/frontend-core';
 import { useSnapshots, useSaveSnapshot, useDeleteSnapshot } from '../hooks/useSnapshots';
 import { useAssetClasses } from '../hooks/useAssetClasses';
 import CheckInDialog from '../components/net-worth/CheckInDialog';
 import AssetClassManagerDialog from '../components/net-worth/AssetClassManagerDialog';
-import ConfirmationModal from '../components/ConfirmationModal';
 import { Snapshot, SnapshotEntry } from '../types';
 import { snapshotMonth } from '../services/snapshotService';
 import { formatCurrency, formatPct } from '../utils/numberUtils';

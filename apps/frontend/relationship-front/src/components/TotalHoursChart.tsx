@@ -1,23 +1,10 @@
 import React, { useState } from 'react';
-import { useTenantFilter } from '@tumbaland/frontend-core';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  CircularProgress,
-  Alert,
-  FormControl,
-  Select,
-  MenuItem,
-  InputLabel,
-  useTheme,
-  useMediaQuery
-} from '@mui/material';
-import { useAsyncData } from '../hooks/useAsyncData';
-import { journalYears } from '../utils/years';
+import { useActivePalette, useTenantFilter } from '@tumbaland/frontend-core';
+import { Box, useTheme, useMediaQuery } from '@mui/material';
 import { BarChart } from '@mui/x-charts';
+import { useAsyncData } from '../hooks/useAsyncData';
 import { getMonthlyActivityBreakdown, MonthlyActivityData } from '../services/statistics';
+import { ChartCard, ChartStats, YearSelect, barLabelOn, monthAxis, monthLabel } from './ChartCard';
 
 interface TotalHoursChartProps {
   title?: string;
@@ -27,18 +14,14 @@ interface TotalHoursChartProps {
 
 const NO_ROWS: MonthlyActivityData[] = [];
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
 const TotalHoursChart: React.FC<TotalHoursChartProps> = ({ title = 'Total Hours per Month', year, height = 400 }) => {
   const [selectedYear, setSelectedYear] = useState<number | undefined>(year);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const palette = useActivePalette();
 
-  // Get the current tenant's group ID
   const tenantGroupId = useTenantFilter();
-
-  const availableYears = journalYears();
 
   const { data: loaded, loading, error } = useAsyncData(
     () => getMonthlyActivityBreakdown(selectedYear, tenantGroupId),
@@ -46,205 +29,48 @@ const TotalHoursChart: React.FC<TotalHoursChartProps> = ({ title = 'Total Hours 
   );
   const data = loaded ?? NO_ROWS;
 
-  if (loading) {
-    return (
-      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{
-            fontWeight: "bold"
-          }}>
-            {title}
-          </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: height
-            }}>
-            <CircularProgress />
-          </Box>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{
-            fontWeight: "bold"
-          }}>
-            {title}
-          </Typography>
-          <Alert severity="error">{error}</Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (data.length === 0) {
-    return (
-      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{
-            fontWeight: "bold"
-          }}>
-            {title}
-          </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: height
-            }}>
-            <Typography sx={{
-              color: "text.secondary"
-            }}>No data available</Typography>
-          </Box>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Prepare data for the chart
-  const monthLabels = data.map((item) => `${MONTHS[parseInt(item.month) - 1]} ${item.year}`);
+  const monthLabels = data.map(monthLabel);
   const hoursData = data.map((item) => item.totalHours);
 
   const totalHours = data.reduce((sum, item) => sum + item.totalHours, 0);
   const avgHours = Math.round(totalHours / data.length || 0);
-  const peakHours = Math.max(...data.map((d) => d.totalHours));
+  const peakHours = Math.max(...hoursData);
 
   return (
-    <Card 
-      elevation={0}
-      sx={{
-        height: '100%',
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 3
-      }}
+    <ChartCard
+      title={title}
+      height={height}
+      loading={loading}
+      error={error}
+      empty={data.length === 0}
+      actions={<YearSelect value={selectedYear} onChange={setSelectedYear} />}
     >
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{
-            fontWeight: "bold"
-          }}>{title}</Typography>
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Year</InputLabel>
-            <Select
-              value={selectedYear || 'all'}
-              label="Year"
-              onChange={(e) => setSelectedYear(e.target.value === 'all' ? undefined : Number(e.target.value))}
-              sx={{ borderRadius: 2 }}
-            >
-              <MenuItem value="all">All Years</MenuItem>
-              {availableYears.map((yearOption) => (
-                <MenuItem key={yearOption} value={yearOption}>
-                  {yearOption}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-
-        <Box sx={{ width: '100%', height: height - 100 }}>
-          <BarChart
-            xAxis={[{ 
-              scaleType: 'band', 
-              data: monthLabels,
-              tickLabelStyle: {
-                angle: 0,
-                textAnchor: 'middle',
-                fontSize: 12
-              },
-              valueFormatter: (value: string, context) => {
-                const parts = value.split(' ');
-                if (context.location === 'tick') {
-                  return (value === monthLabels[0] || parts[0] === 'Jan') ? parts[1] : '';
-                }
-                return value;
-              }
-            }]}
-            yAxis={[{ 
-              ...(isMobile ? {} : { label: 'Hours' }) // Only show label on non-mobile
-            }]}
-            series={[{
+      <Box sx={{ width: '100%', height: height - 100 }}>
+        <BarChart
+          xAxis={[monthAxis(monthLabels)]}
+          yAxis={[isMobile ? {} : { label: 'Hours' }]}
+          series={[
+            {
               data: hoursData,
               label: `Total Hours (${totalHours})`,
-              color: '#1976d2',
+              color: palette.primary.main,
               valueFormatter: (value) => `${value} hours`,
               barLabel: (item) => item.value?.toString()
-            }]}
-            slotProps={{
-              barLabel: {
-                style: {
-                  fill: '#fff',
-                  fontSize: '10px',
-                  fontWeight: 'bold'
-                }
-              }
-            }}
-            height={height - 130}
-          />
-        </Box>
+            }
+          ]}
+          slotProps={{ barLabel: barLabelOn(palette, '10px') }}
+          height={height - 130}
+        />
+      </Box>
 
-        {/* Summary stats */}
-        <Box
-          sx={{
-            mt: 2,
-            display: 'flex',
-            justifyContent: 'space-around',
-            pt: 2,
-            borderTop: '1px solid var(--mui-palette-divider)',
-            flexWrap: 'wrap',
-            gap: { xs: 2, sm: 0 }
-          }}
-        >
-          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
-            <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-              {totalHours}
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                color: "text.secondary",
-                fontSize: { xs: '0.75rem', sm: '0.875rem' }
-              }}>
-              Total Hours
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
-            <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-              {avgHours}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-                fontSize: { xs: '0.7rem', sm: '0.75rem' }
-              }}>
-              Avg Hours per Month
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
-            <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-              {peakHours}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-                fontSize: { xs: '0.7rem', sm: '0.75rem' }
-              }}>
-              Peak Hours
-            </Typography>
-          </Box>
-        </Box>
-      </CardContent>
-    </Card>
+      <ChartStats
+        stats={[
+          { label: 'Total Hours', value: totalHours },
+          { label: 'Avg Hours per Month', value: avgHours },
+          { label: 'Peak Hours', value: peakHours }
+        ]}
+      />
+    </ChartCard>
   );
 };
 

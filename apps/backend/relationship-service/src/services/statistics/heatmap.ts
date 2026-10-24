@@ -1,6 +1,6 @@
 import { PipelineStage } from 'mongoose';
 import { Activity } from '../../models/Activity';
-import { ActivityMatchConditions, StatisticsFilters, accessQueryFor } from './shared';
+import { StatisticsFilters, typedActivityStages } from './shared';
 
 interface WeeklyHeatmapAggRow {
   _id: { date: string; year: number; month: number; dayOfWeek: number; week: number };
@@ -29,41 +29,7 @@ export const getWeeklyHeatmapData = async (
   year?: number,
   filters: StatisticsFilters = {}
 ): Promise<WeeklyHeatmapData[]> => {
-  // Build aggregation pipeline
-  const pipeline: PipelineStage[] = [];
-
-  // Build match conditions
-  const matchConditions: ActivityMatchConditions = {};
-
-  // Add year filter if specified
-  if (year) {
-    const startDate = new Date(year, 0, 1);
-    const endDate = new Date(year + 1, 0, 1);
-    matchConditions.date = {
-      $gte: startDate,
-      $lt: endDate
-    };
-  }
-
-  Object.assign(matchConditions, accessQueryFor(filters));
-
-  // Add match stage
-  pipeline.push({ $match: matchConditions });
-
-  // Add lookup to populate activity types
-  pipeline.push({
-    $lookup: {
-      from: 'activity_types',
-      localField: 'typeId',
-      foreignField: '_id',
-      as: 'activityType'
-    }
-  });
-
-  // Unwind the activity type
-  pipeline.push({
-    $unwind: '$activityType'
-  });
+  const pipeline: PipelineStage[] = typedActivityStages(year, filters);
 
   // Add grouping by date
   pipeline.push(

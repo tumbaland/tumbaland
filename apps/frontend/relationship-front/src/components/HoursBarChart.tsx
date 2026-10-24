@@ -1,26 +1,12 @@
 import React, { useState } from 'react';
-import { useTenantFilter } from '@tumbaland/frontend-core';
-import { useAsyncData } from '../hooks/useAsyncData';
-import { journalYears } from '../utils/years';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  CircularProgress,
-  Alert,
-  FormControl,
-  Select,
-  MenuItem,
-  InputLabel,
-  Chip,
-  useTheme,
-  useMediaQuery
-} from '@mui/material';
+import { useActivePalette, useTenantFilter } from '@tumbaland/frontend-core';
+import { Box, Chip, useTheme, useMediaQuery } from '@mui/material';
 import { BarChart } from '@mui/x-charts';
+import { useAsyncData } from '../hooks/useAsyncData';
 import { getMonthlyActivityBreakdown, MonthlyActivityData } from '../services/statistics';
 import { getActivityTypes } from '../services/activityTypes';
 import { ActivityType } from '../services/types';
+import { ChartCard, ChartStats, YearSelect, barLabelOn, chipColors, monthAxis, monthLabel } from './ChartCard';
 
 interface BarChartProps {
   title?: string;
@@ -34,8 +20,6 @@ interface BarChartProps {
 const NO_ROWS: MonthlyActivityData[] = [];
 const NO_TYPES: ActivityType[] = [];
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
 const HoursBarChart: React.FC<BarChartProps> = ({
   title = 'Activities per Month by Type',
   year,
@@ -46,11 +30,9 @@ const HoursBarChart: React.FC<BarChartProps> = ({
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const palette = useActivePalette();
 
-  // Get the current tenant's group ID
   const tenantGroupId = useTenantFilter();
-
-  const availableYears = journalYears();
 
   const { data: loaded, loading, error } = useAsyncData(async () => {
     const [monthly, types] = await Promise.all([
@@ -62,268 +44,85 @@ const HoursBarChart: React.FC<BarChartProps> = ({
   const data = loaded?.monthly ?? NO_ROWS;
   const activityTypes = loaded?.types ?? NO_TYPES;
 
-  if (loading) {
-    return (
-      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{
-            fontWeight: "bold"
-          }}>
-            {title}
-          </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: height
-            }}>
-            <CircularProgress />
-          </Box>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{
-            fontWeight: "bold"
-          }}>
-            {title}
-          </Typography>
-          <Alert severity="error">{error}</Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (data.length === 0) {
-    return (
-      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{
-            fontWeight: "bold"
-          }}>
-            {title}
-          </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: height
-            }}>
-            <Typography sx={{
-              color: "text.secondary"
-            }}>No data available</Typography>
-          </Box>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // All activity types present in the data, minus the ones the user hid
-  const allActivityTypes = Array.from(
-    new Set(
-      data.flatMap(month =>
-        Object.keys(month.activities)
-      )
-    )
-  ).filter(type => !hiddenSlugs?.has(type));
-
-  // Prepare data for the chart - create arrays for each activity type
-  const monthLabels = data.map((item) => `${MONTHS[parseInt(item.month) - 1]} ${item.year}`);
-
-  // Recalculate totals based on filtered activities
-  const totalPerMonth = data.map(item => {
-    return allActivityTypes.reduce((sum, type) => {
-      return sum + (item.activities[type]?.count || 0);
-    }, 0);
+  // Every activity type present in the data, minus the ones the user hid, with
+  // its per-month counts.
+  const slugs = Array.from(new Set(data.flatMap((month) => Object.keys(month.activities)))).filter(
+    (slug) => !hiddenSlugs?.has(slug)
+  );
+  const types = slugs.map((slug) => {
+    const type = activityTypes.find((t) => t.slug === slug);
+    const counts = data.map((item) => item.activities[slug]?.count || 0);
+    return {
+      slug,
+      name: type?.name || slug,
+      color: type?.color || palette.grey[600],
+      counts,
+      total: counts.reduce((sum, count) => sum + count, 0)
+    };
   });
 
+  const monthLabels = data.map(monthLabel);
+  const totalPerMonth = data.map((_, month) => types.reduce((sum, type) => sum + type.counts[month], 0));
   const totalActivities = totalPerMonth.reduce((sum, val) => sum + val, 0);
   const avgActivities = Math.round(totalActivities / data.length || 0);
   const peakActivities = Math.max(...totalPerMonth, 0);
 
-  // Create series for each activity type with direct data arrays
-  const generatedSeries = allActivityTypes.map(activityType => {
-    const activityTypeData = activityTypes.find(type => type.slug === activityType);
-    const activityCounts = data.map((item) => {
-      const activityData = item.activities[activityType];
-      return activityData ? activityData.count : 0;
-    });
-
-    return {
-      data: activityCounts,
-      label: activityTypeData?.name || activityType,
-      stack: 'activities',
-      color: activityTypeData?.color || '#9e9e9e'
-    };
-  });
-
   const series = [
-    ...generatedSeries,
+    ...types.map((type) => ({ data: type.counts, label: type.name, stack: 'activities', color: type.color })),
+    // An empty segment on top of each stack, there to carry the month's total as its label.
     {
       data: data.map(() => 0),
       label: `Total (${totalActivities})`,
       stack: 'activities',
       color: 'transparent',
       id: 'total-series',
-      valueFormatter: () => '', // Hide value in tooltip
-      barLabel: (item: { dataIndex: number }) => totalPerMonth[item.dataIndex]?.toString(),
+      valueFormatter: () => '',
+      barLabel: (item: { dataIndex: number }) => totalPerMonth[item.dataIndex]?.toString()
     }
   ];
 
   return (
-    <Card 
-      elevation={0}
-      sx={{
-        height: '100%',
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 3
-      }}
+    <ChartCard
+      title={title}
+      height={height}
+      loading={loading}
+      error={error}
+      empty={data.length === 0}
+      actions={<YearSelect value={selectedYear} onChange={setSelectedYear} />}
     >
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{
-            fontWeight: "bold"
-          }}>{title}</Typography>
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Year</InputLabel>
-            <Select
-              value={selectedYear || 'all'}
-              label="Year"
-              onChange={(e) => setSelectedYear(e.target.value === 'all' ? undefined : Number(e.target.value))}
-              sx={{ borderRadius: 2 }}
-            >
-              <MenuItem value="all">All Years</MenuItem>
-              {availableYears.map((yearOption) => (
-                <MenuItem key={yearOption} value={yearOption}>
-                  {yearOption}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-
-        {/* Legend */}
-        <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
-          {allActivityTypes
-            .map((activityType) => {
-            const activityTypeData = activityTypes.find(type => type.slug === activityType);
-            const totalCount = data.reduce((sum, month) => sum + (month.activities[activityType]?.count || 0), 0);
-            return (
-              <Chip
-                key={activityType}
-                label={`${activityTypeData?.name || activityType} (${totalCount})`}
-                size="small"
-                sx={{
-                  backgroundColor: activityTypeData?.color || '#9e9e9e',
-                  color: 'white',
-                  '& .MuiChip-label': {
-                    fontSize: { xs: '0.65rem', sm: '0.75rem' }
-                  },
-                  minWidth: { xs: '60px', sm: 'auto' }
-                }}
-              />
-            );
-          })}
-        </Box>
-
-        <Box sx={{ width: '100%', height: height - 100 }}>
-          <BarChart
-            xAxis={[{ 
-              scaleType: 'band', 
-              data: monthLabels,
-              tickLabelStyle: {
-                angle: 0,
-                textAnchor: 'middle',
-                fontSize: 12
-              },
-              valueFormatter: (value: string, context) => {
-                const parts = value.split(' ');
-                if (context.location === 'tick') {
-                  return (value === monthLabels[0] || parts[0] === 'Jan') ? parts[1] : '';
-                }
-                return value;
-              }
-            }]}
-            yAxis={[{ 
-              ...(isMobile ? {} : { label: 'Activities' }) // Only show label on non-mobile
-            }]}
-            series={series}
-            slotProps={{
-              barLabel: {
-                style: {
-                  fill: '#ffffff',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  transform: 'translateY(-10px)'
-                }
-              }
+      <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
+        {types.map((type) => (
+          <Chip
+            key={type.slug}
+            label={`${type.name} (${type.total})`}
+            size="small"
+            sx={{
+              ...chipColors(palette, type.color),
+              '& .MuiChip-label': { fontSize: { xs: '0.65rem', sm: '0.75rem' } },
+              minWidth: { xs: '60px', sm: 'auto' }
             }}
-            height={height - 130}
           />
-        </Box>
+        ))}
+      </Box>
 
-        {/* Summary stats */}
-        <Box
-          sx={{
-            mt: 2,
-            display: 'flex',
-            justifyContent: 'space-around',
-            pt: 2,
-            borderTop: '1px solid var(--mui-palette-divider)',
-            flexWrap: 'wrap',
-            gap: { xs: 2, sm: 0 }
-          }}
-        >
-          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
-            <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-              {totalActivities}
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                color: "text.secondary",
-                fontSize: { xs: '0.75rem', sm: '0.875rem' }
-              }}>
-              Total Activities
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
-            <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-              {avgActivities}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-                fontSize: { xs: '0.7rem', sm: '0.75rem' }
-              }}>
-              Avg Activities per Month
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
-            <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-              {peakActivities}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-                fontSize: { xs: '0.7rem', sm: '0.75rem' }
-              }}>
-              Peak Activities
-            </Typography>
-          </Box>
-        </Box>
-      </CardContent>
-    </Card>
+      <Box sx={{ width: '100%', height: height - 100 }}>
+        <BarChart
+          xAxis={[monthAxis(monthLabels)]}
+          yAxis={[isMobile ? {} : { label: 'Activities' }]}
+          series={series}
+          slotProps={{ barLabel: barLabelOn(palette, '12px', { transform: 'translateY(-10px)' }) }}
+          height={height - 130}
+        />
+      </Box>
+
+      <ChartStats
+        stats={[
+          { label: 'Total Activities', value: totalActivities },
+          { label: 'Avg Activities per Month', value: avgActivities },
+          { label: 'Peak Activities', value: peakActivities }
+        ]}
+      />
+    </ChartCard>
   );
 };
 

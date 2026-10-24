@@ -11,13 +11,6 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Switch,
-  FormControlLabel,
   Chip,
   useTheme,
   useMediaQuery
@@ -29,17 +22,15 @@ import {
   ShowChart as ShowChartIcon,
   Sync as SyncIcon
 } from '@mui/icons-material';
-import { UsageMeter } from '@tumbaland/frontend-core';
+import { UsageMeter, ConfirmationModal, paywallMessage } from '@tumbaland/frontend-core';
 import { TrackedTicker } from '../../services/trackedTickerService';
-import { paywallMessage } from '../../utils/paywall';
 import {
   useCreateTrackedTicker,
   useUpdateTrackedTicker,
   useDeleteTrackedTicker
 } from '../../hooks/useTrackedTicker';
-import ConfirmationModal from '../ConfirmationModal';
 import TickerHistoryModal from '../TickerHistoryModal';
-import TickerSearch from './TickerSearch';
+import TickerFormDialog, { TickerForm, emptyTickerForm } from './TickerFormDialog';
 import DataSyncDialog from './DataSyncDialog';
 import { useTickerSync } from '../../hooks/useTickerSync';
 
@@ -60,16 +51,6 @@ interface TickersTabProps {
   meteredTickers?: number;
   onUpgrade?: () => void;
 }
-
-interface TickerForm {
-  ticker: string;
-  displayName: string;
-  currency: string;
-  description: string;
-  isActive: boolean;
-}
-
-const emptyForm: TickerForm = { ticker: '', displayName: '', currency: '', description: '', isActive: true };
 
 /**
  * Instruments whose prices are fetched daily (19:00) from Alpha Vantage.
@@ -92,14 +73,14 @@ const TickersTab: React.FC<TickersTabProps> = ({
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<TickerForm>(emptyForm);
+  const [form, setForm] = useState<TickerForm>(emptyTickerForm);
   const [deleteTarget, setDeleteTarget] = useState<TrackedTicker | null>(null);
   const [historyTicker, setHistoryTicker] = useState<string | null>(null);
   const { quota, coverage, refreshCoverage, syncTicker, setSyncTicker, busyAction, handleSync, lastUpdated } = useTickerSync(notify);
 
   const openCreate = () => {
     setEditingId(null);
-    setForm(emptyForm);
+    setForm(emptyTickerForm);
     setDialogOpen(true);
   };
 
@@ -158,6 +139,23 @@ const TickersTab: React.FC<TickersTabProps> = ({
     }
     setDeleteTarget(null);
   };
+
+  const rowActions = (t: TrackedTicker) => (
+    <>
+      <IconButton size="small" onClick={() => setHistoryTicker(t.ticker)} title="Price history">
+        <ShowChartIcon fontSize="small" />
+      </IconButton>
+      <IconButton size="small" onClick={() => setSyncTicker(t.ticker)} title="Price data & sync">
+        <SyncIcon fontSize="small" />
+      </IconButton>
+      <IconButton size="small" onClick={() => openEdit(t)}>
+        <EditIcon fontSize="small" />
+      </IconButton>
+      <IconButton size="small" onClick={() => setDeleteTarget(t)}>
+        <DeleteIcon fontSize="small" />
+      </IconButton>
+    </>
+  );
 
   return (
     <Box>
@@ -236,18 +234,7 @@ const TickersTab: React.FC<TickersTabProps> = ({
                   })()}
                 </Box>
                 <Box sx={{ display: 'flex', flexShrink: 0 }}>
-                  <IconButton size="small" onClick={() => setHistoryTicker(t.ticker)} title="Price history">
-                    <ShowChartIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => setSyncTicker(t.ticker)} title="Price data & sync">
-                    <SyncIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => openEdit(t)}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => setDeleteTarget(t)}>
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
+                  {rowActions(t)}
                 </Box>
               </Box>
             </Paper>
@@ -324,18 +311,7 @@ const TickersTab: React.FC<TickersTabProps> = ({
                     })()}
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton size="small" onClick={() => setHistoryTicker(t.ticker)} title="Price history">
-                      <ShowChartIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => setSyncTicker(t.ticker)} title="Price data & sync">
-                      <SyncIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => openEdit(t)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => setDeleteTarget(t)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
+                    {rowActions(t)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -353,75 +329,16 @@ const TickersTab: React.FC<TickersTabProps> = ({
         </TableContainer>
       )}
 
-      {/* Add/Edit dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingId ? 'Edit ticker' : 'Track ticker'}</DialogTitle>
-        <DialogContent>
-          {!editingId && (
-            <Box sx={{ mb: 2, mt: 1 }}>
-              <TickerSearch
-                onSelect={(r) =>
-                  setForm((f) => ({ ...f, ticker: r.symbol, displayName: r.name, currency: r.currency || '' }))
-                }
-              />
-            </Box>
-          )}
-          <TextField
-            margin="dense"
-            label="Ticker"
-            fullWidth
-            required
-            value={form.ticker}
-            onChange={(e) => setForm((f) => ({ ...f, ticker: e.target.value.toUpperCase() }))}
-            helperText={
-              renaming
-                ? `Price history, holdings and trades for ${savedSymbol} will move to ${form.ticker}.`
-                : undefined
-            }
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          <TextField
-            margin="dense"
-            label="Display name"
-            fullWidth
-            required
-            value={form.displayName}
-            onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          <TextField
-            margin="dense"
-            label="Currency"
-            fullWidth
-            value={form.currency}
-            onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase().slice(0, 3) }))}
-            placeholder="EUR"
-            helperText="Currency this instrument is quoted in — used to convert its prices into your base currency."
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          <TextField
-            margin="dense"
-            label="Description"
-            fullWidth
-            multiline
-            rows={2}
-            value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          <FormControlLabel
-            control={<Switch checked={form.isActive} onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))} />}
-            label="Update price daily"
-            sx={{ mt: 1 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained" disabled={createMutation.isPending || updateMutation.isPending}>
-            {editingId ? 'Update' : 'Add'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <TickerFormDialog
+        open={dialogOpen}
+        editing={!!editingId}
+        form={form}
+        setForm={setForm}
+        renamingFrom={renaming ? savedSymbol : undefined}
+        submitting={createMutation.isPending || updateMutation.isPending}
+        onSubmit={handleSubmit}
+        onClose={() => setDialogOpen(false)}
+      />
 
       <ConfirmationModal
         open={!!deleteTarget}

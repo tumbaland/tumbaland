@@ -1,21 +1,17 @@
 /**
  * Turns a 402 into a sentence that names the limit that was hit.
  *
- * Enforcement lands before the shared `<UpgradeDialog>` of MONETIZATION.md 4.2
- * does, and "Failed to upload photo.jpg" for a plan limit reads as a bug rather
- * than a price — which is the one failure mode the phase is meant to avoid.
- * Until the dialog exists, the 402 body says everything the user needs, so this
- * renders it into the error alert the upload dialog already has.
+ * "Failed to upload photo.jpg" for a plan limit reads as a bug rather than a
+ * price, which is the one failure mode enforcement is meant to avoid. Until the
+ * shared `<UpgradeDialog>` of MONETIZATION.md 4.2 exists, the 402 body says
+ * everything the user needs, so this renders it into the alert or snackbar the
+ * caller already has.
  *
  * Anything that is not a 402 keeps the caller's own message: a network blip and
  * a paywall must not read the same.
- *
- * A copy of finance-front's, deliberately: the two fronts cannot import from
- * each other, and `@tumbaland/frontend-core` is presentational — this belongs in
- * `<UpgradeDialog>` when that lands, which is when both copies go away.
  */
 
-import { formatBytes } from './formatBytes';
+import { formatBytes } from './components/UsageMeter';
 
 interface PaymentRequiredBody {
   code?: string;

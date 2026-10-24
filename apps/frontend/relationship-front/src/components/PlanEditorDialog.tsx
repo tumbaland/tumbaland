@@ -15,13 +15,12 @@ import {
   Typography
 } from '@mui/material';
 import NotificationsActiveOutlinedIcon from '@mui/icons-material/NotificationsActiveOutlined';
-import { ApiError, logger, useTenantFilter } from '@tumbaland/frontend-core';
+import { ApiError, logger, useTenantFilter, ConfirmationModal } from '@tumbaland/frontend-core';
 import { ActivityLocation, ActivityType, Place, Plan } from '../services/types';
 import { createPlan, deletePlan, logPlan, updatePlan } from '../services/plans';
 import { getActivityTypes } from '../services/activityTypes';
 import { getPlaces } from '../services/places';
 import LocationPicker from './map/LocationPicker';
-import ConfirmationModal from './ConfirmationModal';
 import { localDayKey, todayKey } from '../utils/dates';
 
 interface PlanEditorDialogProps {

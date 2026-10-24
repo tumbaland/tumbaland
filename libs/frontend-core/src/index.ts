@@ -69,6 +69,7 @@ export { NotificationsMenu } from './components/NotificationsMenu/NotificationsM
 export { AuthHeader, StandaloneAuthHeader } from './components/AuthHeader';
 export type { StandaloneAuthHeaderProps } from './components/AuthHeader';
 export { AppLayout } from './components/AppLayout';
+export { ConfirmationModal } from './components/ConfirmationModal';
 export { SectionBar } from './components/SectionBar';
 export { ColorModeSetting, useActivePalette, useThemeColorMeta } from './components/ColorModeSetting';
 
@@ -78,6 +79,7 @@ export type { MediaThumbProps } from './components/MediaThumb';
 
 // Entitlements: the usage bar and the hook that feeds it
 export { UsageMeter, formatBytes, useEntitlements } from './components/UsageMeter';
+export { isPaymentRequired, paywallMessage } from './paywall';
 
 // Tenant selection: provider, selector, and hooks shared across domain frontends
 export {
@@ -94,6 +96,7 @@ export type { LoaderProps } from './components/Loader';
 export type { ErrorPageProps } from './components/ErrorPage';
 export type { AppErrorBoundaryProps } from './components/AppErrorBoundary';
 export type { AppLayoutProps } from './components/AppLayout';
+export type { ConfirmationModalProps } from './components/ConfirmationModal';
 export type { SectionBarProps, SectionBarItem } from './components/SectionBar';
 export type { ColorMode, ColorModeSettingProps } from './components/ColorModeSetting';
 export type { UnauthorizedPageProps } from './components/UnauthorizedPage';

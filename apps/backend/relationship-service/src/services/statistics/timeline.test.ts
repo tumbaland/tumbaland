@@ -53,15 +53,15 @@ describe('getCumulativeTimelineData', () => {
 
     const result = await getCumulativeTimelineData(2026, { userId: 'u1' });
 
-    // The service builds the range in UTC through `new Date(year + 1, 0, 1)`
-    // inclusive, matching the UTC day keys the aggregation groups by — so these
-    // boundaries are the same on every host regardless of timezone.
+    // The service builds the range in UTC, from 1 January up to (not including)
+    // the next year's, matching the UTC day keys the aggregation groups by — so
+    // these boundaries are the same on every host regardless of timezone.
     const firstDate = '2026-01-01';
     const secondDate = '2026-01-02';
-    const lastDate = '2027-01-01';
+    const lastDate = '2026-12-31';
 
-    expect(result.length).toBe(366);
-    expect(result[365]).toMatchObject({ date: lastDate, dailyActivities: 0, cumulativeActivities: 2 });
+    expect(result.length).toBe(365);
+    expect(result[364]).toMatchObject({ date: lastDate, dailyActivities: 0, cumulativeActivities: 2 });
     expect(result[0]).toMatchObject({
       date: firstDate,
       dailyActivities: 2,

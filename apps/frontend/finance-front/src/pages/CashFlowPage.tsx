@@ -29,7 +29,7 @@ import {
   Rule as RuleIcon
 } from '@mui/icons-material';
 import TableSortLabel from '@mui/material/TableSortLabel';
-import { useTenantFilter } from '@tumbaland/frontend-core';
+import { useTenantFilter, ConfirmationModal } from '@tumbaland/frontend-core';
 import {
   useTransactions,
   useTransactionCategories,
@@ -52,7 +52,6 @@ import TransactionFilters, {
   EMPTY_FILTERS,
   toQuery
 } from '../components/cashflow/TransactionFilters';
-import ConfirmationModal from '../components/ConfirmationModal';
 import { formatCurrency } from '../utils/numberUtils';
 
 const PAGE_SIZE = 100;

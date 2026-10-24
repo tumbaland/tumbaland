@@ -260,27 +260,12 @@ it('gives up after ~30 polling attempts with no resolution', async () => {
   vi.useRealTimers();
 });
 
-it('closes the Terms dialog via its onClose handler (e.g. Escape/backdrop)', async () => {
+it('links the terms to the shell\'s single copy, in a new tab', async () => {
   mockedListPlans.mockResolvedValue([proPlan]);
   renderAt('/subscription/checkout?plan=pro');
   await screen.findByText('For pros');
 
-  await userEvent.click(screen.getByText('Terms and Conditions'));
-  expect(await screen.findByRole('heading', { name: 'Terms and Conditions' })).toBeInTheDocument();
-
-  await userEvent.keyboard('{Escape}');
-
-  await waitFor(() => expect(screen.queryByRole('heading', { name: 'Terms and Conditions' })).not.toBeInTheDocument());
-});
-
-it('opens and closes the Terms and Conditions dialog', async () => {
-  mockedListPlans.mockResolvedValue([proPlan]);
-  renderAt('/subscription/checkout?plan=pro');
-  await screen.findByText('For pros');
-
-  await userEvent.click(screen.getByText('Terms and Conditions'));
-  expect(await screen.findByRole('heading', { name: 'Terms and Conditions' })).toBeInTheDocument();
-
-  await userEvent.click(screen.getByRole('button', { name: 'Close' }));
-  await waitFor(() => expect(screen.queryByRole('heading', { name: 'Terms and Conditions' })).not.toBeInTheDocument());
+  const link = screen.getByRole('link', { name: 'Terms' });
+  expect(link).toHaveAttribute('href', '/terms');
+  expect(link).toHaveAttribute('target', '_blank');
 });

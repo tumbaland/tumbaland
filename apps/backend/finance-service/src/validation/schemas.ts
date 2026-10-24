@@ -71,16 +71,6 @@ export const createTradeSchema = z.object({
 
 export const updateTradeSchema = createTradeSchema.partial();
 
-export const createTransactionSchema = z.object({
-  date: z.iso.date(),
-  // A positive magnitude; direction lives in `type`.
-  amount: z.number().min(0),
-  type: z.enum(['income', 'expense']),
-  category: z.string().trim().min(1),
-  note: z.string().optional(),
-  groupId: z.string().optional()
-});
-
 /**
  * `matchType` defaults to a folded substring test, so a pattern is the merchant
  * name as it reads on the statement — which is all the UI ever writes. `regex`

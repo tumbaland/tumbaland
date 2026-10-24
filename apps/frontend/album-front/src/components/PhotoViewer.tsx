@@ -11,7 +11,7 @@ import { Photo } from '../types';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 import { useProgressiveImage } from '../hooks/useProgressiveImage';
 import { downloadPhoto } from '../utils/downloadPhoto';
-import { formatBytes } from '../utils/formatBytes';
+import { formatBytes } from '@tumbaland/frontend-core';
 
 const formatDateTime = (dateString: string) =>
   new Date(dateString).toLocaleString(undefined, {

@@ -23,42 +23,26 @@ export const createAssetClass = async (data: Partial<IAssetClass>) => {
   return assetClass.save();
 };
 
-export const deleteAssetClass = async (id: string, userId: string, userGroupIds: string[] = []) => {
+/** The asset class, if it exists and the user may change it. */
+const loadAccessible = async (id: string, userId: string, userGroupIds: string[]) => {
   const assetClass = await AssetClass.findById(id);
   if (!assetClass) {
     throw new NotFoundError('Asset class not found');
   }
-
-  const hasAccess = canAccessResource(
-    userId,
-    assetClass.userId,
-    assetClass.groupId,
-    userGroupIds,
-    false
-  );
-  if (!hasAccess) {
+  if (!canAccessResource(userId, assetClass.userId, assetClass.groupId, userGroupIds, false)) {
     throw new ForbiddenError('Access denied');
   }
+  return assetClass;
+};
+
+export const deleteAssetClass = async (id: string, userId: string, userGroupIds: string[] = []) => {
+  await loadAccessible(id, userId, userGroupIds);
 
   return AssetClass.findByIdAndDelete(id);
 };
 
 export const updateAssetClass = async (id: string, data: Partial<IAssetClass>, userId: string, userGroupIds: string[] = []) => {
-  const assetClass = await AssetClass.findById(id);
-  if (!assetClass) {
-    throw new NotFoundError('Asset class not found');
-  }
-
-  const hasAccess = canAccessResource(
-    userId,
-    assetClass.userId,
-    assetClass.groupId,
-    userGroupIds,
-    false
-  );
-  if (!hasAccess) {
-    throw new ForbiddenError('Access denied');
-  }
+  await loadAccessible(id, userId, userGroupIds);
 
   // Moving a class into a group is writing into that group.
   if (data.groupId && !userGroupIds.includes(data.groupId)) {

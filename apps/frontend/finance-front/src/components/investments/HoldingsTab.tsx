@@ -12,11 +12,6 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   Tooltip,
   Alert,
   useTheme,
@@ -31,38 +26,17 @@ import {
 } from '@mui/icons-material';
 import { Holding } from '../../services/holdingService';
 import { useCreateHolding, useUpdateHolding, useDeleteHolding } from '../../hooks/useHoldings';
-import ConfirmationModal from '../ConfirmationModal';
 import TickerHistoryModal from '../TickerHistoryModal';
 import TradeHistoryDialog from './TradeHistoryDialog';
-import TickerSearch from './TickerSearch';
+import HoldingFormDialog, { HoldingForm, emptyHoldingForm } from './HoldingFormDialog';
 import { parseNumericInput, formatCurrency, formatPrice, formatPct } from '../../utils/numberUtils';
-import { paywallMessage } from '../../utils/paywall';
+import { ConfirmationModal, paywallMessage } from '@tumbaland/frontend-core';
 
 interface HoldingsTabProps {
   holdings: Holding[];
   tenantGroupId?: string;
   notify: (message: string, severity: 'success' | 'error') => void;
 }
-
-interface HoldingForm {
-  ticker: string;
-  displayName: string;
-  currency: string;
-  quantity: string;
-  avgBuyPrice: string;
-  buyDate: string;
-  notes: string;
-}
-
-const emptyForm: HoldingForm = {
-  ticker: '',
-  displayName: '',
-  currency: '',
-  quantity: '',
-  avgBuyPrice: '',
-  buyDate: '',
-  notes: ''
-};
 
 const plColor = (v?: number) => (v === undefined ? 'text.secondary' : v > 0 ? 'success.main' : v < 0 ? 'error.main' : 'text.secondary');
 
@@ -75,14 +49,14 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<HoldingForm>(emptyForm);
+  const [form, setForm] = useState<HoldingForm>(emptyHoldingForm);
   const [deleteTarget, setDeleteTarget] = useState<Holding | null>(null);
   const [historyTicker, setHistoryTicker] = useState<string | null>(null);
   const [tradesFor, setTradesFor] = useState<Holding | null>(null);
 
   const openCreate = () => {
     setEditingId(null);
-    setForm(emptyForm);
+    setForm(emptyHoldingForm);
     setDialogOpen(true);
   };
 
@@ -173,6 +147,23 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
   const baseAmount = (value?: number) =>
     value === undefined ? '—' : formatCurrency(value, baseCurrency);
 
+  const rowActions = (h: Holding) => (
+    <>
+      <IconButton size="small" onClick={() => setTradesFor(h)} title="Trade history">
+        <ReceiptLongIcon fontSize="small" />
+      </IconButton>
+      <IconButton size="small" onClick={() => setHistoryTicker(h.ticker)} title="Price history">
+        <ShowChartIcon fontSize="small" />
+      </IconButton>
+      <IconButton size="small" onClick={() => openEdit(h)}>
+        <EditIcon fontSize="small" />
+      </IconButton>
+      <IconButton size="small" onClick={() => setDeleteTarget(h)}>
+        <DeleteIcon fontSize="small" />
+      </IconButton>
+    </>
+  );
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
@@ -199,18 +190,7 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>{h.displayName || '—'}</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', flexShrink: 0 }}>
-                  <IconButton size="small" onClick={() => setTradesFor(h)} title="Trade history">
-                    <ReceiptLongIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => setHistoryTicker(h.ticker)} title="Price history">
-                    <ShowChartIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => openEdit(h)}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => setDeleteTarget(h)}>
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
+                  {rowActions(h)}
                 </Box>
               </Box>
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 1.5 }}>
@@ -343,18 +323,7 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
                     ) : '—'}
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton size="small" onClick={() => setTradesFor(h)} title="Trade history">
-                      <ReceiptLongIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => setHistoryTicker(h.ticker)} title="Price history">
-                      <ShowChartIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => openEdit(h)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => setDeleteTarget(h)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
+                    {rowActions(h)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -392,95 +361,15 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
         </TableContainer>
       )}
 
-      {/* Add/Edit dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingId ? 'Edit holding' : 'Add holding'}</DialogTitle>
-        <DialogContent>
-          {!editingId && (
-            <Box sx={{ mb: 2, mt: 1 }}>
-              <TickerSearch
-                onSelect={(r) =>
-                  setForm((f) => ({ ...f, ticker: r.symbol, displayName: r.name, currency: r.currency || '' }))
-                }
-              />
-            </Box>
-          )}
-          <TextField
-            margin="dense"
-            label="Ticker"
-            fullWidth
-            required
-            value={form.ticker}
-            onChange={(e) => setForm((f) => ({ ...f, ticker: e.target.value.toUpperCase() }))}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          {!editingId && (
-            <TextField
-              margin="dense"
-              label="Display name"
-              fullWidth
-              value={form.displayName}
-              onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))}
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-          )}
-          <TextField
-            margin="dense"
-            label="Quantity"
-            fullWidth
-            required
-            value={form.quantity}
-            onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
-            slotProps={{ inputLabel: { shrink: true }, htmlInput: { inputMode: 'decimal' } }}
-          />
-          <TextField
-            margin="dense"
-            label={form.currency ? `Average buy price (${form.currency})` : 'Average buy price'}
-            fullWidth
-            required
-            value={form.avgBuyPrice}
-            onChange={(e) => setForm((f) => ({ ...f, avgBuyPrice: e.target.value }))}
-            slotProps={{ inputLabel: { shrink: true }, htmlInput: { inputMode: 'decimal' } }}
-          />
-          {!editingId && (
-            <TextField
-              margin="dense"
-              label="Currency"
-              fullWidth
-              value={form.currency}
-              onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase().slice(0, 3) }))}
-              placeholder="EUR"
-              helperText="Currency the instrument is quoted in. Filled in automatically when you pick from search; leave blank to treat prices as already being in your base currency."
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-          )}
-          <TextField
-            margin="dense"
-            label="Buy date"
-            type="date"
-            fullWidth
-            value={form.buyDate}
-            onChange={(e) => setForm((f) => ({ ...f, buyDate: e.target.value }))}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          <TextField
-            margin="dense"
-            label="Notes"
-            fullWidth
-            multiline
-            rows={2}
-            value={form.notes}
-            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained" disabled={createMutation.isPending || updateMutation.isPending}>
-            {editingId ? 'Update' : 'Add'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <HoldingFormDialog
+        open={dialogOpen}
+        editing={!!editingId}
+        form={form}
+        setForm={setForm}
+        submitting={createMutation.isPending || updateMutation.isPending}
+        onSubmit={handleSubmit}
+        onClose={() => setDialogOpen(false)}
+      />
 
       <ConfirmationModal
         open={!!deleteTarget}

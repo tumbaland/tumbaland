@@ -1,8 +1,7 @@
 import React from 'react';
 import { Card, CardContent, Typography, Box, LinearProgress } from '@mui/material';
 import { Storage as StorageIcon } from '@mui/icons-material';
-import { UsageMeter } from '@tumbaland/frontend-core';
-import { formatBytes } from '../../utils/formatBytes';
+import { UsageMeter, formatBytes } from '@tumbaland/frontend-core';
 
 export interface StorageChartAlbum {
   albumId: string;

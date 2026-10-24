@@ -15,13 +15,13 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import AssetClassModal, { AssetClassFormValues } from '../AssetClassModal';
-import ConfirmationModal from '../ConfirmationModal';
 import { AssetClass } from '../../types';
 import {
   useCreateAssetClass,
   useUpdateAssetClass,
   useDeleteAssetClass
 } from '../../hooks/useAssetClasses';
+import { ConfirmationModal } from '@tumbaland/frontend-core';
 
 interface AssetClassManagerDialogProps {
   open: boolean;

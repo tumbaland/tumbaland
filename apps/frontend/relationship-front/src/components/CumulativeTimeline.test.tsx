@@ -91,7 +91,27 @@ it('renders per-type chips and cumulative summary stats', async () => {
 
   expect(screen.getByText('Total Activities').previousSibling).toHaveTextContent('3');
   expect(screen.getByText('Active Days').previousSibling).toHaveTextContent('2');
-  expect(screen.getByText('Avg Per Day').previousSibling).toHaveTextContent('2'); // round((2+1)/2)
+  expect(screen.getByText('Avg Per Active Day').previousSibling).toHaveTextContent('2'); // round((2+1)/2)
+});
+
+it('counts only days with entries as active, and averages over those', async () => {
+  const day = (date: string, daily: number, cumulative: number) => ({
+    date,
+    dailyActivities: daily,
+    cumulativeActivities: cumulative,
+    dailyHours: daily,
+    cumulativeHours: cumulative,
+    activityBreakdown: {}
+  });
+  // Three calendar days, the middle one empty: the server fills every day in.
+  mockedGetTimeline.mockResolvedValue([day('2024-01-01', 3, 3), day('2024-01-02', 0, 3), day('2024-01-03', 1, 4)]);
+
+  render(<CumulativeTimeline />);
+
+  expect(await screen.findByText('Active Days')).toBeInTheDocument();
+  expect(screen.getByText('Active Days').previousSibling).toHaveTextContent('2');
+  expect(screen.getByText('Avg Per Active Day').previousSibling).toHaveTextContent('2'); // (3+1)/2
+  expect(screen.getByText('Total Activities').previousSibling).toHaveTextContent('4');
 });
 
 it('toggles a line chip on and off without crashing', async () => {

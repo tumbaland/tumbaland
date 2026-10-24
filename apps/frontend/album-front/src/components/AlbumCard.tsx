@@ -2,8 +2,7 @@ import React from 'react';
 import { Card, CardContent, Typography, Chip, Box, Menu, MenuItem } from '@mui/material';
 import { PhotoLibrary as PhotoLibraryIcon } from '@mui/icons-material';
 import { Album } from '../types';
-import { formatBytes } from '../utils/formatBytes';
-import { MediaThumb } from '@tumbaland/frontend-core';
+import { MediaThumb, formatBytes } from '@tumbaland/frontend-core';
 
 interface AlbumCardProps {
   album: Album;

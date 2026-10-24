@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Button, Card, CardContent, CircularProgress, Alert, Divider, Stack, Chip, Link as MuiLink, Checkbox, FormControlLabel, Dialog, DialogTitle, DialogContent, DialogActions, useMediaQuery, LinearProgress } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { Box, Typography, Button, Card, CardContent, CircularProgress, Alert, Divider, Stack, Chip, Link as MuiLink, Checkbox, FormControlLabel, LinearProgress } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
@@ -24,9 +23,6 @@ const SubscriptionCheckoutPage: React.FC = () => {
   const [redirecting, setRedirecting] = useState(false);
   const [pollEnded, setPollEnded] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [termsOpen, setTermsOpen] = useState(false);
-  const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const formatPrice = (cents?: number) => (cents ? `${(cents / 100).toFixed(2)} € / month` : 'Free');
 
   /**
@@ -263,7 +259,7 @@ const SubscriptionCheckoutPage: React.FC = () => {
                     <Stack spacing={1}>
                       <FormControlLabel
                         control={<Checkbox checked={acceptedTerms} onChange={(e) => setAcceptedTerms(e.target.checked)} />}
-                        label={<Typography variant="caption">I agree to the <MuiLink href="#" onClick={(e: React.MouseEvent<HTMLAnchorElement>)=>{e.preventDefault(); setTermsOpen(true);}}>Terms and Conditions</MuiLink>.</Typography>}
+                        label={<Typography variant="caption">I agree to the <MuiLink href="/terms" target="_blank" rel="noopener noreferrer">Terms</MuiLink>.</Typography>}
                       />
                       <Typography variant="caption" sx={{
                         color: "text.secondary"
@@ -296,79 +292,6 @@ const SubscriptionCheckoutPage: React.FC = () => {
           </Box>
         </Box>
 
-        <Dialog open={termsOpen} onClose={()=>setTermsOpen(false)} maxWidth="md" fullWidth fullScreen={fullScreen}>
-          <DialogTitle>Terms and Conditions</DialogTitle>
-          <DialogContent dividers sx={{ maxHeight: { xs: '80vh', sm: '70vh' }, overflowY: 'auto' }}>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-                display: 'block',
-                mb: 2
-              }}>
-              Last updated: {new Date().toLocaleDateString()}
-            </Typography>
-
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              These Terms and Conditions ("Terms") govern your use of Tumbaland and its related services. By creating an account,
-              purchasing a subscription, or using the service, you agree to be bound by these Terms.
-            </Typography>
-
-            <Typography variant="subtitle2" sx={{ mt: 2 }}>1. Subscriptions & Billing</Typography>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              Paid plans are billed in advance on a recurring basis (monthly unless stated otherwise) and renew automatically until canceled.
-              You can cancel at any time from your account. If you cancel, access remains until the end of the current billing period.
-            </Typography>
-
-            <Typography variant="subtitle2" sx={{ mt: 2 }}>2. Trials, Discounts, and Taxes</Typography>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              Promotional offers may be available and are subject to change. Prices are shown inclusive/exclusive of taxes where applicable.
-              You are responsible for any applicable taxes and fees.
-            </Typography>
-
-            <Typography variant="subtitle2" sx={{ mt: 2 }}>3. Refunds</Typography>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              Except where required by law, payments are non-refundable. If you believe you were charged in error, contact support within 14 days.
-            </Typography>
-
-            <Typography variant="subtitle2" sx={{ mt: 2 }}>4. Acceptable Use</Typography>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              You agree not to misuse the service, including but not limited to: violating laws, infringing intellectual property,
-              uploading harmful content, or attempting to disrupt or overload the service. We may suspend or terminate accounts that violate these Terms.
-            </Typography>
-
-            <Typography variant="subtitle2" sx={{ mt: 2 }}>5. Content & Privacy</Typography>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              You retain ownership of content you upload. You grant us a limited license to store and process content for the purpose of providing the service.
-              We handle personal data in accordance with our Privacy Policy.
-            </Typography>
-
-            <Typography variant="subtitle2" sx={{ mt: 2 }}>6. Service Availability</Typography>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              We strive for high availability but do not guarantee uninterrupted service. Features may change over time. We may perform maintenance with or without notice.
-            </Typography>
-
-            <Typography variant="subtitle2" sx={{ mt: 2 }}>7. Limitation of Liability</Typography>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              To the maximum extent permitted by law, Tumbaland and its affiliates will not be liable for indirect, incidental, special,
-              consequential, or punitive damages, or any loss of profits, data, or goodwill.
-            </Typography>
-
-            <Typography variant="subtitle2" sx={{ mt: 2 }}>8. Changes to Terms</Typography>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              We may update these Terms from time to time. Material changes will be communicated. Continued use after changes constitutes acceptance.
-            </Typography>
-
-            <Typography variant="subtitle2" sx={{ mt: 2 }}>9. Contact</Typography>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              Questions? Contact support. You can also view these Terms at <MuiLink href="/terms" target="_blank" rel="noopener noreferrer">/terms</MuiLink>.
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={()=>setTermsOpen(false)}>Close</Button>
-            <Button variant="outlined" href="/terms" target="_blank" rel="noopener noreferrer">Open Full Page</Button>
-          </DialogActions>
-        </Dialog>
       </Box>
     </Box>
   );

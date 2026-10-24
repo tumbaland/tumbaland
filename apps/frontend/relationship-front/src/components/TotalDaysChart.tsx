@@ -1,24 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { useTenantFilter } from '@tumbaland/frontend-core';
-import { logger } from '@tumbaland/frontend-core';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  CircularProgress,
-  Alert,
-  FormControl,
-  Select,
-  MenuItem,
-  InputLabel,
-  Chip,
-  useTheme,
-  useMediaQuery
-} from '@mui/material';
+import React, { useState } from 'react';
+import { useActivePalette, useTenantFilter } from '@tumbaland/frontend-core';
+import { Box, Chip, useTheme, useMediaQuery } from '@mui/material';
 import { BarChart } from '@mui/x-charts';
+import { useAsyncData } from '../hooks/useAsyncData';
 import { getMonthlyStatistics, MonthlyStatisticsData } from '../services/statistics';
 import { ActivityType } from '../services/types';
+import { ChartCard, ChartStats, YearSelect, barLabelOn, chipColors, monthAxis, monthLabel } from './ChartCard';
 
 interface TotalDaysChartProps {
   title?: string;
@@ -31,15 +18,14 @@ interface TotalDaysChartProps {
   featuredType?: ActivityType;
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-const COLOR_TOGETHER = '#2196f3'; // days with entries (not featured)
-const COLOR_APART = '#90a4ae'; // days without any entry
+const NO_ROWS: MonthlyStatisticsData[] = [];
 
 // Helper function to get total days in a month
 const getDaysInMonth = (year: number, month: number): number => {
   return new Date(year, month, 0).getDate();
 };
+
+const sum = (values: number[]): number => values.reduce((total, v) => total + v, 0);
 
 const TotalDaysChart: React.FC<TotalDaysChartProps> = ({
   title = 'Monthly Days Breakdown',
@@ -47,85 +33,21 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({
   height = 400,
   featuredType
 }) => {
-  const [data, setData] = useState<MonthlyStatisticsData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(year);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const palette = useActivePalette();
 
-  // Get the current tenant's group ID
   const tenantGroupId = useTenantFilter();
 
-  // Generate available years (from 2024 to current year)
-  const currentYear = new Date().getFullYear();
-  const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);
+  const { data: loaded, loading, error } = useAsyncData(
+    () => getMonthlyStatistics(selectedYear, tenantGroupId),
+    [selectedYear, tenantGroupId]
+  );
+  const data = loaded ?? NO_ROWS;
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const monthlyData = await getMonthlyStatistics(selectedYear, tenantGroupId);
-      setData(monthlyData);
-    } catch (err) {
-      logger.error('Error fetching data', err);
-      setError(err instanceof Error ? err.message : 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void fetchData();
-    // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedYear, tenantGroupId]);
-
-  if (loading) {
-    return (
-      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-            {title}
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: height }}>
-            <CircularProgress />
-          </Box>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-            {title}
-          </Typography>
-          <Alert severity="error">{error}</Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (data.length === 0) {
-    return (
-      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-            {title}
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: height }}>
-            <Typography sx={{ color: 'text.secondary' }}>No data available</Typography>
-          </Box>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Prepare data for the chart
-  const monthLabels = data.map((item) => `${MONTHS[parseInt(item.month) - 1]} ${item.year}`);
+  const monthLabels = data.map(monthLabel);
 
   const featuredDaysFor = (item: MonthlyStatisticsData): number =>
     featuredType ? item.types.find((t) => t.slug === featuredType.slug)?.uniqueDays || 0 : 0;
@@ -138,152 +60,68 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({
     return Math.max(0, calendarDays - item.daysWithEntries);
   });
 
-  const featuredLabel = featuredType ? `${featuredType.name} days` : '';
-  const togetherLabel = featuredType ? 'Other days together' : 'Days together';
-  const apartLabel = 'Days apart';
-  const featuredColor = featuredType?.color || theme.palette.error.main;
+  // Days with entries take the brand's violet, days without any a neutral grey
+  // that recedes but still stands off the card in both schemes (4:1 or better);
+  // a featured type brings its own colour.
+  const colorTogether = palette.secondary.main;
+  const colorApart = palette.grey[600];
+  const featuredColor = featuredType?.color || palette.error.main;
 
-  const series = [
-    ...(featuredType ? [{ data: featuredData, label: featuredLabel, stack: 'days', color: featuredColor }] : []),
-    { data: togetherData, label: togetherLabel, stack: 'days', color: COLOR_TOGETHER },
-    { data: apartData, label: apartLabel, stack: 'days', color: COLOR_APART }
-  ];
-
-  const totalFeatured = featuredData.reduce((sum, v) => sum + v, 0);
-  const totalTogether = togetherData.reduce((sum, v) => sum + v, 0);
-  const totalApart = apartData.reduce((sum, v) => sum + v, 0);
-
-  const legendItems = [
+  // One entry per stacked segment: its bar series, its legend chip and its headline number.
+  const segments = [
     ...(featuredType
-      ? [{ key: 'featured', label: featuredLabel, color: featuredColor, count: totalFeatured, textColor: 'white' }]
+      ? [{ label: `${featuredType.name} days`, color: featuredColor, data: featuredData }]
       : []),
-    { key: 'together', label: togetherLabel, color: COLOR_TOGETHER, count: totalTogether, textColor: 'white' },
-    { key: 'apart', label: apartLabel, color: COLOR_APART, count: totalApart, textColor: '#666' }
-  ];
+    {
+      label: featuredType ? 'Other days together' : 'Days together',
+      color: colorTogether,
+      data: togetherData
+    },
+    { label: 'Days apart', color: colorApart, data: apartData }
+  ].map((segment) => ({ ...segment, count: sum(segment.data) }));
 
   return (
-    <Card
-      elevation={0}
-      sx={{
-        height: '100%',
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 3
-      }}
+    <ChartCard
+      title={title}
+      height={height}
+      loading={loading}
+      error={error}
+      empty={data.length === 0}
+      actions={<YearSelect value={selectedYear} onChange={setSelectedYear} />}
     >
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-            {title}
-          </Typography>
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Year</InputLabel>
-            <Select
-              value={selectedYear || 'all'}
-              label="Year"
-              onChange={(e) => setSelectedYear(e.target.value === 'all' ? undefined : Number(e.target.value))}
-              sx={{ borderRadius: 2 }}
-            >
-              <MenuItem value="all">All Years</MenuItem>
-              {availableYears.map((yearOption) => (
-                <MenuItem key={yearOption} value={yearOption}>
-                  {yearOption}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-
-        {/* Legend */}
-        <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {legendItems.map((item) => (
-            <Chip
-              key={item.key}
-              label={`${item.label} (${item.count})`}
-              size="small"
-              sx={{
-                backgroundColor: item.color,
-                color: item.textColor,
-                '& .MuiChip-label': {
-                  fontSize: { xs: '0.65rem', sm: '0.75rem' }
-                },
-                minWidth: { xs: '60px', sm: 'auto' }
-              }}
-            />
-          ))}
-        </Box>
-
-        <Box sx={{ width: '100%', height: height - 100 }}>
-          <BarChart
-            xAxis={[
-              {
-                scaleType: 'band',
-                data: monthLabels,
-                tickLabelStyle: {
-                  angle: 0,
-                  textAnchor: 'middle',
-                  fontSize: 12
-                },
-                valueFormatter: (value: string, context) => {
-                  const parts = value.split(' ');
-                  if (context.location === 'tick') {
-                    return value === monthLabels[0] || parts[0] === 'Jan' ? parts[1] : '';
-                  }
-                  return value;
-                }
-              }
-            ]}
-            yAxis={[
-              {
-                max: 31,
-                ...(isMobile ? {} : { label: 'Days' }) // Only show label on non-mobile
-              }
-            ]}
-            series={series.map((item) => ({ ...item, barLabel: 'value' }))}
-            slotProps={{
-              barLabel: {
-                style: {
-                  fill: '#fff',
-                  fontSize: '10px',
-                  fontWeight: 'bold'
-                }
-              }
+      <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+        {segments.map((segment) => (
+          <Chip
+            key={segment.label}
+            label={`${segment.label} (${segment.count})`}
+            size="small"
+            sx={{
+              ...chipColors(palette, segment.color),
+              '& .MuiChip-label': { fontSize: { xs: '0.65rem', sm: '0.75rem' } },
+              minWidth: { xs: '60px', sm: 'auto' }
             }}
-            height={height - 130}
           />
-        </Box>
+        ))}
+      </Box>
 
-        {/* Summary stats */}
-        <Box
-          sx={{
-            mt: 2,
-            display: 'flex',
-            justifyContent: 'space-around',
-            pt: 2,
-            borderTop: '1px solid var(--mui-palette-divider)',
-            flexWrap: 'wrap',
-            gap: { xs: 2, sm: 0 }
-          }}
-        >
-          {legendItems.map((item) => (
-            <Box key={item.key} sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
-              <Typography variant="h6" sx={{ color: item.color, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-                {item.count}
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: 'text.secondary',
-                  fontSize: { xs: '0.7rem', sm: '0.75rem' }
-                }}
-              >
-                {item.label}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      </CardContent>
-    </Card>
+      <Box sx={{ width: '100%', height: height - 100 }}>
+        <BarChart
+          xAxis={[monthAxis(monthLabels)]}
+          yAxis={[{ max: 31, ...(isMobile ? {} : { label: 'Days' }) }]}
+          series={segments.map((segment) => ({
+            data: segment.data,
+            label: segment.label,
+            stack: 'days',
+            color: segment.color,
+            barLabel: 'value' as const
+          }))}
+          slotProps={{ barLabel: barLabelOn(palette, '10px') }}
+          height={height - 130}
+        />
+      </Box>
+
+      <ChartStats stats={segments.map((segment) => ({ label: segment.label, value: segment.count, color: segment.color }))} />
+    </ChartCard>
   );
 };
 

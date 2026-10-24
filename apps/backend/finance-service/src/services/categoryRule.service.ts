@@ -242,6 +242,32 @@ export interface ApplyOptions {
   onlyUncategorised?: boolean;
 }
 
+export interface CategoryChange {
+  id: string;
+  category: string;
+}
+
+/**
+ * Writes the new categories in one unordered bulk write, and says how many
+ * transactions went to each, most first.
+ */
+export async function applyCategoryChanges(changes: CategoryChange[]): Promise<ApplyResult['categories']> {
+  if (changes.length > 0) {
+    await Transaction.bulkWrite(
+      changes.map((change) => ({
+        updateOne: { filter: { _id: change.id }, update: { $set: { category: change.category } } }
+      })),
+      { ordered: false }
+    );
+  }
+
+  const byCategory = new Map<string, number>();
+  for (const change of changes) {
+    byCategory.set(change.category, (byCategory.get(change.category) || 0) + 1);
+  }
+  return [...byCategory.entries()].map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count);
+}
+
 /**
  * Run the owner's rules over transactions already imported.
  *
@@ -270,32 +296,18 @@ export const applyRulesToExisting = async (
 
   const candidates = await Transaction.find(filter, { note: 1, category: 1, type: 1 }).lean();
 
-  const changes: Array<{ id: string; category: string }> = [];
+  const changes: CategoryChange[] = [];
   for (const transaction of candidates) {
     const match = matchCustomRule(rules, fold(transaction.note || ''), transaction.type);
     if (!match || match.category === transaction.category) continue;
     changes.push({ id: String(transaction._id), category: match.category });
   }
 
-  if (changes.length > 0) {
-    await Transaction.bulkWrite(
-      changes.map((change) => ({
-        updateOne: { filter: { _id: change.id }, update: { $set: { category: change.category } } }
-      })),
-      { ordered: false }
-    );
-  }
-
-  const byCategory = new Map<string, number>();
-  for (const change of changes) {
-    byCategory.set(change.category, (byCategory.get(change.category) || 0) + 1);
-  }
+  const categories = await applyCategoryChanges(changes);
 
   return {
     updated: changes.length,
     examined: candidates.length,
-    categories: [...byCategory.entries()]
-      .map(([category, count]) => ({ category, count }))
-      .sort((a, b) => b.count - a.count)
+    categories
   };
 };

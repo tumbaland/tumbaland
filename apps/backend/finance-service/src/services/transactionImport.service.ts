@@ -9,7 +9,7 @@ import {
   parseCsv,
   RowKind
 } from './bankStatement.service';
-import { getCompiledRules } from './categoryRule.service';
+import { applyCategoryChanges, getCompiledRules, CategoryChange } from './categoryRule.service';
 import { getOwnerNameTest } from './statementSettings.service';
 import {
   readPensionStatement,
@@ -302,7 +302,7 @@ export const importCategories = async (
   ).lean();
 
   const held = new Map(existing.map((t) => [String(t._id), t.category]));
-  const changes: Array<{ id: string; category: string }> = [];
+  const changes: CategoryChange[] = [];
   let unchanged = 0;
 
   for (const [id, category] of wanted) {
@@ -312,19 +312,7 @@ export const importCategories = async (
     changes.push({ id, category });
   }
 
-  if (changes.length > 0) {
-    await Transaction.bulkWrite(
-      changes.map((change) => ({
-        updateOne: { filter: { _id: change.id }, update: { $set: { category: change.category } } }
-      })),
-      { ordered: false }
-    );
-  }
-
-  const byCategory = new Map<string, number>();
-  for (const change of changes) {
-    byCategory.set(change.category, (byCategory.get(change.category) || 0) + 1);
-  }
+  const categories = await applyCategoryChanges(changes);
 
   return {
     format: 'tumbaland',
@@ -333,9 +321,7 @@ export const importCategories = async (
     unchanged,
     notFound: wanted.size - held.size,
     malformed,
-    categories: [...byCategory.entries()]
-      .map(([category, count]) => ({ category, count }))
-      .sort((a, b) => b.count - a.count)
+    categories
   };
 };
 

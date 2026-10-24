@@ -422,14 +422,3 @@ export const getCumulativeTimelineData = async (year?: number, groupId?: string)
   }
 };
 
-export const statisticsApi = {
-  getStatistics,
-  getStreaks,
-  getMilestones,
-  getTrends,
-  getMonthlyHours,
-  getMonthlyStatistics,
-  getMonthlyActivityBreakdown,
-  getWeeklyHeatmapData,
-  getCumulativeTimelineData
-};

@@ -57,6 +57,38 @@ export async function withMemberActivity(groups: IGroup[]): Promise<Record<strin
   });
 }
 
+/** A group that has not been soft-deleted (`deletedAt` unset or null). */
+const NOT_DELETED = { $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] };
+
+/**
+ * A soft-deleted group. `$ne: null` rather than `$exists`: the schema defaults
+ * `deletedAt` to null, so every live group has the field and `$exists` matches it.
+ */
+const DELETED = { deletedAt: { $ne: null } };
+
+async function findActiveGroup(groupId: string): Promise<IGroup> {
+  const group = await Group.findOne({ _id: groupId, ...NOT_DELETED });
+  if (!group) throw new NotFoundError('Group not found');
+  return group;
+}
+
+async function findDeletedGroup(groupId: string): Promise<IGroup> {
+  const group = await Group.findOne({ _id: groupId, ...DELETED });
+  if (!group) throw new NotFoundError('Group not found');
+  return group;
+}
+
+/** The acting member's role, if it is one that may change the group (owner or admin). */
+function requireManager(group: IGroup, actingEmail: string): GroupRole {
+  const role = memberRole(group, actingEmail);
+  if (role !== 'owner' && role !== 'admin') throw new ForbiddenError('Access denied');
+  return role;
+}
+
+function requireOwner(group: IGroup, actingEmail: string): void {
+  if (memberRole(group, actingEmail) !== 'owner') throw new ForbiddenError('Access denied');
+}
+
 export async function createGroup(creatorEmail: string, name: string): Promise<IGroup> {
   const group = await Group.create({
     name: String(name).trim(),
@@ -67,31 +99,15 @@ export async function createGroup(creatorEmail: string, name: string): Promise<I
 }
 
 export async function listMyGroups(email: string): Promise<IGroup[]> {
-  return Group.find({ 
-    'members.email': email.toLowerCase(),
-    $or: [
-      { deletedAt: null },
-      { deletedAt: { $exists: false } }
-    ]
-  }).sort({ updatedAt: -1 });
+  return Group.find({ 'members.email': email.toLowerCase(), ...NOT_DELETED }).sort({ updatedAt: -1 });
 }
 
 export async function listMyDeletedGroups(email: string): Promise<IGroup[]> {
-  return Group.find({ 
-    'members.email': email.toLowerCase(),
-    deletedAt: { $exists: true }
-  }).sort({ deletedAt: -1 });
+  return Group.find({ 'members.email': email.toLowerCase(), ...DELETED }).sort({ deletedAt: -1 });
 }
 
 export async function getGroupIfMember(groupId: string, email: string): Promise<IGroup> {
-  const group = await Group.findOne({ 
-    _id: groupId,
-    $or: [
-      { deletedAt: null },
-      { deletedAt: { $exists: false } }
-    ]
-  });
-  if (!group) throw new NotFoundError('Group not found');
+  const group = await findActiveGroup(groupId);
   if (!group.members.some((m) => m.email === email.toLowerCase())) throw new ForbiddenError('Access denied');
   return group;
 }
@@ -101,16 +117,8 @@ export async function updateGroup(
   actingEmail: string,
   updates: { name?: string }
 ): Promise<IGroup> {
-  const group = await Group.findOne({ 
-    _id: groupId,
-    $or: [
-      { deletedAt: null },
-      { deletedAt: { $exists: false } }
-    ]
-  });
-  if (!group) throw new NotFoundError('Group not found');
-  const myRole = memberRole(group, actingEmail);
-  if (!myRole || (myRole !== 'owner' && myRole !== 'admin')) throw new ForbiddenError('Access denied');
+  const group = await findActiveGroup(groupId);
+  requireManager(group, actingEmail);
   
   if (updates.name !== undefined) {
     group.name = String(updates.name).trim();
@@ -121,16 +129,8 @@ export async function updateGroup(
 }
 
 export async function deleteGroup(groupId: string, actingEmail: string): Promise<void> {
-  const group = await Group.findOne({ 
-    _id: groupId,
-    $or: [
-      { deletedAt: null },
-      { deletedAt: { $exists: false } }
-    ]
-  });
-  if (!group) throw new NotFoundError('Group not found');
-  const myRole = memberRole(group, actingEmail);
-  if (myRole !== 'owner') throw new ForbiddenError('Access denied');
+  const group = await findActiveGroup(groupId);
+  requireOwner(group, actingEmail);
   
   // Soft delete by setting deletedAt timestamp
   group.deletedAt = new Date();
@@ -138,13 +138,8 @@ export async function deleteGroup(groupId: string, actingEmail: string): Promise
 }
 
 export async function restoreGroup(groupId: string, actingEmail: string): Promise<IGroup> {
-  const group = await Group.findOne({ 
-    _id: groupId,
-    deletedAt: { $exists: true }
-  });
-  if (!group) throw new NotFoundError('Group not found');
-  const myRole = memberRole(group, actingEmail);
-  if (myRole !== 'owner') throw new ForbiddenError('Access denied');
+  const group = await findDeletedGroup(groupId);
+  requireOwner(group, actingEmail);
   
   // Restore by removing deletedAt timestamp
   group.deletedAt = undefined;
@@ -153,13 +148,8 @@ export async function restoreGroup(groupId: string, actingEmail: string): Promis
 }
 
 export async function permanentlyDeleteGroup(groupId: string, actingEmail: string): Promise<void> {
-  const group = await Group.findOne({ 
-    _id: groupId,
-    deletedAt: { $exists: true }
-  });
-  if (!group) throw new NotFoundError('Group not found');
-  const myRole = memberRole(group, actingEmail);
-  if (myRole !== 'owner') throw new ForbiddenError('Access denied');
+  const group = await findDeletedGroup(groupId);
+  requireOwner(group, actingEmail);
   
   // Permanently delete the group
   await Group.findByIdAndDelete(groupId);
@@ -171,16 +161,8 @@ export async function addMember(
   memberEmail: string,
   role: GroupRole = 'member'
 ): Promise<IGroup> {
-  const group = await Group.findOne({ 
-    _id: groupId,
-    $or: [
-      { deletedAt: null },
-      { deletedAt: { $exists: false } }
-    ]
-  });
-  if (!group) throw new NotFoundError('Group not found');
-  const myRole = memberRole(group, actingEmail);
-  if (!myRole || (myRole !== 'owner' && myRole !== 'admin')) throw new ForbiddenError('Access denied');
+  const group = await findActiveGroup(groupId);
+  const myRole = requireManager(group, actingEmail);
   if (role === 'owner' && myRole !== 'owner') throw new ForbiddenError('Only the owner can add another owner');
   
   // Check if user is already a member
@@ -274,16 +256,8 @@ export async function updateMemberRole(
   memberEmail: string,
   role: GroupRole
 ): Promise<IGroup> {
-  const group = await Group.findOne({ 
-    _id: groupId,
-    $or: [
-      { deletedAt: null },
-      { deletedAt: { $exists: false } }
-    ]
-  });
-  if (!group) throw new NotFoundError('Group not found');
-  const myRole = memberRole(group, actingEmail);
-  if (!myRole || (myRole !== 'owner' && myRole !== 'admin')) throw new ForbiddenError('Access denied');
+  const group = await findActiveGroup(groupId);
+  const myRole = requireManager(group, actingEmail);
   const m = group.members.find((x) => x.email === memberEmail.toLowerCase());
   if (!m) throw new NotFoundError('Member not found');
   assertOwnershipChange(group, myRole, m.role as GroupRole, role);
@@ -293,14 +267,7 @@ export async function updateMemberRole(
 }
 
 export async function removeMember(groupId: string, actingEmail: string, targetEmail: string): Promise<IGroup> {
-  const group = await Group.findOne({ 
-    _id: groupId,
-    $or: [
-      { deletedAt: null },
-      { deletedAt: { $exists: false } }
-    ]
-  });
-  if (!group) throw new NotFoundError('Group not found');
+  const group = await findActiveGroup(groupId);
   const myRole = memberRole(group, actingEmail);
   if (!myRole) throw new ForbiddenError('Access denied');
   if (actingEmail.toLowerCase() !== targetEmail.toLowerCase() && myRole === 'member') throw new ForbiddenError('Access denied');
@@ -315,14 +282,7 @@ export async function checkMembership(
   groupId: string,
   email: string
 ): Promise<{ member: boolean; role: GroupRole | null }> {
-  const group = await Group.findOne({ 
-    _id: groupId,
-    $or: [
-      { deletedAt: null },
-      { deletedAt: { $exists: false } }
-    ]
-  });
-  if (!group) throw new NotFoundError('Group not found');
+  const group = await findActiveGroup(groupId);
   const m = group.members.find((x) => x.email === email.toLowerCase());
   return { member: !!m, role: (m?.role as GroupRole) || null };
 }

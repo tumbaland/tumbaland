@@ -1,2 +1,2 @@
 export { collageRead } from './read';
-export { collageWrite, COLLAGE_LAYOUT_RULES } from './write';
+export { collageWrite } from './write';

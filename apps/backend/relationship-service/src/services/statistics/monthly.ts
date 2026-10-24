@@ -1,6 +1,6 @@
 import { PipelineStage } from 'mongoose';
 import { Activity } from '../../models/Activity';
-import { ActivityMatchConditions, StatisticsFilters, accessQueryFor } from './shared';
+import { StatisticsFilters, matchFor, typedActivityStages } from './shared';
 
 interface MonthlyStatsAggRow {
   _id: { year: number; month: number };
@@ -50,20 +50,8 @@ export interface MonthlyActivityData {
 }
 
 export const getMonthlyHours = async (year?: number, filters: StatisticsFilters = {}): Promise<MonthlyHoursData[]> => {
-  // Build query conditions
-  const conditions: ActivityMatchConditions = {};
-
-  if (year) {
-    conditions.date = {
-      $gte: new Date(year, 0, 1),
-      $lt: new Date(year + 1, 0, 1)
-    };
-  }
-
-  Object.assign(conditions, accessQueryFor(filters));
-
   // Get all activities
-  const activities = await Activity.find(conditions).sort({ date: 1 });
+  const activities = await Activity.find(matchFor(year, filters)).sort({ date: 1 });
 
   // Group by year-month
   const monthlyData = new Map<string, { hours: number; activities: number }>();
@@ -108,38 +96,7 @@ export const getMonthlyStatistics = async (
   year?: number,
   filters: StatisticsFilters = {}
 ): Promise<MonthlyStatisticsData[]> => {
-  // Build aggregation pipeline
-  const pipeline: PipelineStage[] = [];
-
-  // Build match conditions
-  const matchConditions: ActivityMatchConditions = {};
-
-  if (year) {
-    const startDate = new Date(year, 0, 1);
-    const endDate = new Date(year + 1, 0, 1);
-    matchConditions.date = {
-      $gte: startDate,
-      $lt: endDate
-    };
-  }
-
-  Object.assign(matchConditions, accessQueryFor(filters));
-
-  pipeline.push({ $match: matchConditions });
-
-  // Lookup activity types
-  pipeline.push({
-    $lookup: {
-      from: 'activity_types',
-      localField: 'typeId',
-      foreignField: '_id',
-      as: 'activityType'
-    }
-  });
-
-  pipeline.push({
-    $unwind: '$activityType'
-  });
+  const pipeline: PipelineStage[] = typedActivityStages(year, filters);
 
   // Group by year-month and activity type to count activities
   pipeline.push({
@@ -230,41 +187,7 @@ export const getMonthlyActivityBreakdown = async (
   year?: number,
   filters: StatisticsFilters = {}
 ): Promise<MonthlyActivityData[]> => {
-  // Build aggregation pipeline
-  const pipeline: PipelineStage[] = [];
-
-  // Build match conditions
-  const matchConditions: ActivityMatchConditions = {};
-
-  // Add year filter if specified
-  if (year) {
-    const startDate = new Date(year, 0, 1);
-    const endDate = new Date(year + 1, 0, 1);
-    matchConditions.date = {
-      $gte: startDate,
-      $lt: endDate
-    };
-  }
-
-  Object.assign(matchConditions, accessQueryFor(filters));
-
-  // Add match stage
-  pipeline.push({ $match: matchConditions });
-
-  // Add lookup to populate activity types
-  pipeline.push({
-    $lookup: {
-      from: 'activity_types',
-      localField: 'typeId',
-      foreignField: '_id',
-      as: 'activityType'
-    }
-  });
-
-  // Unwind the activity type
-  pipeline.push({
-    $unwind: '$activityType'
-  });
+  const pipeline: PipelineStage[] = typedActivityStages(year, filters);
 
   // Add grouping stages
   pipeline.push(

@@ -31,9 +31,10 @@ export function formatBytes(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
   const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   const value = bytes / Math.pow(1024, exponent);
-  // Whole units read better without a trailing ".00"; fractions need a digit.
-  const decimals = exponent === 0 || Number.isInteger(value) ? 0 : value < 10 ? 2 : 1;
-  return `${value.toFixed(decimals)} ${units[exponent]}`;
+  // Two decimals below 10 and one above, then no trailing zeros: "1.07 GB",
+  // "1.5 GB" and "1 GB", never "1.50 GB" or "1.00 GB".
+  const decimals = exponent === 0 ? 0 : value < 10 ? 2 : 1;
+  return `${Number(value.toFixed(decimals))} ${units[exponent]}`;
 }
 
 function formatValue(value: number, unit: 'bytes' | 'count'): string {

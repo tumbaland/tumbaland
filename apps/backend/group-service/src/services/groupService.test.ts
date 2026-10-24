@@ -391,7 +391,7 @@ describe('listMyDeletedGroups', () => {
 
     expect(mockedFind).toHaveBeenCalledWith({
       'members.email': 'owner@example.com',
-      deletedAt: { $exists: true }
+      deletedAt: { $ne: null }
     });
     expect(sort).toHaveBeenCalledWith({ deletedAt: -1 });
   });

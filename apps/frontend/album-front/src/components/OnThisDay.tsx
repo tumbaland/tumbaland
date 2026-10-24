@@ -1,28 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router';
-import { Box, Card, Chip, Stack, Tooltip, Typography, alpha, useTheme } from '@mui/material';
-import { HistoryToggleOff as HistoryIcon, Image as ImageIcon } from '@mui/icons-material';
+import { Card, Chip, Stack, Typography } from '@mui/material';
+import { HistoryToggleOff as HistoryIcon } from '@mui/icons-material';
 import { useMemories } from '../hooks/useMemories';
-import { MemoryPhoto, MemoryYear } from '../types';
+import { MemoryPhoto } from '../types';
 import { appPath } from '../appBase';
-import { MediaThumb } from '@tumbaland/frontend-core';
-import { mediaPreview } from '../utils/mediaPreview';
+import { PhotoTileGrid } from './PhotoTileGrid';
 
 interface OnThisDayProps {
   groupId?: string;
 }
-
-/**
- * How many photos the row shows, by screen width.
- *
- * Every returned photo used to sit in a row that scrolled sideways, which on a
- * phone pushed the whole page past the screen edge. The fix capped the row at
- * four and spent the fourth slot on a `+5` counter — but a counter is a dead
- * tile: it shows nothing, and it cannot be clicked. The extra photos are simply
- * not drawn now, and a wider screen draws more of them, so resizing reveals
- * them rather than trading one away to say they exist.
- */
-const TILES_BY_WIDTH = { xs: 4, sm: 6, md: 8 } as const;
 
 const formatFullDay = (day: string): string =>
   new Date(`${day}T00:00:00`).toLocaleDateString(undefined, {
@@ -43,93 +30,6 @@ const describe = (photo: MemoryPhoto): string => {
   const when = formatFullDay(photo.memoryDate);
   const source = photo.dateSource === 'uploaded' ? ' (uploaded)' : '';
   return `${where}. ${when}${source} · ${photo.albumName}`;
-};
-
-const tileSx = {
-  width: '100%',
-  aspectRatio: '1 / 1',
-  borderRadius: 2,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center'
-} as const;
-
-interface MemoryTilesProps {
-  year: MemoryYear;
-  onSelect: (photo: MemoryPhoto) => void;
-}
-
-const MemoryTiles: React.FC<MemoryTilesProps> = ({ year, onSelect }) => {
-  const theme = useTheme();
-  // Every photo the server sent is rendered; CSS decides how many are on
-  // screen. Doing it the other way — slicing to a width read in JavaScript —
-  // would need a resize listener and would still be a frame behind.
-  const shown = year.photos.slice(0, TILES_BY_WIDTH.md);
-
-  return (
-    // Fixed columns sized from the card, never from the photos: the row can
-    // only ever be as wide as the space it is given. The tiles past the
-    // column count are hidden rather than dropped, so widening the window
-    // brings them in.
-    <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: {
-          xs: `repeat(${TILES_BY_WIDTH.xs}, minmax(0, 1fr))`,
-          sm: `repeat(${TILES_BY_WIDTH.sm}, minmax(0, 1fr))`,
-          md: `repeat(${TILES_BY_WIDTH.md}, minmax(0, 1fr))`
-        },
-        gap: 1,
-        maxWidth: { xs: '100%', sm: 660 }
-      }}
-    >
-      {shown.map((photo, index) => {
-        const { src, mimetype } = mediaPreview(photo);
-
-        return (
-          <Tooltip key={photo._id} title={describe(photo)}>
-            <Box
-              component="button"
-              type="button"
-              onClick={() => onSelect(photo)}
-              aria-label={describe(photo)}
-              sx={{
-                ...tileSx,
-                display: {
-                  xs: index < TILES_BY_WIDTH.xs ? 'flex' : 'none',
-                  sm: index < TILES_BY_WIDTH.sm ? 'flex' : 'none',
-                  md: 'flex'
-                },
-                p: 0,
-                border: '1px solid',
-                borderColor: 'divider',
-                overflow: 'hidden',
-                cursor: 'pointer',
-                bgcolor: 'action.hover',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.15)}`
-                }
-              }}
-            >
-              {src ? (
-                <MediaThumb
-                  src={src}
-                  mimetype={mimetype}
-                  alt={photo.title || photo.originalName}
-                  loading="lazy"
-                  sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                />
-              ) : (
-                <ImageIcon sx={{ color: 'text.disabled' }} />
-              )}
-            </Box>
-          </Tooltip>
-        );
-      })}
-    </Box>
-  );
 };
 
 /**
@@ -179,7 +79,12 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ groupId }) => {
         </Typography>
       </Stack>
 
-      <MemoryTiles year={year} onSelect={(photo) => navigate(appPath(`/albums/${photo.albumId}/photos/${photo._id}`))} />
+      <PhotoTileGrid
+        photos={year.photos}
+        describe={describe}
+        maxWidth={{ xs: '100%', sm: 660 }}
+        onSelect={(photo) => navigate(appPath(`/albums/${photo.albumId}/photos/${photo._id}`))}
+      />
     </Card>
   );
 };

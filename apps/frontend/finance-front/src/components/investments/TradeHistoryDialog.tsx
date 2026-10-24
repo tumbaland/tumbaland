@@ -23,8 +23,8 @@ import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useTrades, usePosition, useCreateTrade, useDeleteTrade } from '../../hooks/useTrades';
 import { Trade, TradeType, isShareTrade, tradeValue } from '../../services/tradeService';
 import { parseNumericInput, formatCurrency, formatPrice } from '../../utils/numberUtils';
-import ConfirmationModal from '../ConfirmationModal';
 import { todayKey } from '../../utils/dates';
+import { ConfirmationModal } from '@tumbaland/frontend-core';
 
 interface TradeHistoryDialogProps {
   open: boolean;

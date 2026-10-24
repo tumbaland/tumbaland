@@ -7,8 +7,7 @@ import {
   Storage as StorageIcon,
   Image as ImageIcon
 } from '@mui/icons-material';
-import { brand, ink, moduleAccent } from '@tumbaland/frontend-core';
-import { formatBytes } from '../../utils/formatBytes';
+import { brand, ink, moduleAccent, formatBytes } from '@tumbaland/frontend-core';
 import { appPath } from '../../appBase';
 
 interface StatisticsOverviewData {
