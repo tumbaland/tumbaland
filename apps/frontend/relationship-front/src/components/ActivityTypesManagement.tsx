@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { logger, useActivePalette } from '@tumbaland/frontend-core';
 import {
   Box,
@@ -51,7 +51,7 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState<ActivityType | null>(null);
 
-  const loadActivityTypes = async () => {
+  const loadActivityTypes = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getActivityTypes({ groupId });
@@ -62,7 +62,7 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
     } finally {
       setLoading(false);
     }
-  };
+  }, [groupId]);
 
   const handleCreate = () => {
     setEditingType(null);
@@ -99,8 +99,8 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
   };
 
   useEffect(() => {
-    loadActivityTypes();
-  }, [groupId]);
+    void loadActivityTypes();
+  }, [loadActivityTypes]);
 
   const addButton = (
     <Button

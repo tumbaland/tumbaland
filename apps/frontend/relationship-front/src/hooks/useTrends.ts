@@ -34,7 +34,7 @@ export const useTrends = (windowDays: number, groupId?: string): UseTrendsReturn
   }, [windowDays, groupId]);
 
   useEffect(() => {
-    fetchTrends();
+    void fetchTrends();
   }, [fetchTrends]);
 
   return { trends, loading, error, refetch: fetchTrends };

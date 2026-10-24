@@ -92,7 +92,7 @@ describe('useVoiceRecorder', () => {
     const { result } = await recording();
 
     loudness = 0.2;
-    act(() => vi.advanceTimersByTime(300));
+    void act(() => vi.advanceTimersByTime(300));
 
     expect(result.current.levels.length).toBeGreaterThan(0);
     expect(result.current.levels.at(-1)).toBeGreaterThan(0.5);
@@ -121,7 +121,7 @@ describe('useVoiceRecorder', () => {
   it('keeps what was said when the microphone goes away', async () => {
     const { onEnded } = await recording();
 
-    act(() => vi.advanceTimersByTime(3000));
+    void act(() => vi.advanceTimersByTime(3000));
     await act(async () => ended?.());
 
     await settle();
@@ -146,7 +146,7 @@ describe('useVoiceRecorder', () => {
     await act(() => result.current.start());
 
     expect(result.current.error).toBe('Could not reach a microphone.');
-    act(() => vi.advanceTimersByTime(6000));
+    void act(() => vi.advanceTimersByTime(6000));
     expect(result.current.error).toBeNull();
   });
 

@@ -63,7 +63,7 @@ export const queueLog = (logData: MonitoringLog) => {
       clearTimeout(batchTimeout);
       batchTimeout = null;
     }
-    sendBatch();
+    void sendBatch();
     return;
   }
 
@@ -71,7 +71,7 @@ export const queueLog = (logData: MonitoringLog) => {
   if (!batchTimeout) {
     batchTimeout = setTimeout(() => {
       batchTimeout = null;
-      sendBatch();
+      void sendBatch();
     }, BATCH_INTERVAL);
   }
 };

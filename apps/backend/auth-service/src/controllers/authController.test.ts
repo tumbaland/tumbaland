@@ -18,6 +18,7 @@ jest.mock('../services/googleAuthService', () => ({
 import { Request, Response } from 'express';
 import { User } from '../models/User';
 import { Session } from '../models/Session';
+import { makeSession } from '../test/sessionModelMock';
 import app from '../app';
 import { generateJWT, decodeJWT, generateRefreshToken } from '../services/jwtService';
 import { verifyGoogleToken } from '../services/googleAuthService';
@@ -26,7 +27,13 @@ import { validateToken, verifyAuth, refreshToken, safeRedirectTarget } from './a
 const mockedFindOne = User.findOne as unknown as jest.Mock;
 const mockedFindOneAndUpdate = User.findOneAndUpdate as unknown as jest.Mock;
 const mockedVerifyGoogleToken = verifyGoogleToken as unknown as jest.Mock;
+const SESSION_ID = 'a'.repeat(24);
 const sessions = Session as unknown as Record<'create' | 'findOne' | 'findOneAndUpdate' | 'find' | 'deleteOne' | 'deleteMany', jest.Mock>;
+
+// The tokens below name this session, and it is live.
+beforeEach(() => {
+  sessions.findOne.mockResolvedValue(makeSession({ _id: SESSION_ID, lastSeenAt: new Date() }));
+});
 
 describe('POST /auth/refresh', () => {
   beforeAll(() => {
@@ -56,7 +63,7 @@ describe('POST /auth/refresh', () => {
   });
 
   it('rejects a token whose tokenVersion has been invalidated', async () => {
-    const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+    const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User', tokenVersion: 1 });
     mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 2, isApproved: true });
 
     const res = await request(app).post('/auth/refresh').set('Cookie', `access_token=${token}`);
@@ -66,7 +73,7 @@ describe('POST /auth/refresh', () => {
   });
 
   it('rejects an unapproved user', async () => {
-    const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+    const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User', tokenVersion: 1 });
     mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 1, isApproved: false });
 
     const res = await request(app).post('/auth/refresh').set('Cookie', `access_token=${token}`);
@@ -76,7 +83,7 @@ describe('POST /auth/refresh', () => {
   });
 
   it('issues a fresh httpOnly access_token cookie and no token field in the body once authenticated', async () => {
-    const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+    const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User', tokenVersion: 1 });
     mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 1, isApproved: true });
 
     const res = await request(app).post('/auth/refresh').set('Cookie', `access_token=${token}`);
@@ -99,7 +106,7 @@ describe('POST /auth/refresh', () => {
     process.env.GROUP_API_URL = 'http://group-service.internal';
     process.env.INTERNAL_SERVICE_TOKEN = 'test-internal-token';
     global.fetch = jest.fn();
-    const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', groups: ['group-1'], tokenVersion: 1 });
+    const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User', groups: ['group-1'], tokenVersion: 1 });
     mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 1, isApproved: true, roles: ['admin'] });
 
     const res = await request(app).post('/auth/refresh').set('Cookie', `access_token=${token}`);
@@ -161,7 +168,7 @@ describe('POST /auth/internal/invalidate-tokens', () => {
 
   it('demonstrates the end-to-end invalidation contract: a token minted before invalidation is rejected after it', async () => {
     process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
-    const staleToken = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+    const staleToken = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User', tokenVersion: 1 });
 
     // Step 1: invalidate — DB tokenVersion goes from 1 to 2.
     mockedFindOneAndUpdate.mockResolvedValue({ email: 'user@example.com', tokenVersion: 2 });
@@ -421,7 +428,7 @@ describe('POST /auth/logout', () => {
   });
 
   it('clears the access_token cookie and returns success for an authenticated, approved user', async () => {
-    const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+    const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User', tokenVersion: 1 });
     mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 1, isApproved: true });
 
     const res = await request(app).post('/auth/logout').set('Cookie', `access_token=${token}`);
@@ -454,7 +461,7 @@ describe('GET /auth/verify', () => {
   });
 
   it('returns the authenticated user and a fresh token for a valid, approved session', async () => {
-    const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+    const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User', tokenVersion: 1 });
     mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 1, isApproved: true });
 
     const res = await request(app).get('/auth/verify').set('Cookie', `access_token=${token}`);
@@ -591,7 +598,7 @@ describe('admin routes', () => {
   });
 
   function adminToken() {
-    return generateJWT({ id: '1', email: 'admin@example.com', name: 'Admin', tokenVersion: 1 });
+    return generateJWT({ id: '1', sid: SESSION_ID, email: 'admin@example.com', name: 'Admin', tokenVersion: 1 });
   }
 
   describe('POST /auth/admin/approve', () => {

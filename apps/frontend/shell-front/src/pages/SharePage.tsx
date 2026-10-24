@@ -4,11 +4,22 @@ import { Box, Button, ButtonBase, CircularProgress, Typography } from '@mui/mate
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
 import PhotoAlbumOutlinedIcon from '@mui/icons-material/PhotoAlbumOutlined';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutlined';
-import { glass, ink, logger, moduleAccent, surface, useTenantFilter } from '@tumbaland/frontend-core';
+import {
+  clearShare,
+  glass,
+  ink,
+  isMedia,
+  logger,
+  moduleAccent,
+  readShare,
+  sharedMessage,
+  surface,
+  useTenantFilter,
+  type SharedItem
+} from '@tumbaland/frontend-core';
 import { SectionLabel } from '../components/home/SectionLabel';
 import { CHAT_APP } from '../config/apps';
 import { useAuthState } from '../hooks/useAuthState';
-import { clearShare, isMedia, readShare, sharedMessage, type SharedItem } from '../services/sharedInbox';
 import {
   conversationName,
   listAlbums,
@@ -136,7 +147,7 @@ export default function SharePage() {
 
   const cancel = async () => {
     await clearShare();
-    navigate('/', { replace: true });
+    void navigate('/', { replace: true });
   };
 
   if (share === undefined) {

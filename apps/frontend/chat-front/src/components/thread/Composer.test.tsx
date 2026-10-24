@@ -578,7 +578,7 @@ describe('send with an effect', () => {
       const send = screen.getByLabelText('Send');
 
       fireEvent.pointerDown(send, { button: 0 });
-      act(() => vi.advanceTimersByTime(500));
+      void act(() => vi.advanceTimersByTime(500));
       fireEvent.pointerUp(send);
       fireEvent.click(send);
 

@@ -6,12 +6,16 @@ jest.mock('../models/User', () => ({
     findOneAndUpdate: jest.fn()
   }
 }));
+jest.mock('../models/Session', () => jest.requireActual('../test/sessionModelMock').sessionModule());
 
 import { User } from '../models/User';
+import { Session } from '../models/Session';
+import { makeSession } from '../test/sessionModelMock';
 import { authenticateToken, optionalAuth, requireRole, requireApproved } from './authMiddleware';
 import { generateJWT } from '../services/jwtService';
 import { mintAccessToken, PERSONAL_TENANT } from '@tumbaland/backend-core';
 
+const SESSION_ID = 'a'.repeat(24);
 const mockedFindOne = User.findOne as unknown as jest.Mock;
 const mockedFindOneAndUpdate = User.findOneAndUpdate as unknown as jest.Mock;
 
@@ -37,6 +41,8 @@ describe('authMiddleware', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Every token below names this session, and it is live.
+    (Session.findOne as unknown as jest.Mock).mockResolvedValue(makeSession({ _id: SESSION_ID }));
   });
 
   describe('authenticateToken', () => {
@@ -66,7 +72,7 @@ describe('authMiddleware', () => {
     });
 
     it('rejects a valid token when the DB user no longer exists', async () => {
-      const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+      const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User', tokenVersion: 1 });
       const req = mockReq({ cookies: { access_token: token } } as never);
       const res = mockRes();
       const next = jest.fn();
@@ -82,7 +88,7 @@ describe('authMiddleware', () => {
     it('rejects a valid token whose tokenVersion is stale (post-invalidation)', async () => {
       // Simulates: token was issued when tokenVersion was 1, but
       // invalidate-tokens has since bumped the DB user's tokenVersion to 2.
-      const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+      const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User', tokenVersion: 1 });
       const req = mockReq({ cookies: { access_token: token } } as never);
       const res = mockRes();
       const next = jest.fn();
@@ -96,7 +102,7 @@ describe('authMiddleware', () => {
     });
 
     it('accepts a valid token whose tokenVersion matches the DB user and attaches req.user/req.dbUser', async () => {
-      const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+      const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User', tokenVersion: 1 });
       const req = mockReq({ cookies: { access_token: token } } as never);
       const res = mockRes();
       const next = jest.fn();
@@ -117,7 +123,7 @@ describe('authMiddleware', () => {
       // look like they belonged to no groups, so pinning an API key to a group
       // was refused with "You are not a member of that group".
       const token = generateJWT({
-        id: '1',
+        id: '1', sid: SESSION_ID,
         email: 'user@example.com',
         name: 'User',
         groups: ['g1', 'g2']
@@ -133,7 +139,7 @@ describe('authMiddleware', () => {
     });
 
     it('sets req.userGroups to an empty array when the token carries no groups', async () => {
-      const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User' });
+      const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User' });
       const req = mockReq({ cookies: { access_token: token } } as never);
       mockedFindOne.mockResolvedValue({ email: 'user@example.com', isApproved: true });
 
@@ -144,12 +150,25 @@ describe('authMiddleware', () => {
       expect(req.userGroups).toEqual([]);
     });
 
-    it('accepts a token with no tokenVersion claim (falsy tokenVersion skips the check)', async () => {
-      const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User' });
+    it('treats a token with no tokenVersion claim as version 1, so a sign-out everywhere ends it', async () => {
+      const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User' });
       const req = mockReq({ cookies: { access_token: token } } as never);
       const res = mockRes();
       const next = jest.fn();
       mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 7, isApproved: true });
+
+      await authenticateToken(req, res, next);
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+
+    it('accepts a token with no tokenVersion claim while the user is still on version 1', async () => {
+      const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User' });
+      const req = mockReq({ cookies: { access_token: token } } as never);
+      const res = mockRes();
+      const next = jest.fn();
+      mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 1, isApproved: true });
 
       await authenticateToken(req, res, next);
 
@@ -158,7 +177,7 @@ describe('authMiddleware', () => {
     });
 
     it('accepts a token passed via the Authorization: Bearer header when no cookie is present', async () => {
-      const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+      const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User', tokenVersion: 1 });
       const req = mockReq({ cookies: {}, headers: { authorization: `Bearer ${token}` } } as never);
       const res = mockRes();
       const next = jest.fn();
@@ -196,7 +215,7 @@ describe('authMiddleware', () => {
     });
 
     it('attaches req.user and upserts the DB user when the token is valid', async () => {
-      const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+      const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User', tokenVersion: 1 });
       const req = mockReq({ cookies: { access_token: token } } as never);
       const res = mockRes();
       const next = jest.fn();
@@ -210,7 +229,7 @@ describe('authMiddleware', () => {
     });
 
     it('accepts a token passed via the Authorization: Bearer header when no cookie is present', async () => {
-      const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+      const token = generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User', tokenVersion: 1 });
       const req = mockReq({ cookies: {}, headers: { authorization: `Bearer ${token}` } } as never);
       const res = mockRes();
       const next = jest.fn();

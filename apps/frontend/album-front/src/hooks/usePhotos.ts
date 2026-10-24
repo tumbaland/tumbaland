@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Photo, PaginatedResponse } from '../types';
 import { photoService, PhotoQueryParams } from '../services/photoService';
@@ -29,15 +28,13 @@ export interface UsePhotosOptions {
 
 export const usePhotos = (albumId: string, params?: PhotoQueryParams, options?: UsePhotosOptions) => {
   const queryClient = useQueryClient();
-  const tagsKey = params?.tags?.join(',');
-  const memoizedParams = useMemo(
-    () => normalizeParams(params),
-    [params?.page, params?.limit, params?.search, tagsKey, params?.tagMatch]
-  );
+  // Query keys are compared by value, so a fresh object each render is fine:
+  // listing the fields by hand here would stop refetching the day a filter is added.
+  const normalizedParams = normalizeParams(params);
 
   const query = useQuery<PaginatedResponse<Photo>>({
-    queryKey: photoKeys.list(albumId, memoizedParams),
-    queryFn: () => photoService.loadPhotosWithThumbnails(albumId, memoizedParams as PhotoQueryParams),
+    queryKey: photoKeys.list(albumId, normalizedParams),
+    queryFn: () => photoService.loadPhotosWithThumbnails(albumId, normalizedParams as PhotoQueryParams),
     enabled: Boolean(albumId) && options?.enabled !== false,
     placeholderData: keepPreviousData
   });
@@ -47,12 +44,12 @@ export const usePhotos = (albumId: string, params?: PhotoQueryParams, options?: 
       return await photoService.updatePhoto(id, data);
     },
     onSuccess: (_result, variables) => {
-      queryClient.invalidateQueries({ queryKey: photoKeys.album(albumId) });
-      queryClient.invalidateQueries({ queryKey: ['photo', variables.id] });
+      void queryClient.invalidateQueries({ queryKey: photoKeys.album(albumId) });
+      void queryClient.invalidateQueries({ queryKey: ['photo', variables.id] });
       // An edit that touched tags changes the album's vocabulary and what the
       // filter row shows counts for.
       if (variables.data.tags) {
-        queryClient.invalidateQueries({ queryKey: albumTagKeys.album(albumId) });
+        void queryClient.invalidateQueries({ queryKey: albumTagKeys.album(albumId) });
       }
     }
   });
@@ -62,15 +59,15 @@ export const usePhotos = (albumId: string, params?: PhotoQueryParams, options?: 
       await photoService.deletePhoto(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: photoKeys.album(albumId) });
-      queryClient.invalidateQueries({ queryKey: ['album', albumId] });
-      queryClient.invalidateQueries({ queryKey: ['albums'] });
+      void queryClient.invalidateQueries({ queryKey: photoKeys.album(albumId) });
+      void queryClient.invalidateQueries({ queryKey: ['album', albumId] });
+      void queryClient.invalidateQueries({ queryKey: ['albums'] });
     }
   });
 
   const pagination = query.data?.pagination ?? {
-    page: (memoizedParams.page as number) || 1,
-    limit: (memoizedParams.limit as number) || 20,
+    page: (normalizedParams.page as number) || 1,
+    limit: (normalizedParams.limit as number) || 20,
     total: 0,
     pages: 0
   };

@@ -25,6 +25,9 @@ function buildApp() {
     next(namedError('ValidationError', 'CollageModel validation failed: title: Path `title` is required.'))
   );
   app.get('/cast', (_req, _res, next) => next(namedError('CastError', 'Cast to ObjectId failed for value "abc"')));
+  app.get('/duplicate', (_req, _res, next) =>
+    next(Object.assign(new Error('E11000 duplicate key error collection: x index: email_1 dup key: { email: "a@b.c" }'), { code: 11000 }))
+  );
   app.get('/over-quota', (_req, _res, next) =>
     next(
       new PaymentRequiredError('Storage limit reached', {
@@ -146,6 +149,15 @@ describe('errorHandler', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('CastError');
+    });
+  });
+
+  describe('duplicate key', () => {
+    it('maps a Mongo 11000 to 409 without quoting the index or value', async () => {
+      const res = await request(buildApp()).get('/duplicate');
+
+      expect(res.status).toBe(409);
+      expect(res.body).toEqual({ success: false, error: 'ConflictError', message: 'That already exists' });
     });
   });
 

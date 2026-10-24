@@ -17,6 +17,7 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
       next();
       return;
     }
-    coreAuthenticateToken(req, res, next);
+    // Answers every failure itself; there is nothing for a caller to catch.
+    void coreAuthenticateToken(req, res, next);
   });
 }

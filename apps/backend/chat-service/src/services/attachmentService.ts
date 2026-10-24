@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import { BadRequestError, logger } from '@tumbaland/backend-core';
 import type { IAttachment, IMessage } from '../models/Message';
 import { downloadBuffer, getDownloadUrls, getUploadUrl, storedSize, uploadBuffer } from './fileServiceClient';
-import type { MessageView } from './messageService';
+import type { MessageView } from './messageView';
 import { isAudioType, isDocumentType } from '../validation/schemas';
 
 /**

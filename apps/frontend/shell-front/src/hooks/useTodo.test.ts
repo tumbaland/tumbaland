@@ -49,7 +49,7 @@ it('ignores a concurrent fetchTodo call while one is already in flight', async (
   const { result } = renderHook(() => useTodo());
 
   await act(async () => {
-    result.current.fetchTodo();
+    void result.current.fetchTodo();
   });
   expect(mockedGet).toHaveBeenCalledTimes(1);
 

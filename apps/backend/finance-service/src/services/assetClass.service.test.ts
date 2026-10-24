@@ -19,8 +19,6 @@ jest.mock('../models/AssetClass', () => {
 import { ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
 import AssetClass from '../models/AssetClass';
 import {
-  getAllAssetClasses,
-  getAssetClassesByUser,
   getPersonalAssetClasses,
   getAssetClassesByGroup,
   createAssetClass,
@@ -43,25 +41,6 @@ const findReturning = (result: unknown) => {
 };
 
 describe('read queries', () => {
-  it('getAllAssetClasses returns every class sorted by name', async () => {
-    const rows = [{ name: 'Bonds' }];
-    const { sort } = findReturning(rows);
-
-    await expect(getAllAssetClasses()).resolves.toBe(rows);
-    expect(model.find).toHaveBeenCalledWith();
-    expect(sort).toHaveBeenCalledWith({ name: 1 });
-  });
-
-  it('getAssetClassesByUser filters via the access query (own + groups)', async () => {
-    findReturning([]);
-
-    await getAssetClassesByUser('user-1', ['group-a']);
-
-    expect(model.find).toHaveBeenCalledWith({
-      $or: [{ userId: 'user-1' }, { groupId: { $in: ['group-a'] } }]
-    });
-  });
-
   it('getPersonalAssetClasses returns only ungrouped classes for the user', async () => {
     findReturning([]);
 

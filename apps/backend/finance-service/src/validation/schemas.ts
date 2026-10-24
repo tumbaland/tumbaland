@@ -81,8 +81,6 @@ export const createTransactionSchema = z.object({
   groupId: z.string().optional()
 });
 
-export const updateTransactionSchema = createTransactionSchema.partial();
-
 /**
  * `matchType` defaults to a folded substring test, so a pattern is the merchant
  * name as it reads on the statement — which is all the UI ever writes. `regex`

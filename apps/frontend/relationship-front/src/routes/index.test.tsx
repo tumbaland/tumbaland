@@ -17,8 +17,8 @@ const renderAt = (path: string) =>
     </MemoryRouter>
   );
 
-it('sends the old map address to the dashboard, which now holds the map', () => {
+it('sends the old map address to the dashboard, which now holds the map', async () => {
   renderAt('/relationship/map');
 
-  expect(screen.getByText('Dashboard page')).toBeInTheDocument();
+  expect(await screen.findByText('Dashboard page')).toBeInTheDocument();
 });

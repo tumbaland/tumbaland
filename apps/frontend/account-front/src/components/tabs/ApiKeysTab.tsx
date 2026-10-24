@@ -115,7 +115,7 @@ const ApiKeysTab: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   // Groups are a convenience, not a requirement: if the group service is

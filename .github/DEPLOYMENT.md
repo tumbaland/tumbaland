@@ -243,6 +243,25 @@ Note what is **not** copied, matching the old scp behaviour: sidecar config file
 (`prometheus/prometheus.yml`, `redis/redis.conf`) live on the
 server and are not managed by the deploy. Editing one in the repo does not ship it.
 
+## One replica per service
+
+Several services keep state in the memory of their one process, and are written
+for exactly one copy of each running:
+
+- **chat-service**: the live stream hub (who is connected to which group's
+  events), presence, call ring and drop timers.
+- **backend-core, in every service**: the 30 second group membership cache.
+- **finance-service**: the Alpha Vantage quota is counted in Mongo, but the
+  nightly price job runs inside the process.
+
+Running two copies of chat-service would split the stream hub: a message sent
+through one would never reach a person connected to the other, with no error
+anywhere. Before scaling a service past one replica, move that state to Redis
+(already part of the stack) or Mongo first.
+
+(The Stripe webhook's record of handled events is in Mongo, not in memory, and
+is not affected.)
+
 ## Security: never run untrusted code on this runner
 
 A self-hosted runner executes workflow code on your home network. The manual

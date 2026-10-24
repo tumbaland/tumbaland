@@ -3,6 +3,7 @@ import { sendSuccess } from '@tumbaland/backend-core';
 import { caller, requireConversation, requireGroupMembership } from '../services/accessService';
 import * as conversations from '../services/conversationService';
 import * as messages from '../services/messageService';
+import { searchMessages } from '../services/messageSearch';
 import { isPushConfigured, removeSubscription, saveSubscription } from '../services/pushService';
 import {
   belongsToConversation,
@@ -102,8 +103,9 @@ export const listMessages = async (req: Request, res: Response): Promise<void> =
   const conversation = await requireConversation(person, req.params.id as string);
 
   const page = await messages.listMessages(conversation._id.toString(), {
-    before: req.query.before as string | undefined,
-    after: req.query.after as string | undefined,
+    // A repeated parameter arrives as an array; only a single value is a cursor.
+    before: typeof req.query.before === 'string' ? req.query.before : undefined,
+    after: typeof req.query.after === 'string' ? req.query.after : undefined,
     limit: req.query.limit ? Number(req.query.limit) : undefined
   });
 
@@ -229,7 +231,7 @@ export const search = async (req: Request, res: Response): Promise<void> => {
     .map((conversation) => conversation.id)
     .filter((id) => !scoped || id === scoped);
 
-  sendSuccess(res, await messages.searchMessages(ids, term));
+  sendSuccess(res, await searchMessages(ids, term));
 };
 
 /**

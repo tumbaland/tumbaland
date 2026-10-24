@@ -111,7 +111,7 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
   };
 
   const handleRefreshAlbums = () => {
-    fetchAlbums();
+    void fetchAlbums();
   };
 
   return (

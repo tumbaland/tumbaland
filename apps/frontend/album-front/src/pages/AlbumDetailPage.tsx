@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { logger } from '@tumbaland/frontend-core';
+import { clearShare, isMedia, logger, readShare } from '@tumbaland/frontend-core';
 import { Box, Container, Alert, CircularProgress, Button, Typography, SelectChangeEvent } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -26,7 +26,7 @@ import PhotoTagFilter from '../components/PhotoTagFilter';
 import TagPhotosDialog from '../components/TagPhotosDialog';
 import { Photo, TagMatch } from '../types';
 import { appPath } from '../appBase';
-import { clearShare, isMedia, readShare } from '../services/sharedInbox';
+import { usePhotoSelection } from '../hooks/usePhotoSelection';
 
 const AlbumDetailPage: React.FC = () => {
   const { albumId } = useParams<{ albumId: string }>();
@@ -40,10 +40,6 @@ const AlbumDetailPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [photoToEdit, setPhotoToEdit] = useState<Photo | null>(null);
-  const [selectMode, setSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
-  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagMatch, setTagMatch] = useState<TagMatch>('all');
   const [photosToTag, setPhotosToTag] = useState<Photo[] | null>(null);
@@ -94,6 +90,19 @@ const AlbumDetailPage: React.FC = () => {
     { enabled: !pageHoldsWholeAlbum }
   );
   const allPhotos = pageHoldsWholeAlbum || fullPhotoList.length === 0 ? photos : fullPhotoList;
+
+  const {
+    selectMode,
+    selectedIds,
+    showBulkDeleteDialog,
+    setShowBulkDeleteDialog,
+    bulkDeleting,
+    endSelection,
+    toggleSelectMode: handleToggleSelectMode,
+    toggleSelectPhoto: handleToggleSelectPhoto,
+    selectAllOnPage: handleSelectAllOnPage,
+    confirmBulkDelete: handleConfirmBulkDelete
+  } = usePhotoSelection(photos, deletePhoto);
 
   const { tags: albumTags } = useAlbumTags(albumId || '');
   const { bulkUpdateTags } = useBulkTagMutation(albumId || '');
@@ -175,38 +184,6 @@ const AlbumDetailPage: React.FC = () => {
     setShowDeleteDialog(true);
   };
 
-  const handleToggleSelectMode = () => {
-    setSelectMode((prev) => !prev);
-    setSelectedIds(new Set());
-  };
-
-  const handleToggleSelectPhoto = (photo: Photo) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(photo._id)) next.delete(photo._id);
-      else next.add(photo._id);
-      return next;
-    });
-  };
-
-  const handleSelectAllOnPage = () => {
-    setSelectedIds(new Set(photos.map((p) => p._id)));
-  };
-
-  const handleConfirmBulkDelete = async () => {
-    setBulkDeleting(true);
-    try {
-      await Promise.all(Array.from(selectedIds).map((id) => deletePhoto(id)));
-      setShowBulkDeleteDialog(false);
-      setSelectMode(false);
-      setSelectedIds(new Set());
-    } catch (err) {
-      alert('Failed to delete some photos');
-    } finally {
-      setBulkDeleting(false);
-    }
-  };
-
   const handleConfirmDeletePhoto = async () => {
     if (!photoToDelete) return;
 
@@ -263,10 +240,7 @@ const AlbumDetailPage: React.FC = () => {
       await bulkUpdateTags({ photoIds, ...changes });
       // Leaving select mode on would strand the user on a selection whose tags
       // they just finished editing.
-      if (photoIds.length > 1) {
-        setSelectMode(false);
-        setSelectedIds(new Set());
-      }
+      if (photoIds.length > 1) endSelection();
     } catch (err) {
       logger.error('Failed to update tags', err);
       alert('Failed to update tags');
@@ -280,7 +254,7 @@ const AlbumDetailPage: React.FC = () => {
     try {
       const response = await albumService.setCoverPhoto(albumId, photo._id);
       queryClient.setQueryData(['album', albumId], response.data);
-      queryClient.invalidateQueries({ queryKey: ['albums'] });
+      void queryClient.invalidateQueries({ queryKey: ['albums'] });
       // Show success message
       alert('Cover photo updated successfully!');
     } catch (err) {
@@ -289,15 +263,15 @@ const AlbumDetailPage: React.FC = () => {
   };
 
   const handleViewPhotoDetails = (photo: Photo) => {
-    navigate(appPath(`/albums/${albumId}/photos/${photo._id}`));
+    void navigate(appPath(`/albums/${albumId}/photos/${photo._id}`));
   };
 
   const handleUploadComplete = () => {
-    fetchPhotos();
+    void fetchPhotos();
     if (albumId) {
-      queryClient.invalidateQueries({ queryKey: ['album', albumId] });
+      void queryClient.invalidateQueries({ queryKey: ['album', albumId] });
     }
-    queryClient.invalidateQueries({ queryKey: ['albums'] });
+    void queryClient.invalidateQueries({ queryKey: ['albums'] });
   };
 
   // Reset to first page when the search or tag filter changes

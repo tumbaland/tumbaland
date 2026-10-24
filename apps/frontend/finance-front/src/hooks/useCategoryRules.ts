@@ -17,14 +17,14 @@ import { TransactionType } from '../services/cashflowService';
  * trends and the dashboard's contributions/growth split with it.
  */
 const invalidateRules = (queryClient: ReturnType<typeof useQueryClient>, alsoTransactions = false) => {
-  queryClient.invalidateQueries({ queryKey: ['categoryRules'] });
+  void queryClient.invalidateQueries({ queryKey: ['categoryRules'] });
   if (!alsoTransactions) return;
 
-  queryClient.invalidateQueries({ queryKey: ['transactions'] });
-  queryClient.invalidateQueries({ queryKey: ['cashflowSummary'] });
-  queryClient.invalidateQueries({ queryKey: ['cashflowAnalytics'] });
-  queryClient.invalidateQueries({ queryKey: ['transactionCategories'] });
-  queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  void queryClient.invalidateQueries({ queryKey: ['transactions'] });
+  void queryClient.invalidateQueries({ queryKey: ['cashflowSummary'] });
+  void queryClient.invalidateQueries({ queryKey: ['cashflowAnalytics'] });
+  void queryClient.invalidateQueries({ queryKey: ['transactionCategories'] });
+  void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
 };
 
 export const useCategoryRules = (groupId?: string) =>

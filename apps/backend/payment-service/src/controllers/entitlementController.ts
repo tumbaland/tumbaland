@@ -10,7 +10,7 @@ import { resolveEntitlements } from '../services/entitlementService';
  * claim that would be up to 24h stale in both directions.
  */
 export const getEntitlementsByEmail = async (req: Request, res: Response): Promise<void> => {
-  const email = String(req.query.email ?? '').trim();
+  const email = (typeof req.query.email === 'string' ? req.query.email : '').trim();
   if (!email) { throw new BadRequestError('email query parameter required'); }
 
   const entitlements = await resolveEntitlements(email);

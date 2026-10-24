@@ -4,7 +4,7 @@ import { IConversation } from '../models/Conversation';
 import { ReadState } from '../models/ReadState';
 import type { Caller } from './accessService';
 import { attachmentNoun } from './attachmentService';
-import { MessageView } from './messageService';
+import { MessageView } from './messageView';
 import { isPushConfigured, sendToUsers } from './pushService';
 import { planReminderPush } from './planText';
 

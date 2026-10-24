@@ -2,9 +2,9 @@ import { randomUUID } from 'crypto';
 import { Types } from 'mongoose';
 import { BadRequestError, ForbiddenError, NotFoundError, logger } from '@tumbaland/backend-core';
 import { Conversation, IConversation } from '../models/Conversation';
-import { IAttachment, ICollageCard, IMessage, IPlanCard, IQuote, Message, MessageEffect } from '../models/Message';
+import { IAttachment, IMessage, IQuote, Message, MessageEffect } from '../models/Message';
+import { MessageView, preview, quoteText, toView } from './messageView';
 import {
-  attachmentNoun,
   belongsToConversation,
   bytesOf,
   fileIdsOf,
@@ -24,86 +24,6 @@ import { forgetBackgroundIn } from './appearanceService';
 
 export const MESSAGE_PAGE_SIZE = 50;
 export const MAX_MESSAGE_PAGE_SIZE = 100;
-
-/**
- * An attachment as the client receives it: the stored record plus signed URLs,
- * minted per response because they expire.
- */
-export interface AttachmentView extends IAttachment {
-  url?: string | null;
-  thumbnailUrl?: string | null;
-  posterUrl?: string | null;
-}
-
-/** The wire shape. Mongoose documents carry `__v` and internals the client has no use for. */
-export interface MessageView {
-  id: string;
-  conversationId: string;
-  senderEmail: string;
-  senderId: string;
-  senderName: string;
-  kind: string;
-  body: string;
-  attachments: AttachmentView[];
-  replyTo: string | null;
-  quote: IQuote | null;
-  effect: MessageEffect | null;
-  collage: ICollageCard | null;
-  plan: IPlanCard | null;
-  reactions: Array<{ userId: string; name: string; emoji: string; at: Date }>;
-  clientId: string;
-  editedAt: Date | null;
-  deletedAt: Date | null;
-  createdAt: Date;
-}
-
-export function toView(document: IMessage): MessageView {
-  // Attachments and reactions are Mongoose subdocuments. Convert before
-  // enriching them: spreading a subdocument copies internals, not its fields.
-  const message = document.toObject();
-  return {
-    id: message._id.toString(),
-    conversationId: message.conversationId,
-    senderEmail: message.senderEmail,
-    senderId: message.senderId,
-    senderName: message.senderName,
-    kind: message.kind,
-    // A deleted message keeps its place in the thread but gives up its content.
-    // Blanking here rather than at delete time means an edit history or an
-    // undelete stays possible without a migration.
-    body: message.deletedAt ? '' : message.body,
-    attachments: message.deletedAt ? [] : message.attachments,
-    replyTo: message.replyTo ?? null,
-    quote: message.deletedAt ? null : (message.quote ?? null),
-    effect: message.deletedAt ? null : (message.effect ?? null),
-    collage: message.deletedAt ? null : (message.collage ?? null),
-    plan: message.deletedAt ? null : (message.plan ?? null),
-    reactions: message.deletedAt ? [] : message.reactions,
-    clientId: message.clientId,
-    editedAt: message.editedAt ?? null,
-    deletedAt: message.deletedAt ?? null,
-    createdAt: message.createdAt
-  };
-}
-
-/** Longest quote a reply keeps of the message it answers. */
-const QUOTE_LENGTH = 200;
-
-/** What a reply shows of `message`: a line of its text, or what it carried. */
-export function quoteText(message: Pick<IMessage, 'body' | 'attachments' | 'collage' | 'plan' | 'deletedAt'>): string {
-  if (message.deletedAt) return '';
-  if (message.collage) return `Collage: ${message.collage.title}`;
-  if (message.plan) return `Reminder: ${message.plan.title}`;
-  return preview(message.body, message.attachments).slice(0, QUOTE_LENGTH);
-}
-
-/** A one-line summary for the conversation list. */
-function preview(body: string, attachments: IAttachment[]): string {
-  if (body.trim()) return body.trim();
-  if (attachments.length === 0) return '';
-  if (attachments.length === 1) return attachmentNoun(attachments[0]!);
-  return `${attachments.length} attachments`;
-}
 
 export interface SendInput {
   clientId: string;
@@ -184,7 +104,6 @@ export async function sendMessage(
   const conversationId = conversation._id.toString();
 
   let message: IMessage;
-  const created = true;
   try {
     message = await Message.create({
       conversationId,
@@ -221,7 +140,7 @@ export async function sendMessage(
   // After the reply, like the push: Album being slow must not hold up a send.
   if (!input.skipAlbum) void saveToAlbum(conversation, message, input.skipAlbumFileIds);
 
-  return { message: view, created };
+  return { message: view, created: true };
 }
 
 /**
@@ -282,7 +201,7 @@ export async function postSystemLine(person: Caller, conversation: IConversation
 }
 
 export interface PageInput {
-  /** ISO timestamp; returns messages strictly older than this. */
+  /** A cursor from a previous page (or a bare ISO timestamp); returns messages strictly older than it. */
   before?: string;
   /** ISO timestamp; returns messages strictly newer than this, used on reconnect. */
   after?: string;
@@ -291,40 +210,61 @@ export interface PageInput {
 
 export interface MessagePage {
   messages: MessageView[];
-  /** Cursor to pass as `before` for the next page, or null at the start of the thread. */
+  /** Opaque cursor to pass as `before` for the next page, or null at the start of the thread. */
   nextCursor: string | null;
+}
+
+/** Joins the two halves of a paging cursor; an ObjectId is hex, so it never contains this. */
+const CURSOR_SEPARATOR = '_';
+
+const cursorOf = (message: Pick<IMessage, 'createdAt' | '_id'>): string =>
+  `${message.createdAt.toISOString()}${CURSOR_SEPARATOR}${message._id.toString()}`;
+
+/**
+ * A cursor as a time and, when it carries one, the message id that breaks a tie.
+ * A bare timestamp is still accepted: it is what clients sent before ids joined
+ * the cursor, and what the stream's replay on reconnect sends.
+ */
+function parseCursor(value: string, field: string): { at: Date; id: Types.ObjectId | null } {
+  const [time, id] = value.split(CURSOR_SEPARATOR);
+  const at = new Date(time ?? '');
+  if (Number.isNaN(at.getTime())) throw new BadRequestError(`${field} is not a date`);
+  if (id !== undefined && !Types.ObjectId.isValid(id)) throw new BadRequestError(`${field} is not a cursor`);
+  return { at, id: id === undefined ? null : new Types.ObjectId(id) };
 }
 
 /**
  * A page of the thread, newest first.
  *
- * Cursored on `createdAt`, never on skip/offset: a live thread grows under a
- * reader, and an offset would silently repeat or drop messages every time
- * someone sends while another is scrolling back.
+ * Cursored on `(createdAt, _id)`, never on skip/offset: a live thread grows
+ * under a reader, and an offset would silently repeat or drop messages every
+ * time someone sends while another is scrolling back. The id is there because
+ * two messages can share a millisecond (a system line is written in the same
+ * request as the message it follows), and a cursor on time alone would skip
+ * whichever of them fell across a page boundary.
  */
 export async function listMessages(conversationId: string, input: PageInput): Promise<MessagePage> {
   const limit = Math.min(Math.max(input.limit ?? MESSAGE_PAGE_SIZE, 1), MAX_MESSAGE_PAGE_SIZE);
 
   const query: Record<string, unknown> = { conversationId };
   if (input.before) {
-    const before = new Date(input.before);
-    if (Number.isNaN(before.getTime())) throw new BadRequestError('before is not a date');
-    query.createdAt = { $lt: before };
+    const { at, id } = parseCursor(input.before, 'before');
+    query.$or = id
+      ? [{ createdAt: { $lt: at } }, { createdAt: at, _id: { $lt: id } }]
+      : [{ createdAt: { $lt: at } }];
   } else if (input.after) {
-    const after = new Date(input.after);
-    if (Number.isNaN(after.getTime())) throw new BadRequestError('after is not a date');
-    query.createdAt = { $gt: after };
+    query.createdAt = { $gt: parseCursor(input.after, 'after').at };
   }
 
   // One extra row answers "is there another page" without a second count query.
-  const rows = await Message.find(query).sort({ createdAt: -1 }).limit(limit + 1);
+  const rows = await Message.find(query).sort({ createdAt: -1, _id: -1 }).limit(limit + 1);
   const hasMore = rows.length > limit;
   const page = hasMore ? rows.slice(0, limit) : rows;
 
   return {
     // One file-service call for the whole page, not one per attachment.
     messages: await withDownloadUrls(page.map(toView)),
-    nextCursor: hasMore && page.length > 0 ? page[page.length - 1]!.createdAt.toISOString() : null
+    nextCursor: hasMore && page.length > 0 ? cursorOf(page[page.length - 1]!) : null
   };
 }
 
@@ -554,52 +494,4 @@ export function publishTyping(conversation: IConversation, person: Caller): void
     // Nobody needs their own typing indicator echoed back at them.
     person.id
   );
-}
-
-/** The longest term searched for; anything past it is dropped. */
-const MAX_SEARCH_TERM = 100;
-
-const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-/**
- * The term as a pattern: taken literally, except that е and ё match each
- * other. Russian is mostly typed without ё ("еще" for "ещё"), so a search
- * would otherwise miss half of what was written. Case is left to the `i`
- * flag, which folds Cyrillic as well as Latin.
- */
-const searchPattern = (term: string) => escapeRegex(term).replace(/[еёЕЁ]/g, '[еёЕЁ]');
-
-/**
- * Messages in the conversations the caller can reach whose text contains the
- * term, newest first.
- *
- * A plain substring match, in any case, rather than the text index. The index
- * matches whole English words only, so "rest" missed "restaurant" and Estonian
- * words were cut by English stemming rules; people searching a chat type the
- * start of a word and expect the latest mention first. Scoped by
- * conversation, it walks that conversation's own index, which a couple's
- * history stays well inside.
- *
- * Works the same for Russian: any case, and е finds ё (see searchPattern).
- *
- * Notes about the conversation ("Irja set photos to go to Rome") and unsent
- * messages are left out.
- */
-export async function searchMessages(
-  conversationIds: string[],
-  term: string,
-  limit = 50
-): Promise<MessageView[]> {
-  const needle = term.trim().slice(0, MAX_SEARCH_TERM);
-  if (conversationIds.length === 0 || !needle) return [];
-
-  const rows = await Message.find({
-    conversationId: { $in: conversationIds },
-    deletedAt: null,
-    kind: { $ne: 'system' },
-    body: { $regex: searchPattern(needle), $options: 'i' }
-  })
-    .sort({ createdAt: -1 })
-    .limit(Math.min(limit, MAX_MESSAGE_PAGE_SIZE));
-  return rows.map(toView);
 }

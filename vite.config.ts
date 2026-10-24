@@ -93,6 +93,8 @@ export default defineConfig({
       'typescript/no-duplicate-enum-values': 'error',
       'typescript/no-empty-object-type': ['error', { allowInterfaces: 'with-single-extends' }],
       'typescript/no-explicit-any': 'error',
+      // A promise nobody awaits fails silently. `void` says it was meant; sync `act(...)` in a test counts too.
+      'typescript/no-floating-promises': 'error',
       'typescript/no-extra-non-null-assertion': 'error',
       'typescript/no-misused-new': 'error',
       'typescript/no-namespace': ['error', { allowDeclarations: true }],

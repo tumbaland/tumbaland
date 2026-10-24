@@ -53,7 +53,7 @@ afterEach(() => {
 it('tries once and stops when the log endpoint is down in development', async () => {
   const { captureMessage, warn } = await loadMonitoring({ isDevelopment: true });
 
-  for (let i = 0; i < 10; i++) captureMessage(`request ${i} failed`, 'error');
+  for (let i = 0; i < 10; i++) void captureMessage(`request ${i} failed`, 'error');
   await settle();
 
   expect(global.fetch).toHaveBeenCalledTimes(1);
@@ -66,7 +66,7 @@ it('does not queue its own failure report for sending outside development either
   try {
     const { captureMessage } = await loadMonitoring({ isDevelopment: false });
 
-    for (let i = 0; i < 10; i++) captureMessage(`request ${i} failed`, 'error');
+    for (let i = 0; i < 10; i++) void captureMessage(`request ${i} failed`, 'error');
     // Well past the batch interval: anything queued by the failure would go out here.
     await vi.advanceTimersByTimeAsync(60_000);
 

@@ -1,4 +1,4 @@
-import { derivePosition, quantityHeld, EMPTY_POSITION, TradeLike } from './position.service';
+import { derivePosition, EMPTY_POSITION, TradeLike } from './position.service';
 
 const buy = (date: string, quantity: number, price: number, fees = 0): TradeLike => ({
   type: 'buy',
@@ -172,15 +172,5 @@ describe('derivePosition', () => {
 
     expect(position.quantity).toBe(0);
     expect(position.costBasis).toBe(0);
-  });
-});
-
-describe('quantityHeld', () => {
-  it('reports the shares remaining after a replay', () => {
-    expect(quantityHeld([buy('2024-01-01', 10, 100), sell('2024-02-01', 4, 100)])).toBe(6);
-  });
-
-  it('is zero with no trades', () => {
-    expect(quantityHeld([])).toBe(0);
   });
 });

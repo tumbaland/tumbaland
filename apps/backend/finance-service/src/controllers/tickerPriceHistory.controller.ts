@@ -39,7 +39,7 @@ async function retentionSubjects(req: Request): Promise<string[]> {
 
 function parseDate(value: unknown, field: string): Date | undefined {
   if (value === undefined) return undefined;
-  const date = new Date(String(value));
+  const date = new Date(typeof value === 'string' ? value : NaN);
   if (isNaN(date.getTime())) {
     throw new BadRequestError(`${field} must be a valid date`);
   }
@@ -53,7 +53,7 @@ function parseDate(value: unknown, field: string): Date | undefined {
  */
 function parseInterval(value: unknown): PriceInterval | undefined {
   if (value === undefined) return undefined;
-  const interval = String(value);
+  const interval = value;
   if (interval !== 'daily' && interval !== 'weekly') {
     throw new BadRequestError('interval must be daily or weekly');
   }
@@ -79,7 +79,7 @@ export const getTickerPriceHistory = async (req: Request, res: Response): Promis
   const { ticker, from, to, limit, interval } = req.query;
 
   const records = await tickerPriceService.getTickerPriceHistory(user.id, userGroups, {
-    ticker: ticker ? String(ticker) : undefined,
+    ticker: typeof ticker === 'string' && ticker ? ticker : undefined,
     from: parseDate(from, 'from'),
     to: parseDate(to, 'to'),
     limit: parseLimit(limit),

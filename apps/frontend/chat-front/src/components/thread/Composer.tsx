@@ -3,28 +3,25 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import InputBase from '@mui/material/InputBase';
-import CircularProgress from '@mui/material/CircularProgress';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import SendIcon from '@mui/icons-material/Send';
 import CheckIcon from '@mui/icons-material/Check';
-import CloseIcon from '@mui/icons-material/Close';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import ReplyIcon from '@mui/icons-material/Reply';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import SentimentSatisfiedAltIcon from '@mui/icons-material/SentimentSatisfiedAlt';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import { PHONE, TOUCH_TARGET, brand, ink, surface } from '@tumbaland/frontend-core';
 import { DOCUMENT_ACCEPT, isDocumentType } from '../../services/documents';
 import { FullEmojiPicker, loadEmojiPicker } from './FullEmojiPicker';
 import { UploadTray } from './UploadTray';
+import { VoiceRow } from './VoiceRow';
+import { EditingBanner, RecentEmojiRow, ReplyingBanner } from './ComposerBars';
 import { AlbumDestination } from './AlbumDestination';
 import { emojiIn, recordEmoji, useRecentEmoji } from './recentEmoji';
 import { EFFECTS } from './effects';
 import type { VoiceMessage } from '../../hooks/useVoiceMessage';
-import { MAX_VOICE_MS, formatDuration, isVisualType } from '../../services/voice';
+import { isVisualType } from '../../services/voice';
 import type { MessageEffect, PendingUpload, PhotoAlbum, SendOptions } from '../../types';
 
 export interface ComposerProps {
@@ -82,16 +79,6 @@ const ACCEPTED = 'image/*,video/*';
  * a picture would have to find it there.
  */
 const ACCEPTED_DOCUMENTS = DOCUMENT_ACCEPT;
-
-/** There for a screen reader, not on screen. */
-const visuallyHidden = {
-  position: 'absolute',
-  width: 1,
-  height: 1,
-  overflow: 'hidden',
-  clip: 'rect(0 0 0 0)',
-  whiteSpace: 'nowrap'
-} as const;
 
 /** How long Send must be held before it offers effects instead of sending. */
 const HOLD_MS = 450;
@@ -251,20 +238,6 @@ export function Composer({
   const offerEffects = canSend && !editing;
 
   const voiceActive = Boolean(voice?.active);
-  const sendingVoice = voice?.progress != null;
-  const nearLimit = voice?.state === 'recording' && voice.elapsedMs >= MAX_VOICE_MS - 30_000;
-  const showLevels = voice?.state === 'recording' && voice.levels.some((level) => level > 0.02);
-  const voiceStatus = sendingVoice
-    ? voice?.progress
-      ? `Sending ${voice.progress}%`
-      : 'Sending'
-    : voice?.held?.reason === 'failed'
-      ? 'Not sent. Press send to try again'
-      : voice?.held
-        ? 'Recording stopped. Send it?'
-        : voice?.state === 'starting'
-          ? 'Waiting for the microphone'
-          : 'Recording';
 
   const cancelHold = () => {
     if (holdTimer.current) clearTimeout(holdTimer.current);
@@ -324,34 +297,9 @@ export function Composer({
         pb: 'calc(8px + env(safe-area-inset-bottom))'
       }}
     >
-      {editing && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 2, pr: 1, pt: 0.5 }}>
-          <EditOutlinedIcon sx={{ fontSize: 18, color: accent }} />
-          <Typography variant="caption" sx={{ flex: 1, color: ink.muted, fontWeight: 600 }}>
-            Editing message
-          </Typography>
-          <IconButton size="small" aria-label="Cancel edit" onClick={onCancelEdit} sx={{ color: ink.muted }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      )}
+      {editing && <EditingBanner accent={accent} onCancel={onCancelEdit} />}
 
-      {replying && !editing && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 2, pr: 1, pt: 0.5 }}>
-          <ReplyIcon sx={{ fontSize: 18, color: accent }} />
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="caption" sx={{ display: 'block', color: ink.muted, fontWeight: 600, lineHeight: 1.3 }}>
-              Replying to {replying.name || 'a message'}
-            </Typography>
-            <Typography variant="caption" noWrap sx={{ display: 'block', color: ink.muted, lineHeight: 1.3 }}>
-              {replying.text}
-            </Typography>
-          </Box>
-          <IconButton size="small" aria-label="Cancel reply" onClick={onCancelReply} sx={{ color: ink.muted }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      )}
+      {replying && !editing && <ReplyingBanner replying={replying} accent={accent} onCancel={onCancelReply} />}
 
       {/* Documents never go to the album, so the choice is only offered for photos and videos. */}
       {!editing &&
@@ -390,49 +338,7 @@ export function Composer({
           it stays put, because appearing on focus and going on blur resized
           the message list and made the whole thread jump each time. */}
       {(!isPhone || focused || value.length > 0) && !disabled && !voiceActive && (
-        <Box
-          role="group"
-          aria-label="Recent emoji"
-          sx={{
-            display: 'flex',
-            gap: 0.25,
-            px: 1,
-            pt: 0.5,
-            overflowX: 'auto',
-            scrollbarWidth: 'none',
-            '&::-webkit-scrollbar': { display: 'none' }
-          }}
-        >
-          {recentEmoji.map((emoji) => (
-            <Box
-              key={emoji}
-              component="button"
-              type="button"
-              aria-label={`Add ${emoji}`}
-              // Keeps the focus, and on a phone the keyboard, in the message box.
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => insertEmoji(emoji)}
-              tabIndex={-1}
-              sx={{
-                flexShrink: 0,
-                width: 36,
-                height: 36,
-                border: 'none',
-                borderRadius: '50%',
-                background: 'none',
-                cursor: 'pointer',
-                fontSize: 22,
-                lineHeight: 1,
-                p: 0,
-                transition: 'transform .12s ease, background-color .12s ease',
-                '&:hover': { backgroundColor: surface.sunken, transform: 'scale(1.12)' },
-                '&:active': { transform: 'scale(0.92)' }
-              }}
-            >
-              {emoji}
-            </Box>
-          ))}
-        </Box>
+        <RecentEmojiRow emoji={recentEmoji} onPick={insertEmoji} />
       )}
 
       {voice?.error && !voiceActive && (
@@ -442,103 +348,7 @@ export function Composer({
       )}
 
       {voice && voiceActive ? (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, p: 1 }}>
-          <IconButton
-            aria-label="Discard voice message"
-            onClick={voice.discard}
-            disabled={sendingVoice}
-            sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
-          >
-            <DeleteOutlineIcon />
-          </IconButton>
-
-          <Box
-            sx={{
-              flex: 1,
-              minWidth: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              minHeight: TOUCH_TARGET,
-              px: 1.5,
-              borderRadius: 3,
-              bgcolor: surface.sunken
-            }}
-          >
-            {voice.state === 'recording' && (
-              <Box
-                aria-hidden
-                sx={{
-                  flexShrink: 0,
-                  width: 10,
-                  height: 10,
-                  borderRadius: '50%',
-                  bgcolor: 'error.main',
-                  animation: 'voice-pulse 1.2s ease-in-out infinite',
-                  '@keyframes voice-pulse': { '50%': { opacity: 0.3 } }
-                }}
-              />
-            )}
-            <Typography
-              variant="body2"
-              sx={{
-                flexShrink: 0,
-                fontVariantNumeric: 'tabular-nums',
-                fontWeight: 600,
-                color: nearLimit ? 'error.main' : 'inherit'
-              }}
-            >
-              {formatDuration(voice.held ? voice.held.recording.durationMs : voice.elapsedMs)}
-            </Typography>
-            {/* The bars once the microphone is heard; the words until then, and
-                for a screen reader always. Only the words are announced: the
-                timer would be read out ten times a second. */}
-            {showLevels && <LevelBars levels={voice.levels} />}
-            <Typography
-              variant="body2"
-              noWrap
-              role="status"
-              sx={{
-                color: voice.held && !sendingVoice ? 'error.main' : ink.muted,
-                ...(showLevels ? visuallyHidden : {})
-              }}
-            >
-              {voiceStatus}
-            </Typography>
-            {nearLimit && (
-              <Typography variant="caption" noWrap sx={{ flexShrink: 0, ml: 'auto', color: 'error.main' }}>
-                {formatDuration(MAX_VOICE_MS - voice.elapsedMs)} left
-              </Typography>
-            )}
-          </Box>
-
-          <IconButton
-            aria-label="Send voice message"
-            onClick={() => void voice.finish()}
-            disabled={voice.state === 'starting' || sendingVoice}
-            aria-busy={sendingVoice || undefined}
-            sx={{
-              width: TOUCH_TARGET,
-              height: TOUCH_TARGET,
-              color: '#fff',
-              bgcolor: accent,
-              '&:hover': { bgcolor: accent, filter: 'brightness(0.94)' },
-              '&.Mui-disabled': { bgcolor: surface.sunken, color: ink.muted }
-            }}
-          >
-            {sendingVoice ? (
-              <CircularProgress
-                size={18}
-                color="inherit"
-                // Indeterminate until the first byte is counted, so a slow start still moves.
-                variant={voice.progress ? 'determinate' : 'indeterminate'}
-                value={voice.progress ?? 0}
-              />
-            ) : (
-              <SendIcon fontSize="small" />
-            )}
-          </IconButton>
-        </Box>
+        <VoiceRow voice={voice} accent={accent} />
       ) : (
         <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5, p: 1 }}>
           {/* One button. On a phone the system picker already offers the camera
@@ -709,42 +519,6 @@ export function Composer({
         onChange={pick}
         data-testid="document-input"
       />
-    </Box>
-  );
-}
-
-/**
- * The microphone's loudness as a row of bars, newest on the right, so a
- * person can see they are being heard.
- */
-function LevelBars({ levels }: { levels: number[] }) {
-  return (
-    <Box
-      aria-hidden
-      sx={{
-        flex: 1,
-        minWidth: 0,
-        height: 24,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        gap: '2px',
-        overflow: 'hidden'
-      }}
-    >
-      {levels.map((level, index) => (
-        <Box
-          key={index}
-          sx={{
-            flexShrink: 0,
-            width: 3,
-            height: `${Math.max(12, level * 100)}%`,
-            borderRadius: 1,
-            bgcolor: ink.muted,
-            opacity: 0.75
-          }}
-        />
-      ))}
     </Box>
   );
 }

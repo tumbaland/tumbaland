@@ -4,15 +4,24 @@
 // intercepts 'error'/'warn'), and carries structured context instead of a string blob.
 import { captureException, captureMessage } from './errors';
 
+// Fire and forget: the capture functions are async but have nothing a caller
+// could wait for, so the logger returns nothing rather than a promise every
+// call site would have to ignore.
 export const logger = {
-  debug: (message: string, context?: Record<string, unknown>) => captureMessage(message, 'debug', context),
-  info: (message: string, context?: Record<string, unknown>) => captureMessage(message, 'info', context),
-  warn: (message: string, context?: Record<string, unknown>) => captureMessage(message, 'warn', context),
-  error: (message: string, error?: unknown, context?: Record<string, unknown>) => {
+  debug: (message: string, context?: Record<string, unknown>): void => {
+    void captureMessage(message, 'debug', context);
+  },
+  info: (message: string, context?: Record<string, unknown>): void => {
+    void captureMessage(message, 'info', context);
+  },
+  warn: (message: string, context?: Record<string, unknown>): void => {
+    void captureMessage(message, 'warn', context);
+  },
+  error: (message: string, error?: unknown, context?: Record<string, unknown>): void => {
     if (error instanceof Error) {
-      captureException(error, { message, ...context });
+      void captureException(error, { message, ...context });
     } else {
-      captureMessage(message, 'error', error !== undefined ? { error, ...context } : context);
+      void captureMessage(message, 'error', error !== undefined ? { error, ...context } : context);
     }
   }
 };

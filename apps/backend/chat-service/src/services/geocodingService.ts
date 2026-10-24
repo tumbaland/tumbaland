@@ -98,7 +98,7 @@ export async function searchPlaces(query: string, near?: { lat: number; lng: num
   const key = `search:${q.toLowerCase()}:${bias ? `${bias.lat},${bias.lon}` : ''}`;
   if (cache.has(key)) return remember(key, cache.get(key) as PlaceResult[]);
 
-  const features = await photon('/api', { q, limit: '6', ...(bias ?? {}) });
+  const features = await photon('/api', { q, limit: '6', ...bias });
   if (!features) return [];
   return remember(
     key,

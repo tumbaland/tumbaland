@@ -35,7 +35,7 @@ export function useTodo() {
 
   // Auto-fetch on mount
   useEffect(() => {
-    fetchTodo();
+    void fetchTodo();
   }, [fetchTodo]);
 
   return {

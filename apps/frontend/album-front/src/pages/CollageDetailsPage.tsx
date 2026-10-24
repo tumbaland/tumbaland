@@ -20,10 +20,13 @@ import MovieOutlinedIcon from '@mui/icons-material/MovieOutlined';
 import { useCollageDetails, useCollageMutations } from '../hooks/useCollage';
 import { useCollageEditor } from '../hooks/useCollageEditor';
 import { useCollageSync } from '../hooks/useCollageSync';
+import { useChatDockToggle } from '../hooks/useChatDockToggle';
+import { useCollageShortcuts } from '../hooks/useCollageShortcuts';
+import { othersIn } from '../components/collage/collagePresence';
+import { usePhotoPlacement } from '../components/collage/usePhotoPlacement';
 import { CollageViewer, useCollageLive } from '../hooks/useCollageLive';
 import { useMotionReport, useRemoteMotion } from '../hooks/useCollageMotion';
 import { collageService } from '../services/collageService';
-import { CollagePerson, personColour } from '../components/collage/CollagePeople';
 import { ChangeAuthor, useAssistantPresence } from '../hooks/useAssistantPresence';
 import type { DocChange, ServerChange } from '../components/collage/collageChanges';
 import {
@@ -52,69 +55,17 @@ import {
   exportCollageToPng,
   exportCollageToVideo
 } from '../components/collage/exportCollage';
-import { chatDockAvailable } from '../services/chatDock';
 import { appPath } from '../appBase';
-
-/**
- * Longest edge of a newly placed photo, as a fraction of the canvas' shorter
- * side. Small enough that several photos fit before anyone has to resize.
- */
-const PLACED_PHOTO_SCALE = 0.22;
 
 /**
  * Whether the stored collage is from before every item had an id. Autosave
  * names items by id, so such a collage is written whole once, first.
  */
-/**
- * The others with the collage open, one entry a person. Your own other tabs
- * are not someone else.
- */
-const othersIn = (viewers: CollageViewer[], session: string): CollagePerson[] => {
-  const me = viewers.find((viewer) => viewer.session === session)?.userId;
-  const people = new Map<string, CollagePerson>();
-  for (const viewer of viewers) {
-    if (viewer.session === session || viewer.userId === me) continue;
-    const known = people.get(viewer.userId);
-    // Two tabs of theirs: show the one with something selected.
-    if (known?.selection) continue;
-    people.set(viewer.userId, {
-      userId: viewer.userId,
-      name: viewer.name,
-      picture: viewer.picture,
-      color: personColour(viewer.userId),
-      selection: viewer.selection
-    });
-  }
-  return [...people.values()];
-};
-
 const needsIds = (config?: CollageConfig | null): boolean =>
   (config?.photos ?? []).some((photo) => !photo.id) || (config?.texts ?? []).some((text) => !text.id);
 
 /** How long the tray waits for more new photos before fetching them all at once. */
 const PHOTOS_REFETCH_DELAY_MS = 800;
-
-/** Whether chat was left open beside the collage, on this device. */
-const CHAT_OPEN_KEY = 'tumbaland.collage.chatOpen';
-
-const readChatOpen = (): boolean => {
-  try {
-    return window.localStorage.getItem(CHAT_OPEN_KEY) === '1';
-  } catch {
-    return false;
-  }
-};
-
-/** A video's own size, read from the file when the album never stored it. */
-const readVideoSize = (src: string): Promise<{ width: number; height: number }> =>
-  new Promise((resolve, reject) => {
-    const video = document.createElement('video');
-    video.preload = 'metadata';
-    video.muted = true;
-    video.onloadedmetadata = () => resolve({ width: video.videoWidth, height: video.videoHeight });
-    video.onerror = () => reject(new Error('Could not read the video'));
-    video.src = src;
-  });
 
 /** "25 September 2026", for the date element. */
 const todayLabel = (): string =>
@@ -153,19 +104,7 @@ const CollageDetailsPage: React.FC = () => {
   const freshText = useRef<string | null>(null);
   const [exportingVideo, setExportingVideo] = useState(false);
 
-  // Chat beside the canvas, drawn by the shell. Not offered where there is no shell.
-  const [chatAvailable] = useState(chatDockAvailable);
-  const [chatOpen, setChatOpen] = useState(readChatOpen);
-  const toggleChat = useCallback(() => {
-    setChatOpen((open) => {
-      try {
-        window.localStorage.setItem(CHAT_OPEN_KEY, open ? '0' : '1');
-      } catch {
-        // Private mode: it just starts closed next time.
-      }
-      return !open;
-    });
-  }, []);
+  const { chatAvailable, chatOpen, toggleChat } = useChatDockToggle();
 
   // Text in a chosen font should look right on the canvas, not only in the export.
   useEffect(() => ensureCollageFonts(), []);
@@ -226,36 +165,7 @@ const CollageDetailsPage: React.FC = () => {
 
   const usedPhotoIds = useMemo(() => new Set((doc?.photos ?? []).map((p) => p.photoId)), [doc?.photos]);
 
-  const placePhoto = useCallback(
-    (photo: AlbumPhoto, at?: { x: number; y: number }) => {
-      if (!doc) return;
-      const place = (naturalW: number, naturalH: number) => {
-        const target = Math.min(doc.canvas.width, doc.canvas.height) * PLACED_PHOTO_SCALE;
-        const ratio = naturalW > 0 && naturalH > 0 ? naturalW / naturalH : 4 / 3;
-        const width = ratio >= 1 ? target : target * ratio;
-        const height = ratio >= 1 ? target / ratio : target;
-        const x = at ? at.x - width / 2 : doc.canvas.width / 2 - width / 2;
-        const y = at ? at.y - height / 2 : doc.canvas.height / 2 - height / 2;
-        editor.addPhoto({ photoId: photo._id, x, y, width, height, rotation: 0, caption: '' });
-      };
-      if (photo.width && photo.height) {
-        place(photo.width, photo.height);
-      } else if (isVideoType(photo.mimetype) && photo.signedUrl) {
-        readVideoSize(photo.signedUrl)
-          .then(({ width, height }) => place(width, height))
-          .catch(() => place(16, 9));
-      } else if (photo.signedUrl || photo.thumbnailSignedUrl) {
-        // older photos have no stored dimensions; read them from the image itself
-        const img = new Image();
-        img.onload = () => place(img.naturalWidth, img.naturalHeight);
-        img.onerror = () => place(4, 3);
-        img.src = (photo.signedUrl || photo.thumbnailSignedUrl) as string;
-      } else {
-        place(4, 3);
-      }
-    },
-    [doc, editor]
-  );
+  const placePhoto = usePhotoPlacement(doc, editor);
 
   const saveWhole = useCallback(
     async (whole: CollageDoc) => {
@@ -394,7 +304,7 @@ const CollageDetailsPage: React.FC = () => {
   const handleBack = useCallback(async () => {
     const saved = await sync.flush();
     if (!saved && !window.confirm('Your latest changes are not saved yet. Leave anyway?')) return;
-    navigate(appPath('/collages'));
+    void navigate(appPath('/collages'));
   }, [sync, navigate]);
 
   const setMode = useCallback(
@@ -449,45 +359,7 @@ const CollageDetailsPage: React.FC = () => {
     setEditItemId(null);
   }, [editor, editItemId]);
 
-  // Keyboard shortcuts (edit mode, and not while typing or in a dialog)
-  useEffect(() => {
-    if (isViewMode) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (editItemId || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        return;
-      }
-      const mod = e.ctrlKey || e.metaKey;
-      if (mod && e.key.toLowerCase() === 'z') {
-        e.preventDefault();
-        if (e.shiftKey) editor.redo();
-        else editor.undo();
-      } else if (mod && e.key.toLowerCase() === 'y') {
-        e.preventDefault();
-        editor.redo();
-      } else if (mod && e.key.toLowerCase() === 's') {
-        // Saving happens by itself; the habit still gets an immediate save.
-        e.preventDefault();
-        void sync.flush();
-      } else if ((e.key === 'Delete' || e.key === 'Backspace') && editor.selectedId) {
-        e.preventDefault();
-        removeItem(editor.selectedId);
-      } else if (e.key === 'Escape') {
-        editor.select(null);
-      } else if (e.key.startsWith('Arrow') && editor.selectedId && selectedItem) {
-        e.preventDefault();
-        const step = e.shiftKey ? 10 : 1;
-        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
-        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
-        editor.patchItem(editor.selectedId, {
-          x: selectedItem.item.x + dx,
-          y: selectedItem.item.y + dy
-        });
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [editor, selectedItem, editItemId, isViewMode, sync, removeItem]);
+  useCollageShortcuts({ editor, selectedItem, editItemId, isViewMode, flush: sync.flush, removeItem });
 
   const editingItem = useMemo(() => {
     if (!doc || !editItemId) return null;

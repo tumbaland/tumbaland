@@ -1,9 +1,17 @@
-// Simple in-memory processed event ID store (non-persistent). Replace with Redis or DB for scaling.
-const processed = new Set<string>();
+import { WebhookEvent } from '../models/WebhookEvent';
 
+/**
+ * Which Stripe events have been applied.
+ *
+ * Kept in Mongo, not in memory: a deploy empties a process, and Stripe's
+ * retries are exactly what arrives right after one. Entries expire on their
+ * own (see the model), so the collection stays small.
+ */
 export function ensureEventStore() {
   return {
-    has: (id: string) => processed.has(id),
-    add: (id: string) => processed.add(id)
+    has: async (id: string): Promise<boolean> => (await WebhookEvent.exists({ eventId: id })) !== null,
+    add: async (id: string): Promise<void> => {
+      await WebhookEvent.updateOne({ eventId: id }, { $setOnInsert: { eventId: id } }, { upsert: true });
+    }
   };
 }

@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import logger from '../logging/logger';
 import { internalGroupUrl } from './client';
 
@@ -28,9 +29,19 @@ interface CacheEntry {
 const cache = new Map<string, CacheEntry>();
 const inFlight = new Map<string, Promise<string[] | null>>();
 
+/**
+ * A stable stand-in for an address in the logs: enough to tell whether two
+ * lines are about the same person, without shipping the address to the log store.
+ */
+const whoIs = (email: string): string => createHash('sha256').update(email).digest('hex').slice(0, 12);
+
 function putInCache(email: string, groups: string[]): void {
-  if (!cache.has(email) && cache.size >= MAX_CACHE_ENTRIES) {
-    // Map iterates in insertion order, so the first key is the oldest write.
+  // Re-inserted, not just overwritten: Map keeps a key's first position when it
+  // is set again, which would leave a person fetched a moment ago first in
+  // line for eviction.
+  cache.delete(email);
+  if (cache.size >= MAX_CACHE_ENTRIES) {
+    // Map iterates in insertion order, so the first key is the longest since fetched.
     const oldest = cache.keys().next();
     if (!oldest.done) cache.delete(oldest.value);
   }
@@ -61,18 +72,18 @@ async function fetchUserGroupIds(email: string): Promise<string[] | null> {
     });
 
     if (!response.ok) {
-      logger.error('Group membership lookup failed', { email, status: response.status });
+      logger.error('Group membership lookup failed', { person: whoIs(email), status: response.status });
       return null;
     }
 
     const body = (await response.json()) as { success?: boolean; data?: unknown };
     if (!body.success || !Array.isArray(body.data)) {
-      logger.error('Group membership lookup returned no list', { email });
+      logger.error('Group membership lookup returned no list', { person: whoIs(email) });
       return null;
     }
     return body.data.filter((id): id is string => typeof id === 'string');
   } catch (error) {
-    logger.error('Group membership lookup unreachable', { email, error: (error as Error)?.message });
+    logger.error('Group membership lookup unreachable', { person: whoIs(email), error: (error as Error)?.message });
     return null;
   }
 }
@@ -102,7 +113,7 @@ export async function getUserGroupIds(email: string): Promise<string[]> {
     return groups;
   }
   if (entry) {
-    logger.warn('Using the last known group membership while group-service is unreachable', { email: key });
+    logger.warn('Using the last known group membership while group-service is unreachable', { person: whoIs(key) });
     return entry.groups;
   }
   return [];

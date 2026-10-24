@@ -5,7 +5,8 @@ import { IMessage, Message } from '../models/Message';
 import type { Caller } from './accessService';
 import * as albums from './albumClient';
 import { isMedia, withDownloadUrls } from './attachmentService';
-import { postSystemLine, toView, type MessageView } from './messageService';
+import { postSystemLine } from './messageService';
+import { toView, type MessageView } from './messageView';
 import { publishToGroup } from './streamHub';
 
 /**

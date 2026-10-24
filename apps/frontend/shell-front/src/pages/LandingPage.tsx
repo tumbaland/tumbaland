@@ -80,7 +80,7 @@ export function LandingPage() {
     // button leave history the same. Arrived on a shared link instead: there
     // is nothing of ours to step back to, so drop the parameter in place.
     if ((location.state as { openedHere?: boolean } | null)?.openedHere) {
-      navigate(-1);
+      void navigate(-1);
       return;
     }
     setSearchParams(

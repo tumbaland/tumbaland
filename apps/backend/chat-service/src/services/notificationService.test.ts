@@ -6,7 +6,7 @@ jest.mock('../models/ReadState', () => ({ ReadState: { find: jest.fn(async () =>
 import { ReadState } from '../models/ReadState';
 import { IConversation } from '../models/Conversation';
 import { Caller } from './accessService';
-import { MessageView } from './messageService';
+import { MessageView } from './messageView';
 import { notifyNewMessage, recipientsFor } from './notificationService';
 import { sendToUsers } from './pushService';
 import { onlineInGroup } from './streamHub';

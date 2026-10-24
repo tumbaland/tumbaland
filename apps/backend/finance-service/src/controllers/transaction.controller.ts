@@ -22,7 +22,7 @@ import { contextGroupId, contextGroups } from '../utils/scope';
 
 function parseDate(value: unknown, field: string): Date | undefined {
   if (value === undefined) return undefined;
-  const date = new Date(String(value));
+  const date = new Date(typeof value === 'string' ? value : NaN);
   if (isNaN(date.getTime())) {
     throw new BadRequestError(`${field} must be a valid date`);
   }
@@ -65,8 +65,8 @@ export const getTransactions = async (req: Request, res: Response): Promise<void
     from: parseDate(from, 'from'),
     to: parseDate(to, 'to'),
     type: type as TransactionType | undefined,
-    category: category ? String(category) : undefined,
-    search: search ? String(search) : undefined,
+    category: typeof category === 'string' && category ? category : undefined,
+    search: typeof search === 'string' && search ? search : undefined,
     sort: sort === 'amount' ? 'amount' : sort === 'date' ? 'date' : undefined,
     direction: direction === 'asc' ? 'asc' : direction === 'desc' ? 'desc' : undefined,
     limit: parsePositiveInt(limit, 'limit'),
@@ -230,8 +230,8 @@ export const exportTransactionsCsv = async (req: Request, res: Response): Promis
     from: parseDate(from, 'from'),
     to: parseDate(to, 'to'),
     type: type as TransactionType | undefined,
-    category: category ? String(category) : undefined,
-    search: search ? String(search) : undefined
+    category: typeof category === 'string' && category ? category : undefined,
+    search: typeof search === 'string' && search ? search : undefined
   });
 
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -274,7 +274,7 @@ export const bulkRecategorise = async (req: Request, res: Response): Promise<voi
 
   const groups = contextGroups(req);
   const updated = await transactionService.recategorise(
-    { fromCategory, search: search ? String(search) : undefined },
+    { fromCategory, search: typeof search === 'string' && search ? search : undefined },
     toCategory.trim(),
     user.id,
     groups

@@ -37,7 +37,7 @@ const PhotoDetailPage: React.FC = () => {
     currentPhotoIndex >= 0 && currentPhotoIndex < albumPhotos.length - 1 ? albumPhotos[currentPhotoIndex + 1] : null;
 
   const goToPhoto = (targetPhotoId: string) => {
-    navigate(appPath(`/albums/${albumId}/photos/${targetPhotoId}`));
+    void navigate(appPath(`/albums/${albumId}/photos/${targetPhotoId}`));
   };
   const handlePreviousPhoto = () => previousPhoto && goToPhoto(previousPhoto._id);
   const handleNextPhoto = () => nextPhoto && goToPhoto(nextPhoto._id);
@@ -49,10 +49,10 @@ const PhotoDetailPage: React.FC = () => {
 
       if (event.key === 'ArrowLeft' && previousPhoto) {
         event.preventDefault();
-        navigate(appPath(`/albums/${albumId}/photos/${previousPhoto._id}`));
+        void navigate(appPath(`/albums/${albumId}/photos/${previousPhoto._id}`));
       } else if (event.key === 'ArrowRight' && nextPhoto) {
         event.preventDefault();
-        navigate(appPath(`/albums/${albumId}/photos/${nextPhoto._id}`));
+        void navigate(appPath(`/albums/${albumId}/photos/${nextPhoto._id}`));
       }
     };
 
@@ -80,7 +80,7 @@ const PhotoDetailPage: React.FC = () => {
         setLoading(false);
       }
     };
-    fetchData();
+    void fetchData();
   }, [albumId, photoId]);
 
   const handleEdit = () => setShowEditDialog(true);
@@ -91,7 +91,7 @@ const PhotoDetailPage: React.FC = () => {
     setDeleting(true);
     try {
       await photoService.deletePhoto(photo._id);
-      navigate(appPath(`/albums/${albumId}`));
+      void navigate(appPath(`/albums/${albumId}`));
     } catch (err) {
       alert('Failed to delete photo');
     } finally {
@@ -104,9 +104,9 @@ const PhotoDetailPage: React.FC = () => {
   // the user navigates back.
   const invalidatePhotoCaches = (tagsChanged: boolean) => {
     if (!albumId) return;
-    queryClient.invalidateQueries({ queryKey: ['photos', albumId] });
+    void queryClient.invalidateQueries({ queryKey: ['photos', albumId] });
     if (tagsChanged) {
-      queryClient.invalidateQueries({ queryKey: albumTagKeys.album(albumId) });
+      void queryClient.invalidateQueries({ queryKey: albumTagKeys.album(albumId) });
     }
   };
 
@@ -131,7 +131,7 @@ const PhotoDetailPage: React.FC = () => {
 
   const handleDownload = () => {
     if (!photo) return;
-    downloadPhoto(photo);
+    void downloadPhoto(photo);
   };
 
   const formatFileSize = (bytes: number) => {

@@ -69,6 +69,16 @@ it('grants no groups when it has never been able to ask', async () => {
   expect(logger.error).toHaveBeenCalled();
 });
 
+it('keeps the address out of the logs, naming the person by a short hash instead', async () => {
+  (global.fetch as jest.Mock).mockResolvedValue(answer(null, false, 503));
+
+  await getUserGroupIds('ada@example.com');
+
+  const logged = JSON.stringify((logger.error as jest.Mock).mock.calls);
+  expect(logged).not.toContain('ada@example.com');
+  expect(logged).toMatch(/"person":"[0-9a-f]{12}"/);
+});
+
 it('grants no groups when not configured, without calling anything', async () => {
   delete process.env.GROUP_INTERNAL_URL;
   delete process.env.GROUP_API_URL;

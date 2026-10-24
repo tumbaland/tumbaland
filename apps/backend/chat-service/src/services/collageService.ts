@@ -4,7 +4,8 @@ import { Conversation, IConversation } from '../models/Conversation';
 import { IMessage, Message } from '../models/Message';
 import type { Caller } from './accessService';
 import * as albums from './albumClient';
-import { announceNewMessage, toView, type MessageView } from './messageService';
+import { announceNewMessage } from './messageService';
+import { toView, type MessageView } from './messageView';
 import { withDownloadUrls } from './attachmentService';
 import { isPushConfigured, sendToUsers } from './pushService';
 

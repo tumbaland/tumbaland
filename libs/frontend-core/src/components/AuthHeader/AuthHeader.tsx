@@ -331,7 +331,7 @@ export function AuthHeader({
                     key={item.path}
                     selected={isActive}
                     onClick={() => {
-                      navigate(item.path);
+                      void navigate(item.path);
                       handleMobileMenuClose();
                     }}
                   >

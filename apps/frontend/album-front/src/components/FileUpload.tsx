@@ -189,7 +189,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
       setUploading(false);
       // Whatever happened, some bytes may have landed — move the bar with the
       // write rather than leaving a stale reading until the next page load.
-      queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
+      void queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
     }
   };
 

@@ -206,7 +206,7 @@ const CategoryRulesDialog: React.FC<CategoryRulesDialogProps> = ({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
-                  handleAddOwnerName();
+                  void handleAddOwnerName();
                 }
               }}
               placeholder="SMITH ALEX"

@@ -5,7 +5,6 @@ import {
   Button,
   Card,
   CardActionArea,
-  Chip,
   CircularProgress,
   InputAdornment,
   MenuItem,
@@ -17,7 +16,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
-import PlaceIcon from '@mui/icons-material/Place';
 import TuneIcon from '@mui/icons-material/Tune';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
@@ -25,118 +23,48 @@ import EventIcon from '@mui/icons-material/Event';
 import { useSearchParams } from 'react-router';
 import { useTenantFilter } from '@tumbaland/frontend-core';
 import { logger } from '@tumbaland/frontend-core';
-import { ActivityType, Day, DaysResponse, Plan } from '../services/types';
-import { getDays } from '../services/days';
-import { getActivityTypes } from '../services/activityTypes';
+import { Day, Plan } from '../services/types';
+import { useJournalDays } from '../hooks/useJournalDays';
 import { getPlan, getPlans } from '../services/plans';
 import DayEditorDialog from '../components/DayEditorDialog';
 import ActivityTypesDialog from '../components/ActivityTypesDialog';
 import JournalCalendar, { CalendarMonth, currentMonth } from '../components/JournalCalendar';
-import { todayKey } from '../utils/dates';
+import { dayLabel, monthLabel, todayKey } from '../utils/dates';
+import { downloadCsv, journalCsv } from '../utils/journalExport';
+import EntryChip from '../components/EntryChip';
 import PlanEditorDialog from '../components/PlanEditorDialog';
 import PlanRow from '../components/PlanRow';
 
-const PAGE_SIZE = 30;
 /** How many upcoming plans the list shows above the logged days. */
 const COMING_UP = 5;
 /** Bigger pages for the export, so a long history takes few round trips. */
 const EXPORT_PAGE_SIZE = 200;
 
-const dayLabel = (date: string): string => {
-  const d = new Date(`${date}T00:00:00`);
-  const today = new Date(`${todayKey()}T00:00:00`);
-  const diffDays = Math.round((today.getTime() - d.getTime()) / 86400000);
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  return d.toLocaleDateString(undefined, { weekday: 'long' });
-};
-
-const monthLabel = (date: string): string =>
-  new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
-    month: 'long',
-    year: 'numeric'
-  });
-
-/** One entry rendered inside a day card. */
-const EntryChip: React.FC<{ entry: Day['entries'][number] }> = ({ entry }) => {
-  const type = entry.type;
-  const value =
-    type?.valueType === 'number'
-      ? entry.hours !== undefined && entry.hours !== null
-        ? `${entry.hours}h`
-        : undefined
-      : entry.description || undefined;
-  return (
-    <Chip
-      size="small"
-      variant="outlined"
-      icon={
-        <Box
-          sx={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            bgcolor: type?.color || '#9e9e9e',
-            ml: '6px !important'
-          }}
-        />
-      }
-      label={
-        <Box component="span">
-          <span>
-            <strong>{type?.name || 'Unknown'}</strong>
-            {value ? ` · ${value}` : ''}
-          </span>
-          {entry.location && (
-            <>
-              <PlaceIcon
-                sx={{
-                  fontSize: 13,
-                  ml: 0.5,
-                  mr: 0.25,
-                  color: 'text.disabled',
-                  verticalAlign: 'text-bottom'
-                }}
-              />
-              <span>{entry.location.label}</span>
-            </>
-          )}
-        </Box>
-      }
-      sx={{
-        borderColor: 'divider',
-        bgcolor: 'transparent',
-        maxWidth: '100%',
-        // A chip's label never wraps by default, so a long description or place
-        // name used to push the whole journal wider than a phone screen.
-        height: 'auto',
-        '& .MuiChip-label': {
-          whiteSpace: 'normal',
-          overflowWrap: 'anywhere',
-          py: 0.25
-        }
-      }}
-    />
-  );
-};
-
 const JournalPage: React.FC = () => {
   const tenantGroupId = useTenantFilter();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [days, setDays] = useState<Day[]>([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const {
+    days,
+    total,
+    totalPages,
+    page,
+    loading,
+    loadingMore,
+    error,
+    setError,
+    typeFilter,
+    setTypeFilter,
+    search,
+    setSearch,
+    debouncedSearch,
+    types,
+    loadTypes,
+    fetchPage,
+    reload,
+    loadMore
+  } = useJournalDays(tenantGroupId);
   const [exporting, setExporting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const [typeFilter, setTypeFilter] = useState('');
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [types, setTypes] = useState<ActivityType[]>([]);
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorDate, setEditorDate] = useState(todayKey());
@@ -193,75 +121,6 @@ const JournalPage: React.FC = () => {
     void reload();
     void loadComingUp();
     setCalendarRefresh((n) => n + 1);
-  };
-
-  useEffect(() => {
-    const handle = setTimeout(() => setDebouncedSearch(search.trim()), 350);
-    return () => clearTimeout(handle);
-  }, [search]);
-
-  const loadTypes = useCallback(async () => {
-    try {
-      const response = await getActivityTypes({ groupId: tenantGroupId });
-      setTypes(response.data);
-      // A type the filter points at may have just been deleted in the manage
-      // dialog — fall back to "all" so the list doesn't come back empty.
-      setTypeFilter((current) => (current && !response.data.some((t) => t._id === current) ? '' : current));
-    } catch (e) {
-      logger.error('Failed to load activity types', e);
-    }
-  }, [tenantGroupId]);
-
-  useEffect(() => {
-    void loadTypes();
-  }, [loadTypes]);
-
-  const fetchPage = useCallback(
-    async (pageToLoad: number, limit: number = PAGE_SIZE): Promise<DaysResponse> =>
-      getDays({
-        page: pageToLoad,
-        limit,
-        groupId: tenantGroupId,
-        typeId: typeFilter || undefined,
-        search: debouncedSearch || undefined
-      }),
-    [tenantGroupId, typeFilter, debouncedSearch]
-  );
-
-  const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await fetchPage(1);
-      setDays(result.days);
-      setPage(1);
-      setTotalPages(result.totalPages);
-      setTotal(result.total);
-    } catch (e) {
-      logger.error('Failed to load days', e);
-      setError('Failed to load the journal');
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchPage]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  const loadMore = async () => {
-    setLoadingMore(true);
-    try {
-      const result = await fetchPage(page + 1);
-      setDays((prev) => [...prev, ...result.days]);
-      setPage(result.page);
-      setTotalPages(result.totalPages);
-      setTotal(result.total);
-    } catch (e) {
-      logger.error('Failed to load more days', e);
-    } finally {
-      setLoadingMore(false);
-    }
   };
 
   const openEditor = (date: string, dateEditable: boolean) => {
@@ -342,27 +201,7 @@ const JournalPage: React.FC = () => {
       return;
     }
 
-    const rows = [['Date', 'Activity', 'Description', 'Hours', 'Place', 'Latitude', 'Longitude']];
-    for (const day of allDays) {
-      for (const entry of day.entries) {
-        rows.push([
-          day.date,
-          entry.type?.name || '',
-          (entry.description || '').replace(/"/g, '""'),
-          entry.hours !== undefined && entry.hours !== null ? String(entry.hours) : '',
-          (entry.location?.label || '').replace(/"/g, '""'),
-          entry.location ? String(entry.location.lat) : '',
-          entry.location ? String(entry.location.lng) : ''
-        ]);
-      }
-    }
-    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'journal_export.csv';
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadCsv('journal_export.csv', journalCsv(allDays));
     setExporting(false);
   };
 

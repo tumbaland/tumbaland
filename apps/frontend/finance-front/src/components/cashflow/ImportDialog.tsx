@@ -158,7 +158,7 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, tenantGroupI
               const file = e.target.files?.[0];
               // Clear the input so picking the same file twice still fires
               e.target.value = '';
-              if (file) handleFile(file);
+              if (file) void handleFile(file);
             }}
           />
         </Button>

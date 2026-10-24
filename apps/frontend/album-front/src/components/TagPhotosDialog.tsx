@@ -67,7 +67,7 @@ const TagPhotosDialog: React.FC<TagPhotosDialogProps> = ({ open, photos, suggest
       setTags(common);
       setPartialActions({});
     }
-  }, [open, photos]);
+  }, [open, common]);
 
   const multiple = photos.length > 1;
 

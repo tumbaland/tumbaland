@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTenantFilter } from '@tumbaland/frontend-core';
-import { logger } from '@tumbaland/frontend-core';
+import { useAsyncData } from '../hooks/useAsyncData';
+import { journalYears } from '../utils/years';
 import {
   Box,
   Card,
@@ -29,6 +30,10 @@ interface BarChartProps {
   hiddenSlugs?: Set<string>;
 }
 
+// Stable stand-ins until the first answer arrives, so memos keyed on them hold still.
+const NO_ROWS: MonthlyActivityData[] = [];
+const NO_TYPES: ActivityType[] = [];
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const HoursBarChart: React.FC<BarChartProps> = ({
@@ -37,11 +42,7 @@ const HoursBarChart: React.FC<BarChartProps> = ({
   height = 400,
   hiddenSlugs
 }) => {
-  const [data, setData] = useState<MonthlyActivityData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(year);
-  const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -49,31 +50,17 @@ const HoursBarChart: React.FC<BarChartProps> = ({
   // Get the current tenant's group ID
   const tenantGroupId = useTenantFilter();
 
-  // Generate available years (from 2024 to current year)
-  const currentYear = new Date().getFullYear();
-  const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);
+  const availableYears = journalYears();
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const [monthlyData, activityTypesResponse] = await Promise.all([
-        getMonthlyActivityBreakdown(selectedYear, tenantGroupId),
-        getActivityTypes({ groupId: tenantGroupId })
-      ]);
-      setData(monthlyData);
-      setActivityTypes(activityTypesResponse.data);
-    } catch (err) {
-      logger.error('Error fetching data', err);
-      setError(err instanceof Error ? err.message : 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
+  const { data: loaded, loading, error } = useAsyncData(async () => {
+    const [monthly, types] = await Promise.all([
+      getMonthlyActivityBreakdown(selectedYear, tenantGroupId),
+      getActivityTypes({ groupId: tenantGroupId })
+    ]);
+    return { monthly, types: types.data };
   }, [selectedYear, tenantGroupId]);
+  const data = loaded?.monthly ?? NO_ROWS;
+  const activityTypes = loaded?.types ?? NO_TYPES;
 
   if (loading) {
     return (

@@ -20,44 +20,44 @@ function renderAt(path: string) {
   );
 }
 
-it('redirects the index route to dashboard', () => {
+it('redirects the index route to dashboard', async () => {
   renderAt('/');
 
-  expect(screen.getByText('dashboard page')).toBeInTheDocument();
+  expect(await screen.findByText('dashboard page')).toBeInTheDocument();
 });
 
-it('renders the dashboard route', () => {
+it('renders the dashboard route', async () => {
   renderAt('/dashboard');
 
-  expect(screen.getByText('dashboard page')).toBeInTheDocument();
+  expect(await screen.findByText('dashboard page')).toBeInTheDocument();
 });
 
-it('renders the albums route', () => {
+it('renders the albums route', async () => {
   renderAt('/albums');
 
-  expect(screen.getByText('albums page')).toBeInTheDocument();
+  expect(await screen.findByText('albums page')).toBeInTheDocument();
 });
 
-it('renders the album detail route', () => {
+it('renders the album detail route', async () => {
   renderAt('/albums/album-1');
 
-  expect(screen.getByText('album detail page')).toBeInTheDocument();
+  expect(await screen.findByText('album detail page')).toBeInTheDocument();
 });
 
-it('renders the photo detail route', () => {
+it('renders the photo detail route', async () => {
   renderAt('/albums/album-1/photos/photo-1');
 
-  expect(screen.getByText('photo detail page')).toBeInTheDocument();
+  expect(await screen.findByText('photo detail page')).toBeInTheDocument();
 });
 
-it('renders the collage list route', () => {
+it('renders the collage list route', async () => {
   renderAt('/collages');
 
-  expect(screen.getByText('collage list page')).toBeInTheDocument();
+  expect(await screen.findByText('collage list page')).toBeInTheDocument();
 });
 
-it('renders the collage details route', () => {
+it('renders the collage details route', async () => {
   renderAt('/collages/collage-1');
 
-  expect(screen.getByText('collage details page')).toBeInTheDocument();
+  expect(await screen.findByText('collage details page')).toBeInTheDocument();
 });

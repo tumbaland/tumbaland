@@ -32,7 +32,7 @@ describe('useMotionReport', () => {
     for (let x = 1; x <= 5; x += 1) rerender({ active: true, item: at(x) });
 
     expect(reportMoving).toHaveBeenCalledTimes(1);
-    act(() => vi.advanceTimersByTime(MOTION_INTERVAL_MS));
+    void act(() => vi.advanceTimersByTime(MOTION_INTERVAL_MS));
 
     expect(reportMoving).toHaveBeenCalledTimes(2);
     expect(reportMoving).toHaveBeenLastCalledWith('c1', 'tab-1', at(5));
@@ -84,7 +84,7 @@ describe('useRemoteMotion', () => {
     act(() => result.current.onMoving(irja(at(40))));
     act(() => result.current.onMoving(irja(null)));
 
-    act(() => vi.advanceTimersByTime(3000));
+    void act(() => vi.advanceTimersByTime(3000));
 
     expect(result.current.motions).toEqual([]);
   });
@@ -93,9 +93,9 @@ describe('useRemoteMotion', () => {
     const { result } = renderHook(() => useRemoteMotion());
     act(() => result.current.onMoving(irja(at(40))));
 
-    act(() => vi.advanceTimersByTime(2000));
+    void act(() => vi.advanceTimersByTime(2000));
     expect(result.current.motions).toHaveLength(1);
-    act(() => vi.advanceTimersByTime(3000));
+    void act(() => vi.advanceTimersByTime(3000));
     expect(result.current.motions).toEqual([]);
   });
 });

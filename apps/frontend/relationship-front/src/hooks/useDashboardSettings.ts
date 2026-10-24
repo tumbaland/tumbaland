@@ -54,4 +54,3 @@ export const useDashboardSettings = (groupId?: string) => {
   return { settings, types, loading, save };
 };
 
-export type UseDashboardSettings = ReturnType<typeof useDashboardSettings>;

@@ -204,7 +204,7 @@ const ActivityTab: React.FC = () => {
   // request from page 1 of the old one, however alike the numbers look.
   useEffect(() => {
     inFlight.current = 0;
-    load(1, false);
+    void load(1, false);
   }, [load]);
 
   /**
@@ -226,7 +226,7 @@ const ActivityTab: React.FC = () => {
 
     const observer = new IntersectionObserver(
       (records) => {
-        if (records.some((record) => record.isIntersecting)) load(page + 1, true);
+        if (records.some((record) => record.isIntersecting)) void load(page + 1, true);
       },
       // Started before the foot is actually reached, so the next rows are
       // usually there by the time the reader would have run out.

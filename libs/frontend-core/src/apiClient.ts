@@ -42,23 +42,23 @@ export class ApiError extends Error {
 /**
  * Generic authenticated JSON fetch wrapper — base URL handling, credentials,
  * correlation/session headers, structured errors, and an opt-in 401 →
- * redirect-to-auth hook. `authService` and
- * `groupService` don't route through this: they use different auth
- * transports (cookie vs. Bearer token) that predate this client.
+ * redirect-to-auth hook.
  */
 export function createApiClient(options: ApiClientOptions) {
   async function request<T = unknown>(path: string, init: ApiRequestOptions = {}): Promise<T> {
     const { skipAuthRedirect, headers, params, ...rest } = init;
 
+    // A Headers object or a list of pairs is as valid as a plain object here, and
+    // spreading either of those would silently drop every header in it.
+    const merged = new Headers({ 'x-correlation-id': getCorrelationId(), 'x-session-id': getSessionId() });
+    // A FormData body needs the browser to write its own Content-Type, boundary included.
+    if (!(rest.body instanceof FormData)) merged.set('Content-Type', 'application/json');
+    new Headers(headers).forEach((value, name) => merged.set(name, value));
+
     const response = await fetch(`${options.baseUrl()}${appendParams(path, params)}`, {
       credentials: 'include',
       ...rest,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-correlation-id': getCorrelationId(),
-        'x-session-id': getSessionId(),
-        ...headers
-      }
+      headers: merged
     });
 
     if (response.status === 401 && !skipAuthRedirect) {

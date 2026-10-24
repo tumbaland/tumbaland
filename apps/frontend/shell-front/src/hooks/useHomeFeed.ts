@@ -60,7 +60,7 @@ export function useHomeFeed(): HomeFeed {
   }, [groupId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   return { memories, photos, activities, milestones, plans, loading };

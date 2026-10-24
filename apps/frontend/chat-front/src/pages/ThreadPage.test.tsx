@@ -25,8 +25,8 @@ const transport = vi.hoisted(() => ({ current: null as UseChatStreamOptions | nu
 const inbox = vi.hoisted(() => ({ readShare: vi.fn(), clearShare: vi.fn() }));
 
 vi.mock('../services/chatApi', () => ({ chatApi: api, newClientId: () => 'new-message' }));
-vi.mock('../services/sharedInbox', async (original) => ({
-  ...(await original<typeof import('../services/sharedInbox')>()),
+vi.mock('@tumbaland/frontend-core', async (original) => ({
+  ...(await original<typeof import('@tumbaland/frontend-core')>()),
   ...inbox
 }));
 vi.mock('../hooks/useCurrentUser', () => ({

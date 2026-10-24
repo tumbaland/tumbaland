@@ -14,10 +14,10 @@ import {
  * the holdings list, the dashboard — has to be refetched alongside the log.
  */
 const invalidateDerived = (queryClient: ReturnType<typeof useQueryClient>) => {
-  queryClient.invalidateQueries({ queryKey: ['trades'] });
-  queryClient.invalidateQueries({ queryKey: ['position'] });
-  queryClient.invalidateQueries({ queryKey: ['holdings'] });
-  queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  void queryClient.invalidateQueries({ queryKey: ['trades'] });
+  void queryClient.invalidateQueries({ queryKey: ['position'] });
+  void queryClient.invalidateQueries({ queryKey: ['holdings'] });
+  void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
 };
 
 export const useTrades = (groupId?: string, ticker?: string) =>

@@ -160,7 +160,7 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
   // Stripe's retry was then skipped as a duplicate: the payment or the
   // cancellation was never applied.
   const store = ensureEventStore();
-  if (store.has(event.id)) {
+  if (await store.has(event.id)) {
     res.json({ received: true, duplicate: true });
     return;
   }
@@ -204,11 +204,20 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
       if (stripeSubId) {
         const sub = await Subscription.findOne({ stripeSubscriptionId: stripeSubId });
         if (sub) {
+          // A paid invoice ends dunning. Without this a renewal that failed once
+          // and then went through stayed `past_due` until some later event
+          // happened to touch the subscription.
+          let changed = false;
+          if (sub.status === 'past_due') {
+            sub.status = 'active';
+            changed = true;
+          }
           // Update next renewal if provided
           if (invoice.lines?.data?.[0]?.period?.end) {
             sub.renewsAt = new Date(invoice.lines.data[0].period.end * 1000);
-            await sub.save();
+            changed = true;
           }
+          if (changed) await sub.save();
           await ensureSubscriptionPayment(sub, invoice, 'invoice.payment_succeeded', invoice.id, invoice.amount_paid, invoice.currency);
         }
       }
@@ -259,7 +268,7 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
     default:
       break; // ignore others for now
   }
-  store.add(event.id);
+  await store.add(event.id);
   res.json({ received: true });
 };
 

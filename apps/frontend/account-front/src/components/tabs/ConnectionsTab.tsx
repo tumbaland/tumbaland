@@ -41,7 +41,7 @@ const ConnectionsTab: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const handleRevoke = async (connection: Connection) => {

@@ -9,18 +9,19 @@ npm workspaces monorepo with three workspace groups:
   built on `@tumbaland/backend-core`.
 - `apps/frontend/*` — Vite + React + MUI single-page apps, one per domain, plus `shell-front` which
   hosts the top-level shell/navigation. Each app owns a `ConfigProvider` (built on
-  `@tumbaland/components`'s `createConfigProvider`) and its own domain services (built on
+  `@tumbaland/frontend-core`'s `createConfigProvider`) and its own domain services (built on
   `@tumbaland/frontend-core`'s `createApiClient`).
 - `libs/*` — shared packages published to the other two groups:
   - `@tumbaland/backend-core` — backend: `createBaseApp`, auth/CORS/rate-limit/validation middleware,
     the typed `HttpError` hierarchy + `errorHandler`, `sendSuccess`/`sendError` response helpers,
     logger, metrics, tracing.
-  - `@tumbaland/components` — frontend: shared React components (`AuthHeader`, `Loader`,
-    `ErrorPage`, …), `createConfigProvider` (per-app dev/prod config loading + monitoring init),
-    and the monitoring layer (`logger`, `captureException`/`captureMessage`, correlation IDs).
-  - `@tumbaland/frontend-core` — frontend: `createApiClient` (generic authenticated fetch wrapper),
-    `createAuthService`, `createGroupService` — factories each frontend instantiates with its own
-    config accessor.
+  - `@tumbaland/frontend-core` — frontend: shared React components (`AuthHeader`, `Loader`,
+    `ErrorPage`, `GroupSelector`, …), `createConfigProvider` (per-app dev/prod config loading +
+    monitoring init), the monitoring layer (`logger`, `captureException`/`captureMessage`,
+    correlation IDs), and the factories each frontend instantiates with its own config accessor:
+    `createApiClient` (generic authenticated fetch wrapper), `createAuthService`,
+    `createGroupService`. Also what a shared photo or link turns into on arrival
+    (`readShare`, `sharedMessage`).
   - `@tumbaland/collage-core` — both sides: what a collage is (reading and writing its stored
     config) and how it is drawn on a canvas, so the editor's export, the server's preview and
     the assistant's tools agree.

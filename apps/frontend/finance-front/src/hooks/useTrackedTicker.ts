@@ -20,11 +20,11 @@ export const useCreateTrackedTicker = () => {
   return useMutation({
     mutationFn: addTrackedTicker,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trackedTickers'] });
+      void queryClient.invalidateQueries({ queryKey: ['trackedTickers'] });
       // The meter moves with the write: adding, pausing or removing a symbol
       // changes what the account is billed for, and a usage bar that only
       // refreshes on reload reads as broken.
-      queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
+      void queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
     },
   });
 };
@@ -35,13 +35,13 @@ export const useUpdateTrackedTicker = () => {
     mutationFn: ({ id, data }: { id: string; data: Partial<TrackedTicker> }) =>
       updateTrackedTicker(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trackedTickers'] });
-      queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
+      void queryClient.invalidateQueries({ queryKey: ['trackedTickers'] });
+      void queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
       // Renaming the symbol re-points the holdings and trades under it.
-      queryClient.invalidateQueries({ queryKey: ['holdings'] });
-      queryClient.invalidateQueries({ queryKey: ['trades'] });
-      queryClient.invalidateQueries({ queryKey: ['position'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['holdings'] });
+      void queryClient.invalidateQueries({ queryKey: ['trades'] });
+      void queryClient.invalidateQueries({ queryKey: ['position'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -51,8 +51,8 @@ export const useDeleteTrackedTicker = () => {
   return useMutation({
     mutationFn: deleteTrackedTicker,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trackedTickers'] });
-      queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
+      void queryClient.invalidateQueries({ queryKey: ['trackedTickers'] });
+      void queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
     },
   });
 };

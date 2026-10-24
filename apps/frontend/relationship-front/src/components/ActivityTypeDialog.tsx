@@ -18,7 +18,8 @@ import {
 } from '@mui/material';
 import { ActivityType } from '../services/types';
 import { CreateActivityTypeRequest, UpdateActivityTypeRequest } from '../services/activityTypes';
-import GroupSelector from './GroupSelector';
+import { GroupSelector } from '@tumbaland/frontend-core';
+import { getUserGroups } from '../services/groupService';
 
 interface ActivityTypeDialogProps {
   open: boolean;
@@ -219,6 +220,7 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
 
             <Box sx={{ width: '100%' }}>
                <GroupSelector
+                getGroups={getUserGroups}
                 value={formData.groupId}
                 onChange={(groupId) => setFormData((prev) => ({ ...prev, groupId }))}
                 label="Share with Group"

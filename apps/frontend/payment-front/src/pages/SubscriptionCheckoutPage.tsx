@@ -115,7 +115,7 @@ const SubscriptionCheckoutPage: React.FC = () => {
       schedule();
     };
 
-    tick();
+    void tick();
     return () => { active = false; if (timer) clearTimeout(timer); };
   }, [statusParam, sessionId, pollEnded]);
 

@@ -19,8 +19,8 @@ export const useCreateAssetClass = () => {
   return useMutation({
     mutationFn: createAssetClass,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assetClasses'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['assetClasses'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -31,8 +31,8 @@ export const useUpdateAssetClass = () => {
     mutationFn: ({ id, data }: { id: string; data: Partial<Pick<AssetClass, 'name' | 'description' | 'color' | 'kind'>> }) =>
       updateAssetClass(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assetClasses'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['assetClasses'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -42,8 +42,8 @@ export const useDeleteAssetClass = () => {
   return useMutation({
     mutationFn: deleteAssetClass,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['assetClasses'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['assetClasses'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };

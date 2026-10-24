@@ -15,8 +15,8 @@ export const useSaveSnapshot = () => {
     mutationFn: ({ month, entries, groupId }: { month: string; entries: SnapshotEntry[]; groupId?: string }) =>
       saveSnapshot(month, entries, groupId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['snapshots'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['snapshots'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -26,8 +26,8 @@ export const useDeleteSnapshot = () => {
   return useMutation({
     mutationFn: deleteSnapshot,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['snapshots'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['snapshots'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };

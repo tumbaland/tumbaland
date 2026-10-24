@@ -173,10 +173,35 @@ describe('createApiClient', () => {
     await client.get('/things', { headers: { 'Content-Type': 'text/plain' } });
 
     const [, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(init.headers).toMatchObject({
-      'Content-Type': 'text/plain',
-      'x-correlation-id': expect.any(String),
-      'x-session-id': expect.any(String)
-    });
+    const headers = new Headers(init.headers);
+    expect(headers.get('Content-Type')).toBe('text/plain');
+    expect(headers.get('x-correlation-id')).toEqual(expect.any(String));
+    expect(headers.get('x-session-id')).toEqual(expect.any(String));
+  });
+
+  it('keeps headers given as a Headers object or a list of pairs', async () => {
+    const client = createApiClient({ baseUrl });
+
+    mockFetchOnce({});
+    await client.get('/a', { headers: new Headers({ 'x-extra': '1' }) });
+    mockFetchOnce({});
+    await client.get('/b', { headers: [['x-extra', '2']] });
+
+    const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;
+    expect(new Headers(calls[0][1].headers).get('x-extra')).toBe('1');
+    expect(new Headers(calls[1][1].headers).get('x-extra')).toBe('2');
+  });
+
+  it('sends JSON content type by default, but leaves it to the browser for a FormData body', async () => {
+    const client = createApiClient({ baseUrl });
+
+    mockFetchOnce({});
+    await client.post('/json', { a: 1 });
+    mockFetchOnce({});
+    await client.request('/upload', { method: 'POST', body: new FormData() });
+
+    const calls = (global.fetch as ReturnType<typeof vi.fn>).mock.calls;
+    expect(new Headers(calls[0][1].headers).get('Content-Type')).toBe('application/json');
+    expect(new Headers(calls[1][1].headers).get('Content-Type')).toBeNull();
   });
 });

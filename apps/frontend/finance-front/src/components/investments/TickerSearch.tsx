@@ -37,7 +37,7 @@ const TickerSearch: React.FC<TickerSearchProps> = ({ onSelect }) => {
           placeholder="Search symbol or name (e.g. Vanguard S&P 500)"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearch(); } }}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleSearch(); } }}
         />
         <Button onClick={handleSearch} startIcon={loading ? <CircularProgress size={16} /> : <SearchIcon />} disabled={loading}>
           Search

@@ -6,6 +6,18 @@ jest.mock('../models/Subscription', () => ({
 }));
 jest.mock('../models/Plan', () => ({ Plan: { findOne: jest.fn() } }));
 jest.mock('../models/Payment', () => ({ Payment: { findOne: jest.fn(), create: jest.fn() } }));
+// Stands in for the collection: remembers what was recorded, as Mongo would.
+jest.mock('../models/WebhookEvent', () => {
+  const seen = new Set<string>();
+  return {
+    WebhookEvent: {
+      exists: jest.fn(async ({ eventId }: { eventId: string }) => (seen.has(eventId) ? { _id: eventId } : null)),
+      updateOne: jest.fn(async ({ eventId }: { eventId: string }) => {
+        seen.add(eventId);
+      })
+    }
+  };
+});
 
 jest.mock('../services/stripeService', () => ({
   ensureStripe: jest.fn(),

@@ -112,8 +112,3 @@ export function derivePosition(trades: TradeLike[]): Position {
     tradeCount: ordered.length
   };
 }
-
-/** Shares held after replaying trades, used to validate a prospective sell. */
-export function quantityHeld(trades: TradeLike[]): number {
-  return derivePosition(trades).quantity;
-}

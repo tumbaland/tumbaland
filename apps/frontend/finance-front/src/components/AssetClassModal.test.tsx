@@ -3,7 +3,10 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vite-plus/test';
 
-vi.mock('./GroupSelector', () => ({ default: () => <div>group selector</div> }));
+vi.mock('@tumbaland/frontend-core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@tumbaland/frontend-core')>()),
+  GroupSelector: () => <div>group selector</div>
+}));
 
 import AssetClassModal, { AssetClassFormValues } from './AssetClassModal';
 

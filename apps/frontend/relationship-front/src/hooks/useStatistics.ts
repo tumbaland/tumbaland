@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { logger } from '@tumbaland/frontend-core';
 import { RelationshipStatistics, getStatistics } from '../services/statistics';
 
@@ -22,31 +22,36 @@ export const useStatistics = (options: UseStatisticsOptions = {}): UseStatistics
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchStatistics = async () => {
+  // Numbered, so an answer that arrives after a newer request was made is dropped.
+  const latest = useRef(0);
+
+  const fetchStatistics = useCallback(async () => {
+    const request = ++latest.current;
     try {
       setLoading(true);
       setError(null);
       const data = await getStatistics(timeframe, groupId);
-      setStatistics(data);
+      if (request === latest.current) setStatistics(data);
     } catch (err) {
+      if (request !== latest.current) return;
       setError(err instanceof Error ? err.message : 'Failed to fetch statistics');
       logger.error('Failed to fetch statistics', err);
     } finally {
-      setLoading(false);
+      if (request === latest.current) setLoading(false);
     }
-  };
+  }, [timeframe, groupId]);
 
   useEffect(() => {
-    fetchStatistics();
-  }, [timeframe, groupId]);
+    void fetchStatistics();
+  }, [fetchStatistics]);
 
   // Set up refresh interval if provided
   useEffect(() => {
     if (refreshInterval && refreshInterval > 0) {
-      const intervalId = setInterval(fetchStatistics, refreshInterval);
+      const intervalId = setInterval(() => void fetchStatistics(), refreshInterval);
       return () => clearInterval(intervalId);
     }
-  }, [refreshInterval, timeframe, groupId]);
+  }, [refreshInterval, fetchStatistics]);
 
   return {
     statistics,

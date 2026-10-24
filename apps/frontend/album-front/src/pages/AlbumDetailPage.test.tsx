@@ -42,8 +42,8 @@ vi.mock('../hooks/useAlbumTags', () => ({
   useBulkTagMutation: vi.fn(),
   albumTagKeys: { all: ['photo-tags'], album: (albumId: string) => ['photo-tags', albumId] }
 }));
-vi.mock('../services/sharedInbox', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../services/sharedInbox')>()),
+vi.mock('@tumbaland/frontend-core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@tumbaland/frontend-core')>()),
   readShare: vi.fn(),
   clearShare: vi.fn()
 }));
@@ -52,7 +52,7 @@ vi.mock('../services/albumService', () => ({ albumService: { getAlbumById: vi.fn
 import { usePhotos } from '../hooks/usePhotos';
 import { useAlbumTags, useBulkTagMutation } from '../hooks/useAlbumTags';
 import { albumService } from '../services/albumService';
-import { clearShare, readShare } from '../services/sharedInbox';
+import { clearShare, readShare } from '@tumbaland/frontend-core';
 import { makeAlbum, makePhoto } from '../test/fixtures';
 import AlbumDetailPage from './AlbumDetailPage';
 

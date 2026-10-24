@@ -92,7 +92,7 @@ export const addCollageAlbums = async (req: Request, res: Response): Promise<voi
 export const liveStream = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
   const { id } = req.params as { id: string };
-  const session = String(req.query.session ?? '');
+  const session = typeof req.query.session === 'string' ? req.query.session : '';
   if (!SESSION.test(session)) throw new BadRequestError('session is required');
 
   // Checked before the stream opens, while an error can still be a status code.

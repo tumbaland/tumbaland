@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { Box, ButtonBase, IconButton, Typography } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { ink } from '@tumbaland/frontend-core';
 import type { Memories, MemoryYear } from '../../services/homeApi';
 import { MediaThumb } from '@tumbaland/frontend-core';
 
@@ -275,8 +274,5 @@ function Arrow({ side, label, onClick }: ArrowProps) {
     </IconButton>
   );
 }
-
-/** Kept for the empty-state copy a caller may want to render instead. */
-export const MEMORY_MUTED = ink.muted;
 
 export default MemoryCard;

@@ -45,7 +45,7 @@ export * from './sse';
 
 // Middleware
 export { authenticateToken, optionalAuth } from './middleware/authMiddleware';
-export { USER_SESSIONS_COLLECTION, isCurrentSession, isLegacySessionlessToken } from './auth/session';
+export { USER_SESSIONS_COLLECTION, isCurrentSession } from './auth/session';
 export {
   requireInternalServiceToken,
   internalServiceTokenBypass,

@@ -50,9 +50,21 @@ describe('registerShutdown', () => {
 
   const flush = () => new Promise((resolve) => setImmediate(resolve));
 
-  it('registers SIGINT and SIGTERM handlers', () => {
+  it('registers SIGINT and SIGTERM handlers, and logs unhandled rejections', () => {
     registerShutdown({ serviceName: 'svc' });
-    expect(Object.keys(listeners).sort()).toEqual(['SIGINT', 'SIGTERM']);
+    expect(Object.keys(listeners).sort()).toEqual(['SIGINT', 'SIGTERM', 'unhandledRejection']);
+  });
+
+  it('logs an unhandled rejection and keeps the process running', () => {
+    registerShutdown({ serviceName: 'svc' });
+
+    listeners.unhandledRejection!(new Error('nobody awaited me'));
+
+    expect(logger.error).toHaveBeenCalledWith(
+      'Unhandled promise rejection',
+      expect.objectContaining({ service: 'svc', error: 'nobody awaited me' })
+    );
+    expect(exitSpy).not.toHaveBeenCalled();
   });
 
   it('closes the server, disconnects the DB, and exits 0 on SIGTERM', async () => {

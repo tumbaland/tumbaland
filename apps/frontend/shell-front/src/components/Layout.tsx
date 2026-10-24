@@ -118,7 +118,7 @@ export default function Layout({ children }: LayoutProps) {
   useEffect(
     () =>
       onWorkerMessage((message) => {
-        if (message.type === 'NAVIGATE') navigate(message.url);
+        if (message.type === 'NAVIGATE') void navigate(message.url);
         if (message.type === 'PUSH_RESUBSCRIBED') void refreshSubscription();
       }),
     [navigate]

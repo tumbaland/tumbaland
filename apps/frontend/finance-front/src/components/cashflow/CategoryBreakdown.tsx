@@ -40,7 +40,7 @@ const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({ analytics }) => {
 
   const currency = analytics.currency || 'EUR';
   const money = (v: number) => formatCurrency(v, currency);
-  const investmentCategories = new Set(analytics.investmentCategories || []);
+  const investmentCategories = useMemo(() => new Set(analytics.investmentCategories || []), [analytics.investmentCategories]);
 
   const years = useMemo(() => analytics.years.map((y) => y.year), [analytics.years]);
 

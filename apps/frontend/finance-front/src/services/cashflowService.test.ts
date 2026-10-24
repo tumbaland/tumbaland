@@ -119,7 +119,7 @@ describe('analytics and import', () => {
     expect(lastUrl()).toContain('/transactions/import');
     // Sent verbatim — JSON.stringify would quote it and escape every newline
     expect(init.body).toBe('Kliendi konto;a\nrow');
-    expect((init.headers as Record<string, string>)['Content-Type']).toBe('text/csv');
+    expect(new Headers(init.headers).get('Content-Type')).toBe('text/csv');
   });
 
   it('omits the group when working personally', async () => {

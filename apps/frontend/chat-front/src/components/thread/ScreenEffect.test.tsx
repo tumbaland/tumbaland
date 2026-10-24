@@ -27,7 +27,7 @@ describe('ScreenEffect', () => {
 
     expect(screen.getByTestId('screen-effect-hearts')).toBeInTheDocument();
     expect(onDone).not.toHaveBeenCalled();
-    act(() => vi.advanceTimersByTime(6000));
+    void act(() => vi.advanceTimersByTime(6000));
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 

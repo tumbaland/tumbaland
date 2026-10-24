@@ -58,7 +58,7 @@ const ZERO_USAGE: Record<MeterKey, number> = {
 };
 
 /**
- * Builds a per-front entitlements service.
+ * Builds a per-front entitlements service. Arrow members, so they can be destructured.
  *
  *   export const { getMyEntitlements } = createEntitlementsService({
  *     getPaymentApiUrl: () => getGlobalConfig().PAYMENT_API_URL!
@@ -71,7 +71,7 @@ export function createEntitlementsService(config: EntitlementsServiceConfig) {
   });
 
   return {
-    async getMyEntitlements(): Promise<Entitlements> {
+    getMyEntitlements: async (): Promise<Entitlements> => {
       const body = await client.get<EntitlementsResponse>('/api/subscriptions/me/entitlements');
 
       // Reject rather than return a half-built object. Without `limits` there

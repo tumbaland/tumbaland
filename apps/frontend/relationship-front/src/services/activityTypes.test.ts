@@ -49,6 +49,62 @@ describe('getActivityTypes', () => {
   });
 });
 
+describe('getActivityTypes sharing', () => {
+  const empty = { success: true, data: { types: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 0 } } };
+
+  it('shares one request between calls made at the same time', async () => {
+    mockFetchOnce(empty);
+
+    await Promise.all([getActivityTypes({ groupId: 'g1' }), getActivityTypes({ groupId: 'g1' })]);
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps calls with different filters apart', async () => {
+    mockFetchOnce(empty);
+    mockFetchOnce(empty);
+
+    await Promise.all([getActivityTypes({ groupId: 'g1' }), getActivityTypes({ groupId: 'g2' })]);
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('asks again once the first request has finished', async () => {
+    mockFetchOnce(empty);
+    mockFetchOnce(empty);
+
+    await getActivityTypes();
+    await getActivityTypes();
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not hand a read that began before a write to a call made after it', async () => {
+    mockFetchOnce(empty);
+    const before = getActivityTypes();
+    mockFetchOnce({ success: true, data: { _id: 't1', name: 'New' } });
+    await createActivityType({ name: 'New' });
+    mockFetchOnce(empty);
+    const after = getActivityTypes();
+    await Promise.all([before, after]);
+
+    // The read, the write, and a second read of its own.
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('gives each caller its own copy of the list', async () => {
+    mockFetchOnce({
+      success: true,
+      data: { types: [{ _id: 'a' }], pagination: { page: 1, limit: 50, total: 1, totalPages: 1 } }
+    });
+
+    const [first, second] = await Promise.all([getActivityTypes(), getActivityTypes()]);
+    first.data.pop();
+
+    expect(second.data).toHaveLength(1);
+  });
+});
+
 describe('getActivityTypeById', () => {
   it('fetches a single activity type', async () => {
     mockFetchOnce({ success: true, data: { _id: 't1', name: 'Reading' } });

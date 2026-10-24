@@ -1,14 +1,5 @@
 import AssetClass, { IAssetClass } from '../models/AssetClass';
-import { buildAccessQuery, canAccessResource, ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
-
-export const getAllAssetClasses = async () => {
-  return AssetClass.find().sort({ name: 1 });
-};
-
-export const getAssetClassesByUser = async (userId: string, groupIds: string[] = []) => {
-  const query = buildAccessQuery(userId, groupIds, false);
-  return AssetClass.find(query).sort({ name: 1 });
-};
+import { canAccessResource, ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
 
 export const getPersonalAssetClasses = async (userId: string) => {
   // Get only personal asset classes (no group association)

@@ -1,73 +1,45 @@
-afterEach(() => {
-  jest.resetModules();
+jest.mock('../models/WebhookEvent', () => ({
+  WebhookEvent: {
+    exists: jest.fn(),
+    updateOne: jest.fn()
+  }
+}));
+
+import { WebhookEvent } from '../models/WebhookEvent';
+import { ensureEventStore } from './webhookEventStore';
+
+const exists = WebhookEvent.exists as jest.Mock;
+const updateOne = WebhookEvent.updateOne as jest.Mock;
+
+beforeEach(() => {
+  jest.clearAllMocks();
 });
 
 describe('ensureEventStore', () => {
   it('reports an unseen id as not processed', async () => {
-    await jest.isolateModulesAsync(async () => {
-      const { ensureEventStore } = await import('./webhookEventStore');
-      const store = ensureEventStore();
+    exists.mockResolvedValue(null);
 
-      expect(store.has('evt_unseen')).toBe(false);
-    });
+    await expect(ensureEventStore().has('evt_unseen')).resolves.toBe(false);
+    expect(exists).toHaveBeenCalledWith({ eventId: 'evt_unseen' });
   });
 
-  it('marks an id as processed after add', async () => {
-    await jest.isolateModulesAsync(async () => {
-      const { ensureEventStore } = await import('./webhookEventStore');
-      const store = ensureEventStore();
+  it('reports a recorded id as processed', async () => {
+    exists.mockResolvedValue({ _id: 'x' });
 
-      store.add('evt_1');
-
-      expect(store.has('evt_1')).toBe(true);
-    });
+    await expect(ensureEventStore().has('evt_1')).resolves.toBe(true);
   });
 
-  it('treats a repeated add as idempotent', async () => {
-    await jest.isolateModulesAsync(async () => {
-      const { ensureEventStore } = await import('./webhookEventStore');
-      const store = ensureEventStore();
+  it('records an id with an upsert, so a repeated add is harmless', async () => {
+    updateOne.mockResolvedValue({});
 
-      store.add('evt_1');
-      store.add('evt_1');
+    await ensureEventStore().add('evt_1');
+    await ensureEventStore().add('evt_1');
 
-      expect(store.has('evt_1')).toBe(true);
-    });
-  });
-
-  it('tracks distinct ids independently', async () => {
-    await jest.isolateModulesAsync(async () => {
-      const { ensureEventStore } = await import('./webhookEventStore');
-      const store = ensureEventStore();
-
-      store.add('evt_1');
-
-      expect(store.has('evt_1')).toBe(true);
-      expect(store.has('evt_2')).toBe(false);
-    });
-  });
-
-  it('shares state across ensureEventStore() calls (the idempotency guarantee)', async () => {
-    await jest.isolateModulesAsync(async () => {
-      const { ensureEventStore } = await import('./webhookEventStore');
-
-      // A later webhook request obtains its own handle but must see events
-      // recorded by an earlier one — otherwise the duplicate guard is useless.
-      ensureEventStore().add('evt_shared');
-
-      expect(ensureEventStore().has('evt_shared')).toBe(true);
-    });
-  });
-
-  it('does not persist across module reloads (in-memory only)', async () => {
-    await jest.isolateModulesAsync(async () => {
-      const { ensureEventStore } = await import('./webhookEventStore');
-      ensureEventStore().add('evt_gone');
-    });
-
-    await jest.isolateModulesAsync(async () => {
-      const { ensureEventStore } = await import('./webhookEventStore');
-      expect(ensureEventStore().has('evt_gone')).toBe(false);
-    });
+    expect(updateOne).toHaveBeenCalledTimes(2);
+    expect(updateOne).toHaveBeenCalledWith(
+      { eventId: 'evt_1' },
+      { $setOnInsert: { eventId: 'evt_1' } },
+      { upsert: true }
+    );
   });
 });

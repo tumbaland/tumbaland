@@ -56,7 +56,7 @@ const LoginPage: React.FC = () => {
         setError('Failed to initialize Google Sign-In: ' + (err as Error).message);
       }
     };
-    checkExistingAuth();
+    void checkExistingAuth();
   }, [config]);
 
   const handleLogout = async () => {

@@ -111,7 +111,7 @@ const AlbumsPage: React.FC = () => {
   };
 
   const handleViewAlbum = (album: Album) => {
-    navigate(appPath(`/albums/${album._id}`));
+    void navigate(appPath(`/albums/${album._id}`));
   };
 
   const handleOpenEditDialog = (album: Album) => {
@@ -154,7 +154,7 @@ const AlbumsPage: React.FC = () => {
 
   const handleMenuDelete = () => {
     if (selectedAlbum) {
-      handleDeleteAlbum(selectedAlbum);
+      void handleDeleteAlbum(selectedAlbum);
     }
     handleMenuClose();
   };

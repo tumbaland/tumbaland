@@ -8,7 +8,7 @@ export interface UserPayload {
   groups?: string[];
   roles?: string[];
   tokenVersion?: number;
-  /** The auth-service session (user_sessions) this token belongs to; absent on pre-sessions tokens. */
+  /** The auth-service session (user_sessions) this token belongs to; absent on a pre-sessions refresh cookie's claims. */
   sid?: string;
 }
 
@@ -32,14 +32,4 @@ declare global {
       span?: Span;
     }
   }
-}
-
-export interface ServiceHealth {
-  status: 'ok' | 'error';
-  service: string;
-  type: 'backend' | 'frontend';
-  timestamp: string;
-  version: string;
-  description: string;
-  dependencies?: Record<string, unknown>;
 }

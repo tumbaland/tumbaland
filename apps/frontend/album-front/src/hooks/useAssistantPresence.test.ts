@@ -27,12 +27,12 @@ describe('useAssistantPresence', () => {
     const { result } = renderHook(() => useAssistantPresence());
 
     act(() => result.current.noteChange({ userId: 'u1', name: 'Claude', assistant: true }));
-    act(() => vi.advanceTimersByTime(ASSISTANT_QUIET_MS - 1000));
+    void act(() => vi.advanceTimersByTime(ASSISTANT_QUIET_MS - 1000));
     act(() => result.current.noteChange({ userId: 'u1', name: 'Claude', assistant: true }));
-    act(() => vi.advanceTimersByTime(ASSISTANT_QUIET_MS - 1000));
+    void act(() => vi.advanceTimersByTime(ASSISTANT_QUIET_MS - 1000));
     expect(result.current.person).not.toBeNull();
 
-    act(() => vi.advanceTimersByTime(1000));
+    void act(() => vi.advanceTimersByTime(1000));
     expect(result.current.person).toBeNull();
   });
 });

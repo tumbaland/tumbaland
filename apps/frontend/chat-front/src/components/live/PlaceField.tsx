@@ -120,7 +120,7 @@ export function PlaceField({
     let live = true;
     setLoading(true);
     const timer = setTimeout(() => {
-      chatApi
+      void chatApi
         .searchPlaces(query, near)
         .catch(() => [])
         .then((results) => {

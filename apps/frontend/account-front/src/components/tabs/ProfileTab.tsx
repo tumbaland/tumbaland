@@ -28,6 +28,7 @@ import { logger } from '@tumbaland/frontend-core';
 import { authService } from '../../services/authService';
 import { profileService } from '../../services/profileService';
 import { squareAvatar } from '../../services/avatarImage';
+import { useAccountDeletion } from '../../hooks/useAccountDeletion';
 import { User } from '../../types';
 
 const ProfileTab: React.FC = () => {
@@ -39,16 +40,20 @@ const ProfileTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [hasChanges, setHasChanges] = useState(false);
   const [pictureBusy, setPictureBusy] = useState(false);
   const pictureInput = useRef<HTMLInputElement | null>(null);
 
-  // Null means no request standing. Held apart from `user` because it changes
-  // on its own, without the rest of the profile being reloaded.
-  const [deletionRequestedAt, setDeletionRequestedAt] = useState<string | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmEmail, setConfirmEmail] = useState('');
-  const [deleting, setDeleting] = useState(false);
+  const {
+    deletionRequestedAt,
+    setDeletionRequestedAt,
+    confirmOpen,
+    setConfirmOpen,
+    confirmEmail,
+    setConfirmEmail,
+    deleting,
+    requestDeletion: handleRequestDeletion,
+    withdrawDeletion: handleWithdrawDeletion
+  } = useAccountDeletion(setMessage);
 
   // Load user data on component mount
   useEffect(() => {
@@ -89,17 +94,11 @@ const ProfileTab: React.FC = () => {
       }
     };
 
-    loadUserData();
+    void loadUserData();
   }, []);
 
-  // Track changes
-  useEffect(() => {
-    if (user) {
-      const currentFirstName = user.firstName || '';
-      const currentLastName = user.lastName || '';
-      setHasChanges(firstName !== currentFirstName || lastName !== currentLastName);
-    }
-  }, [firstName, lastName, user]);
+  // Derived rather than stored: it is whatever the fields differ from the saved profile by.
+  const hasChanges = Boolean(user) && (firstName !== (user?.firstName || '') || lastName !== (user?.lastName || ''));
 
   const handleSave = async () => {
     if (!user || !hasChanges) return;
@@ -117,8 +116,10 @@ const ProfileTab: React.FC = () => {
       
       if (response.success) {
         setUser(response.user);
+        // The server trims; show what it kept, so there is nothing left to save.
+        setFirstName(response.user.firstName || '');
+        setLastName(response.user.lastName || '');
         setMessage({ type: 'success', text: 'Profile updated successfully!' });
-        setHasChanges(false);
       } else {
         setMessage({ type: 'error', text: response.message || 'Failed to update profile' });
       }
@@ -168,54 +169,6 @@ const ProfileTab: React.FC = () => {
     if (user) {
       setFirstName(user.firstName || '');
       setLastName(user.lastName || '');
-      setHasChanges(false);
-    }
-  };
-
-  /**
-   * Ask for the account to be removed.
-   *
-   * A request, not a removal: nothing is deleted here, the account goes on
-   * working, and an administrator removes the data by hand afterwards. The copy
-   * says so, because a button labelled "delete" that quietly does not delete is
-   * worse than one that never existed — somebody would leave believing their
-   * data was gone.
-   */
-  const handleRequestDeletion = async () => {
-    setDeleting(true);
-    setMessage(null);
-
-    try {
-      const response = await profileService.requestDeletion();
-      setDeletionRequestedAt(response.deletionRequestedAt);
-      setConfirmOpen(false);
-      setConfirmEmail('');
-      setMessage({
-        type: 'success',
-        text: 'Deletion requested. Nothing has been removed yet, and you can withdraw this at any time.'
-      });
-    } catch (error) {
-      logger.error('Failed to request account deletion', error);
-      setMessage({ type: 'error', text: 'Could not send the request. Please try again.' });
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  /** Take the request back. The account was never actually altered. */
-  const handleWithdrawDeletion = async () => {
-    setDeleting(true);
-    setMessage(null);
-
-    try {
-      await profileService.cancelDeletion();
-      setDeletionRequestedAt(null);
-      setMessage({ type: 'success', text: 'Request withdrawn. Your account stays as it is.' });
-    } catch (error) {
-      logger.error('Failed to withdraw the deletion request', error);
-      setMessage({ type: 'error', text: 'Could not withdraw the request. Please try again.' });
-    } finally {
-      setDeleting(false);
     }
   };
 

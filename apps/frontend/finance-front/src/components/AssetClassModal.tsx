@@ -13,7 +13,8 @@ import {
 } from '@mui/material';
 import { TrendingUp, CreditCard } from '@mui/icons-material';
 import { AssetClassKind } from '../types';
-import GroupSelector from './GroupSelector';
+import { GroupSelector } from '@tumbaland/frontend-core';
+import { getUserGroups } from '../services/groupService';
 
 const PREDEFINED_COLORS = [
   '#3b82f6', // Blue
@@ -159,6 +160,7 @@ const AssetClassModal: React.FC<{
 
       <Box sx={{ mt: 2 }}>
         <GroupSelector
+          getGroups={getUserGroups}
           value={form.groupId}
           onChange={(groupId) => setForm((f) => ({ ...f, groupId }))}
           label="Share with Group (optional)"

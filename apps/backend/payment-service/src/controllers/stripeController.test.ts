@@ -20,6 +20,19 @@ jest.mock('../models/Payment', () => ({
   }
 }));
 
+// Stands in for the collection: remembers what was recorded, as Mongo would.
+jest.mock('../models/WebhookEvent', () => {
+  const seen = new Set<string>();
+  return {
+    WebhookEvent: {
+      exists: jest.fn(async ({ eventId }: { eventId: string }) => (seen.has(eventId) ? { _id: eventId } : null)),
+      updateOne: jest.fn(async ({ eventId }: { eventId: string }) => {
+        seen.add(eventId);
+      })
+    }
+  };
+});
+
 import { Subscription } from '../models/Subscription';
 import app from '../app';
 
@@ -136,6 +149,22 @@ describe('POST /api/stripe/webhook (signed events)', () => {
     expect(second.body).toEqual({ received: true, duplicate: true });
 
     // Only processed once despite two deliveries of the same event id.
+    expect(sub.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('puts a past_due subscription back to active when its invoice is paid', async () => {
+    const sub = { status: 'past_due', renewsAt: undefined as Date | undefined, save: jest.fn().mockResolvedValue(undefined) };
+    (Subscription.findOne as jest.Mock).mockResolvedValue(sub);
+
+    const { payload, header } = signedRequest({
+      id: 'evt_test_paid_after_failure',
+      type: 'invoice.payment_succeeded',
+      data: { object: { subscription: 'sub_dunning', lines: { data: [{ period: { end: 1800000000 } }] } } }
+    });
+
+    expect((await postWebhook(payload, header)).status).toBe(200);
+    expect(sub.status).toBe('active');
+    expect(sub.renewsAt).toEqual(new Date(1800000000 * 1000));
     expect(sub.save).toHaveBeenCalledTimes(1);
   });
 });

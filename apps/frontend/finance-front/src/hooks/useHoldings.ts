@@ -13,12 +13,12 @@ export const useCreateHolding = () => {
   return useMutation({
     mutationFn: addHolding,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['holdings'] });
+      void queryClient.invalidateQueries({ queryKey: ['holdings'] });
       // Creating a holding auto-tracks its ticker on the backend, which also
       // spends from the plan's tracked-ticker allowance.
-      queryClient.invalidateQueries({ queryKey: ['trackedTickers'] });
-      queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['trackedTickers'] });
+      void queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -28,8 +28,8 @@ export const useUpdateHolding = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Holding> }) => updateHolding(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['holdings'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['holdings'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -39,8 +39,8 @@ export const useDeleteHolding = () => {
   return useMutation({
     mutationFn: deleteHolding,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['holdings'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['holdings'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };

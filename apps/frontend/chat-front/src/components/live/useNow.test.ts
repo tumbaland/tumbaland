@@ -11,7 +11,7 @@ describe('useNow', () => {
     const { result, unmount } = renderHook(() => useNow(5000));
     expect(result.current).toBe(1_000_000);
 
-    act(() => vi.advanceTimersByTime(5000));
+    void act(() => vi.advanceTimersByTime(5000));
     expect(result.current).toBe(1_005_000);
 
     unmount();

@@ -77,7 +77,7 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({
   };
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedYear, tenantGroupId]);
 

@@ -132,18 +132,30 @@ export async function moveChatPhotos(input: {
     ...(input.fileIds?.length ? { minioFileId: { $in: input.fileIds } } : {})
   });
 
-  let moved = 0;
+  // Photos already in the target stay where they are.
+  const movable = photos.filter((photo) => String(photo.albumId) !== target);
+  const moved = movable.length;
   const touched = new Set<string>([target]);
-  for (const photo of photos) {
-    const from = String(photo.albumId);
-    if (from === target) continue;
-    touched.add(from);
-    await Photo.updateOne({ _id: photo._id }, { $set: { albumId: target } });
-    await Album.updateOne({ _id: from }, { $inc: { photoCount: -1 } });
-    await Album.updateOne({ _id: from, coverPhotoId: photo._id.toString() }, { $unset: { coverPhotoId: 1 } });
-    await Album.updateOne({ _id: target }, { $inc: { photoCount: 1 } });
-    await Album.updateOne({ _id: target, coverPhotoId: null }, { $set: { coverPhotoId: photo._id.toString() } });
-    moved++;
+  if (moved > 0) {
+    const ids = movable.map((photo) => photo._id.toString());
+    const leaving = new Map<string, string[]>();
+    for (const photo of movable) {
+      const from = String(photo.albumId);
+      touched.add(from);
+      leaving.set(from, [...(leaving.get(from) ?? []), photo._id.toString()]);
+    }
+
+    await Photo.updateMany({ _id: { $in: ids } }, { $set: { albumId: target } });
+    await Album.bulkWrite([
+      // Each album they left loses them, and its cover if it was one of them.
+      ...[...leaving].flatMap(([from, left]) => [
+        { updateOne: { filter: { _id: from }, update: { $inc: { photoCount: -left.length } } } },
+        { updateOne: { filter: { _id: from, coverPhotoId: { $in: left } }, update: { $unset: { coverPhotoId: 1 } } } }
+      ]),
+      { updateOne: { filter: { _id: target }, update: { $inc: { photoCount: moved } } } },
+      // An album with no cover takes the first photo that arrived as its cover.
+      { updateOne: { filter: { _id: target, coverPhotoId: null }, update: { $set: { coverPhotoId: ids[0] } } } }
+    ]);
   }
   if (moved > 0) void announceAlbumPhotos([...touched]);
 
@@ -157,10 +169,18 @@ export async function moveChatPhotos(input: {
 export async function removeChatPhotos(messageId: string, fileId?: string): Promise<number> {
   const photos = await Photo.find({ 'source.messageId': messageId, ...(fileId ? { minioFileId: fileId } : {}) });
 
-  for (const photo of photos) {
-    await Photo.deleteOne({ _id: photo._id });
-    await Album.updateOne({ _id: photo.albumId }, { $inc: { photoCount: -1 } });
-    await Album.updateOne({ coverPhotoId: photo._id.toString() }, { $unset: { coverPhotoId: 1 } });
+  if (photos.length > 0) {
+    const ids = photos.map((photo) => photo._id.toString());
+    const perAlbum = new Map<string, number>();
+    for (const photo of photos) perAlbum.set(String(photo.albumId), (perAlbum.get(String(photo.albumId)) ?? 0) + 1);
+
+    await Photo.deleteMany({ _id: { $in: ids } });
+    await Album.bulkWrite([
+      ...[...perAlbum].map(([albumId, count]) => ({
+        updateOne: { filter: { _id: albumId }, update: { $inc: { photoCount: -count } } }
+      })),
+      { updateMany: { filter: { coverPhotoId: { $in: ids } }, update: { $unset: { coverPhotoId: 1 } } } }
+    ]);
   }
   if (photos.length > 0) void announceAlbumPhotos([...new Set(photos.map((photo) => String(photo.albumId)))]);
   return photos.length;

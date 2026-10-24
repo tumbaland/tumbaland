@@ -10,7 +10,6 @@ import {
   getRemainingQuota,
   consumeQuota,
   releaseQuota,
-  hasQuota
 } from './apiQuota.service';
 
 const mockedFindOne = ApiUsage.findOne as unknown as jest.Mock;
@@ -104,15 +103,5 @@ describe('releaseQuota', () => {
     mockedUpdateOne.mockRejectedValue(new Error('mongo down'));
 
     await expect(releaseQuota()).resolves.toBeUndefined();
-  });
-});
-
-describe('hasQuota', () => {
-  it('is true while calls remain and false once they are gone', async () => {
-    mockedFindOne.mockResolvedValueOnce({ count: 24 });
-    expect(await hasQuota()).toBe(true);
-
-    mockedFindOne.mockResolvedValueOnce({ count: 25 });
-    expect(await hasQuota()).toBe(false);
   });
 });

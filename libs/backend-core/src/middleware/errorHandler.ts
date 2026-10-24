@@ -16,7 +16,9 @@ interface KnownError {
  * hierarchy, plus Mongoose's ValidationError (failed schema validation,
  * e.g. a missing required field) and CastError (e.g. an invalid ObjectId
  * string) — both of which are client mistakes, not server bugs, but throw
- * as plain Mongoose error classes rather than anything of ours.
+ * as plain Mongoose error classes rather than anything of ours. A duplicate
+ * key (Mongo error 11000) is the same kind of thing: the client asked for
+ * something that already exists.
  */
 function classifyError(error: Error): KnownError | null {
   if (error instanceof HttpError) {
@@ -24,6 +26,10 @@ function classifyError(error: Error): KnownError | null {
   }
   if (error.name === 'ValidationError' || error.name === 'CastError') {
     return { statusCode: 400, name: error.name, message: error.message };
+  }
+  if ((error as { code?: unknown }).code === 11000) {
+    // Not error.message: it quotes the index and the offending value.
+    return { statusCode: 409, name: 'ConflictError', message: 'That already exists' };
   }
   return null;
 }

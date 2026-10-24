@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTenantFilter } from '@tumbaland/frontend-core';
-import { logger } from '@tumbaland/frontend-core';
 import {
   Box,
   Card,
@@ -15,6 +14,8 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
+import { useAsyncData } from '../hooks/useAsyncData';
+import { journalYears } from '../utils/years';
 import { BarChart } from '@mui/x-charts';
 import { getMonthlyActivityBreakdown, MonthlyActivityData } from '../services/statistics';
 
@@ -24,12 +25,11 @@ interface TotalHoursChartProps {
   height?: number;
 }
 
+const NO_ROWS: MonthlyActivityData[] = [];
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const TotalHoursChart: React.FC<TotalHoursChartProps> = ({ title = 'Total Hours per Month', year, height = 400 }) => {
-  const [data, setData] = useState<MonthlyActivityData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(year);
 
   const theme = useTheme();
@@ -38,27 +38,13 @@ const TotalHoursChart: React.FC<TotalHoursChartProps> = ({ title = 'Total Hours 
   // Get the current tenant's group ID
   const tenantGroupId = useTenantFilter();
 
-  // Generate available years (from 2024 to current year)
-  const currentYear = new Date().getFullYear();
-  const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);
+  const availableYears = journalYears();
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const monthlyData = await getMonthlyActivityBreakdown(selectedYear, tenantGroupId);
-      setData(monthlyData);
-    } catch (err) {
-      logger.error('Error fetching data', err);
-      setError(err instanceof Error ? err.message : 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [selectedYear, tenantGroupId]);
+  const { data: loaded, loading, error } = useAsyncData(
+    () => getMonthlyActivityBreakdown(selectedYear, tenantGroupId),
+    [selectedYear, tenantGroupId]
+  );
+  const data = loaded ?? NO_ROWS;
 
   if (loading) {
     return (

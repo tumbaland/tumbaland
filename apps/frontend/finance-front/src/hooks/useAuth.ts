@@ -45,7 +45,7 @@ export const useLogin = () => {
     },
     onSuccess: () => {
       // Invalidate auth queries on successful login
-      queryClient.invalidateQueries({ queryKey: authKeys.auth });
+      void queryClient.invalidateQueries({ queryKey: authKeys.auth });
     },
   });
 };

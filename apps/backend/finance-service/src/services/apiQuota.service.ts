@@ -67,9 +67,3 @@ export async function releaseQuota(): Promise<void> {
     logger.warn('Failed to release API quota', { error: (err as Error)?.message });
   }
 }
-
-/** True when at least one call is still available today. */
-export async function hasQuota(): Promise<boolean> {
-  const { remaining } = await getRemainingQuota();
-  return remaining > 0;
-}

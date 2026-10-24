@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTenantFilter } from '@tumbaland/frontend-core';
-import { logger } from '@tumbaland/frontend-core';
+import { useAsyncData } from '../hooks/useAsyncData';
+import { journalYears } from '../utils/years';
 import {
   Box,
   Card,
@@ -20,6 +21,10 @@ import { LineChart } from '@mui/x-charts';
 import { getCumulativeTimelineData, CumulativeTimelineData } from '../services/statistics';
 import { getActivityTypes } from '../services/activityTypes';
 import { ActivityType } from '../services/types';
+// Stable stand-ins until the first answer arrives, so memos keyed on them hold still.
+const NO_ROWS: CumulativeTimelineData[] = [];
+const NO_TYPES: ActivityType[] = [];
+
 interface ProcessedCumulativeTimelineData extends CumulativeTimelineData {
   cumulativeByType?: {
     activityTypeSlug: string;
@@ -39,12 +44,8 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
   year,
   height = 400
 }) => {
-  const [data, setData] = useState<CumulativeTimelineData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(year);
   const [selectedLines, setSelectedLines] = useState<string[]>([]);
-  const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -52,36 +53,22 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
   // Get the current tenant's group ID
   const tenantGroupId = useTenantFilter();
 
-  // Generate available years (from 2024 to current year)
-  const currentYear = new Date().getFullYear();
-  const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);
+  const availableYears = journalYears();
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const [timelineData, activityTypesResponse] = await Promise.all([
-        getCumulativeTimelineData(selectedYear, tenantGroupId),
-        getActivityTypes({ groupId: tenantGroupId })
-      ]);
-      logger.debug('Fetched cumulative timeline data', { count: timelineData.length });
-      logger.debug('Fetched activity types', { count: activityTypesResponse.data.length });
-      setData(timelineData);
-      setActivityTypes(activityTypesResponse.data);
-      setSelectedLines(activityTypesResponse.data
-        .filter(type => type.slug !== 'total')
-        .map(type => type.slug));
-    } catch (err) {
-      logger.error('Error fetching cumulative timeline data', err);
-      setError(err instanceof Error ? err.message : 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
+  const { data: loaded, loading, error } = useAsyncData(async () => {
+    const [timeline, types] = await Promise.all([
+      getCumulativeTimelineData(selectedYear, tenantGroupId),
+      getActivityTypes({ groupId: tenantGroupId })
+    ]);
+    return { timeline, types: types.data };
   }, [selectedYear, tenantGroupId]);
+  const data = loaded?.timeline ?? NO_ROWS;
+  const activityTypes = loaded?.types ?? NO_TYPES;
+
+  // Every line starts shown; a new set of types (another group) starts over.
+  useEffect(() => {
+    setSelectedLines(activityTypes.filter((type) => type.slug !== 'total').map((type) => type.slug));
+  }, [activityTypes]);
 
   // Calculate cumulative data per activity type
   const processedData: ProcessedCumulativeTimelineData[] = React.useMemo(() => {

@@ -40,10 +40,10 @@ export const useBulkTagMutation = (albumId: string) => {
     mutationFn: ({ photoIds, add, remove }: { photoIds: string[]; add?: string[]; remove?: string[] }) =>
       photoService.bulkUpdateTags(photoIds, { add, remove }),
     onSuccess: (_result, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['photos', albumId] });
-      queryClient.invalidateQueries({ queryKey: albumTagKeys.album(albumId) });
+      void queryClient.invalidateQueries({ queryKey: ['photos', albumId] });
+      void queryClient.invalidateQueries({ queryKey: albumTagKeys.album(albumId) });
       for (const photoId of variables.photoIds) {
-        queryClient.invalidateQueries({ queryKey: ['photo', photoId] });
+        void queryClient.invalidateQueries({ queryKey: ['photo', photoId] });
       }
     }
   });

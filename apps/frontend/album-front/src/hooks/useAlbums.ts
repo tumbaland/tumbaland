@@ -30,14 +30,13 @@ export const useAlbums = (params?: {
 }) => {
   const queryClient = useQueryClient();
 
-  const memoizedParams = useMemo(
-    () => normalizeParams(params),
-    [params?.page, params?.limit, params?.search, params?.isPublic, params?.groupId, params?.includeCover]
-  );
+  // Query keys are compared by value, so a fresh object each render is fine:
+  // listing the fields by hand here would stop refetching the day a filter is added.
+  const normalizedParams = normalizeParams(params);
 
   const query = useQuery<PaginatedResponse<Album>>({
-    queryKey: albumKeys.list(memoizedParams),
-    queryFn: () => albumService.getAlbums(memoizedParams),
+    queryKey: albumKeys.list(normalizedParams),
+    queryFn: () => albumService.getAlbums(normalizedParams),
     placeholderData: keepPreviousData
   });
 
@@ -53,7 +52,7 @@ export const useAlbums = (params?: {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: albumKeys.all });
+      void queryClient.invalidateQueries({ queryKey: albumKeys.all });
     }
   });
 
@@ -63,8 +62,8 @@ export const useAlbums = (params?: {
       return response.data;
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: albumKeys.all });
-      queryClient.invalidateQueries({ queryKey: ['album', variables.id] });
+      void queryClient.invalidateQueries({ queryKey: albumKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ['album', variables.id] });
     }
   });
 
@@ -73,13 +72,13 @@ export const useAlbums = (params?: {
       await albumService.deleteAlbum(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: albumKeys.all });
+      void queryClient.invalidateQueries({ queryKey: albumKeys.all });
     }
   });
 
   const pagination = query.data?.pagination ?? {
-    page: (memoizedParams.page as number) || 1,
-    limit: (memoizedParams.limit as number) || 10,
+    page: (normalizedParams.page as number) || 1,
+    limit: (normalizedParams.limit as number) || 10,
     total: 0,
     pages: 0
   };
@@ -106,10 +105,10 @@ export const useAlbums = (params?: {
 export const useAllAlbums = (params?: { groupId?: string; includeCover?: boolean }) => {
   const groupId = params?.groupId;
   const includeCover = params?.includeCover;
-  const memoizedParams = useMemo(() => normalizeParams({ groupId, includeCover }), [groupId, includeCover]);
+  const everyParams = useMemo(() => normalizeParams({ groupId, includeCover }), [groupId, includeCover]);
   const query = useQuery<Album[]>({
-    queryKey: [...albumKeys.all, 'every', memoizedParams],
-    queryFn: () => albumService.getAllAlbums(memoizedParams)
+    queryKey: [...albumKeys.all, 'every', everyParams],
+    queryFn: () => albumService.getAllAlbums(everyParams)
   });
   return { albums: query.data ?? [], loading: query.isPending, fetchAlbums: query.refetch };
 };

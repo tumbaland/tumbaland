@@ -31,7 +31,10 @@ interface PortfolioValueChartProps {
   assetColors?: { [assetClass: string]: string };
 }
 
-const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, assetColors = {} }) => {
+// One object for every render that gets no colours, so it can be a memo dependency.
+const NO_COLORS: { [assetClass: string]: string } = {};
+
+const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, assetColors = NO_COLORS }) => {
   const theme = useTheme();
   const { colorScheme } = useColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -108,7 +111,7 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
     });
 
     return { dates, series };
-  }, [filteredRecords, useLogScale, colorScheme]);
+  }, [filteredRecords, useLogScale, colorScheme, assetColors]);
 
   // On a phone the axis has about 40px, so full amounts ("250 000") were cut
   // to "250…". Thousands as "250k" fit and read the same.

@@ -33,7 +33,7 @@ export const useMilestones = (groupId?: string): UseMilestonesReturn => {
   }, [groupId]);
 
   useEffect(() => {
-    fetchMilestones();
+    void fetchMilestones();
   }, [fetchMilestones]);
 
   return { milestones, loading, error, refetch: fetchMilestones };

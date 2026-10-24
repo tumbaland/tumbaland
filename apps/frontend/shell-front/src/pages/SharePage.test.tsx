@@ -13,10 +13,11 @@ vi.mock('../hooks/useAuthState', () => ({
   useAuthState: () => ({ loading: false, authenticated: true, user: { id: 'me', email: 'me@example.com', name: 'Me' } })
 }));
 
-vi.mock('../services/sharedInbox', async () => {
-  const actual = await vi.importActual<typeof import('../services/sharedInbox')>('../services/sharedInbox');
-  return { ...actual, readShare: vi.fn(), clearShare: vi.fn() };
-});
+vi.mock('@tumbaland/frontend-core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@tumbaland/frontend-core')>()),
+  readShare: vi.fn(),
+  clearShare: vi.fn()
+}));
 
 vi.mock('../services/shareApi', async () => {
   const actual = await vi.importActual<typeof import('../services/shareApi')>('../services/shareApi');
@@ -24,7 +25,7 @@ vi.mock('../services/shareApi', async () => {
 });
 
 import SharePage from './SharePage';
-import { clearShare, readShare, type SharedItem } from '../services/sharedInbox';
+import { clearShare, readShare, type SharedItem } from '@tumbaland/frontend-core';
 import { listAlbums, listConversations } from '../services/shareApi';
 
 const share = (overrides: Partial<SharedItem> = {}): SharedItem => ({

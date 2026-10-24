@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { Box, Container, Alert, CircularProgress } from '@mui/material';
 import { logger } from '@tumbaland/frontend-core';
@@ -46,10 +46,10 @@ const GroupDetailsPage: React.FC = () => {
         logger.error('Failed to check auth', err);
       }
     };
-    init();
+    void init();
   }, []);
 
-  const fetchGroupDetails = async () => {
+  const fetchGroupDetails = useCallback(async () => {
     if (!groupId) return;
     try {
       setLoading(true);
@@ -62,15 +62,15 @@ const GroupDetailsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [groupId]);
 
   useEffect(() => {
     if (groupId) {
-      fetchGroupDetails();
+      void fetchGroupDetails();
     } else {
       setLoading(false);
     }
-  }, [groupId]);
+  }, [groupId, fetchGroupDetails]);
 
   const handleUpdateGroup = async () => {
     if (!groupId || !editName.trim()) return;

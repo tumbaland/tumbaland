@@ -146,9 +146,3 @@ export const getUpcomingPlans = async (groupId?: string, limit = 3): Promise<Hom
   });
   return data ?? [];
 };
-
-/** Whether the home page can ask at all: a front deployed without these stays as it was. */
-export const homeFeedsConfigured = (): boolean => {
-  const config = getGlobalConfig();
-  return Boolean(config.ALBUM_API_URL) || Boolean(config.RELATIONSHIP_API_URL);
-};

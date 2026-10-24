@@ -163,24 +163,6 @@ export const getActivityTypeById = async (id: string): Promise<IActivityType | n
   return ActivityType.findById(id);
 };
 
-// Get activity type by slug
-export const getActivityTypeBySlug = async (slug: string, userId?: string, groupId?: string): Promise<IActivityType | null> => {
-  const query: ActivityTypeQuery = { slug, isActive: true };
-
-  if (groupId) {
-    // Group scope only — see the note in getActivityTypes.
-    query.groupId = groupId;
-  } else if (userId) {
-    query.userId = userId;
-    query.$or = [
-      { groupId: { $exists: false } },
-      { groupId: null }
-    ];
-  }
-
-  return ActivityType.findOne(query);
-};
-
 // Update activity type by ID
 export const updateActivityType = async (id: string, updateData: Partial<IActivityType>): Promise<IActivityType | null> => {
   // If slug is being updated, check for uniqueness within the type's own scope.
@@ -207,12 +189,6 @@ export const updateActivityType = async (id: string, updateData: Partial<IActivi
 // Delete activity type by ID (soft delete by setting isActive to false)
 export const deleteActivityType = async (id: string): Promise<boolean> => {
   const result = await ActivityType.findByIdAndUpdate(id, { isActive: false });
-  return !!result;
-};
-
-// Hard delete activity type (use with caution)
-export const hardDeleteActivityType = async (id: string): Promise<boolean> => {
-  const result = await ActivityType.findByIdAndDelete(id);
   return !!result;
 };
 

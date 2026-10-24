@@ -236,6 +236,57 @@ describe('sending and reading messages', () => {
     expect(second.body.data.messages.map((m: { body: string }) => m.body)).toEqual(['m2', 'm1']);
   });
 
+  it('does not skip a message that shares a millisecond with the last one on the page', async () => {
+    const id = await conversationInG1();
+    const at = new Date('2026-10-01T10:00:00.000Z');
+    
+    for (let i = 0; i < 5; i++) {
+      await Message.create({
+        conversationId: id,
+        senderEmail: TOM.email,
+        senderId: TOM.id,
+        senderName: 'Tom',
+        kind: 'text',
+        body: `same${i}`,
+        clientId: clientId(),
+        createdAt: at
+      });
+    }
+
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    do {
+      const url: string = `/api/chat/conversations/${id}/messages?limit=2${
+        cursor ? `&before=${encodeURIComponent(cursor)}` : ''
+      }`;
+      const res = await as(TOM).get(url);
+      seen.push(...res.body.data.messages.map((m: { body: string }) => m.body));
+      cursor = res.body.data.nextCursor;
+    } while (cursor);
+
+    expect([...seen].sort()).toEqual(['same0', 'same1', 'same2', 'same3', 'same4']);
+  });
+
+  it('still accepts a bare timestamp as the cursor', async () => {
+    const id = await conversationInG1();
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'old' });
+
+    const res = await as(TOM).get(
+      `/api/chat/conversations/${id}/messages?before=${encodeURIComponent(new Date(Date.now() + 60_000).toISOString())}`
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.messages).toHaveLength(1);
+  });
+
+  it('refuses a cursor that is neither', async () => {
+    const id = await conversationInG1();
+
+    const res = await as(TOM).get(`/api/chat/conversations/${id}/messages?before=nonsense`);
+
+    expect(res.status).toBe(400);
+  });
+
   it('reports no cursor at the start of the thread', async () => {
     const id = await conversationInG1();
     await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'only' });

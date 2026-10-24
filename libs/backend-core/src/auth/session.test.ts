@@ -9,28 +9,12 @@ import mongoose from 'mongoose';
 import {
   USER_SESSIONS_COLLECTION,
   isCurrentSession,
-  isLegacySessionlessToken,
   overrideSessionCheckForTests
 } from './session';
 
 const USER_ID = 'b'.repeat(24);
 const SESSION_ID = 'a'.repeat(24);
 const now = Math.floor(Date.now() / 1000);
-
-describe('isLegacySessionlessToken', () => {
-  it('accepts a pre-sessions token that lived 24 hours at most', () => {
-    expect(isLegacySessionlessToken({ iat: now, exp: now + 24 * 60 * 60 })).toBe(true);
-  });
-
-  it('refuses a session-less token that lives longer, or has no expiry', () => {
-    expect(isLegacySessionlessToken({ iat: now, exp: now + 24 * 60 * 60 + 1 })).toBe(false);
-    expect(isLegacySessionlessToken({ iat: now })).toBe(false);
-  });
-
-  it('is never true for a token that names a session', () => {
-    expect(isLegacySessionlessToken({ sid: SESSION_ID, iat: now, exp: now + 60 })).toBe(false);
-  });
-});
 
 describe('isCurrentSession', () => {
   const findOne = jest.fn();
@@ -78,12 +62,8 @@ describe('isCurrentSession', () => {
     expect(findOne).not.toHaveBeenCalled();
   });
 
-  it('accepts a short-lived pre-sessions token without a lookup', async () => {
-    await expect(isCurrentSession({ id: USER_ID, iat: now, exp: now + 60 })).resolves.toBe(true);
+  it('refuses a token that names no session, however short-lived', async () => {
+    await expect(isCurrentSession({ id: USER_ID, iat: now, exp: now + 60 })).resolves.toBe(false);
     expect(findOne).not.toHaveBeenCalled();
-  });
-
-  it('refuses a long-lived token with no session', async () => {
-    await expect(isCurrentSession({ id: USER_ID, iat: now, exp: now + 90 * 24 * 60 * 60 })).resolves.toBe(false);
   });
 });

@@ -51,7 +51,7 @@ const DevicesTab: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const handleSignOut = async (device: Device) => {

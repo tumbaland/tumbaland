@@ -1,17 +1,10 @@
-import { getCorrelationId, getSessionId, logger } from './monitoring';
+import { createApiClient } from './apiClient';
+import { logger } from './monitoring';
 import { ApiResponse, Group } from './types';
 
 export interface GroupServiceConfig {
   /** Read fresh at call time (config may not be resolved yet at module load). */
   getGroupApiUrl: () => string;
-}
-
-function groupHeaders(): HeadersInit {
-  return {
-    'Content-Type': 'application/json',
-    'x-correlation-id': getCorrelationId(),
-    'x-session-id': getSessionId()
-  };
 }
 
 /**
@@ -22,56 +15,28 @@ function groupHeaders(): HeadersInit {
  *   export const { getUserGroups, getUserGroupIds } = createGroupService({
  *     getGroupApiUrl: () => getGlobalConfig().GROUP_API_URL!
  *   });
+ *
+ * The members are arrow functions so they can be destructured as above.
  */
 export function createGroupService(config: GroupServiceConfig) {
-  return {
-    async getUserGroups(): Promise<Group[]> {
-      try {
-        const response = await fetch(`${config.getGroupApiUrl()}/api/groups/mine`, {
-          credentials: 'include',
-          headers: groupHeaders()
-        });
+  const client = createApiClient({ baseUrl: () => config.getGroupApiUrl() });
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch groups: ${response.statusText}`);
-        }
-
-        const result: ApiResponse<Group[]> = await response.json();
-
-        if (!result.success) {
-          throw new Error(result.message || 'Failed to fetch groups');
-        }
-
-        return result.data;
-      } catch (error) {
-        logger.error('Error fetching user groups', error);
-        throw error;
+  const read = async <T>(path: string, failure: string, logged: string): Promise<T> => {
+    try {
+      const result = await client.get<ApiResponse<T>>(path);
+      if (!result.success) {
+        throw new Error(result.message || failure);
       }
-    },
-
-    async getUserGroupIds(): Promise<string[]> {
-      try {
-        const response = await fetch(`${config.getGroupApiUrl()}/api/groups/mine/ids`, {
-          credentials: 'include',
-          headers: groupHeaders()
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch group IDs: ${response.statusText}`);
-        }
-
-        const result: ApiResponse<string[]> = await response.json();
-
-        if (!result.success) {
-          throw new Error(result.message || 'Failed to fetch group IDs');
-        }
-
-        return result.data;
-      } catch (error) {
-        logger.error('Error fetching user group IDs', error);
-        throw error;
-      }
+      return result.data;
+    } catch (error) {
+      logger.error(logged, error);
+      throw error;
     }
+  };
+
+  return {
+    getUserGroups: (): Promise<Group[]> => read<Group[]>('/api/groups/mine', 'Failed to fetch groups', 'Error fetching user groups'),
+    getUserGroupIds: (): Promise<string[]> => read<string[]>('/api/groups/mine/ids', 'Failed to fetch group IDs', 'Error fetching user group IDs')
   };
 }
 

@@ -10,7 +10,7 @@ export const getTrades = async (req: Request, res: Response): Promise<void> => {
   const trades = await tradeService.getTrades(
     user.id,
     contextGroups(req),
-    ticker ? String(ticker) : undefined
+    typeof ticker === 'string' && ticker ? ticker : undefined
   );
 
   countRead(res, trades.length);

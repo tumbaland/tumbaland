@@ -66,7 +66,8 @@ export { UnauthorizedPage } from './components/UnauthorizedPage';
 export { ProtectedRoute } from './components/ProtectedRoute';
 export { LoginButton } from './components/LoginButton';
 export { NotificationsMenu } from './components/NotificationsMenu/NotificationsMenu';
-export { AuthHeader } from './components/AuthHeader';
+export { AuthHeader, StandaloneAuthHeader } from './components/AuthHeader';
+export type { StandaloneAuthHeaderProps } from './components/AuthHeader';
 export { AppLayout } from './components/AppLayout';
 export { SectionBar } from './components/SectionBar';
 export { ColorModeSetting, useActivePalette, useThemeColorMeta } from './components/ColorModeSetting';
@@ -109,12 +110,19 @@ export type {
 export type { TenantOption, TenantSelectorProps, UseTenantOptions, UseTenantResult } from './components/tenant';
 export type { UsageMeterProps, UseEntitlementsResult } from './components/UsageMeter';
 
+export { GroupSelector } from './components/GroupSelector';
+export type { GroupSelectorProps } from './components/GroupSelector';
+
+// What another app shared into Tumbaland (written by the shell's service worker)
+export { clearShare, isMedia, readShare, sharedMessage } from './sharedInbox';
+export type { SharedItem } from './sharedInbox';
+
+// React.lazy for route pages, recovering from a deploy
+export { lazyPage } from './lazyPage';
+
 // Config provider factory
 export { createConfigProvider } from './config/createConfigProvider';
 export type { CreateConfigProviderOptions } from './config/createConfigProvider';
-
-// A plain URL helper; the iframe bridge it belonged to is gone (see routing/index).
-export { toOrigin } from './routing';
 
 // Theme: the palette, the MUI theme built from it, and the raw tokens for the
 // places that have to name a colour outside a `sx` prop.

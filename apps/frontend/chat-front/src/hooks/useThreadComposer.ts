@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import type { ComposerProps } from '../components/thread/Composer';
 import { messageSummary } from '../services/summary';
-import { clearShare, isMedia, readShare, sharedMessage } from '../services/sharedInbox';
+import { clearShare, isMedia, readShare, sharedMessage } from '@tumbaland/frontend-core';
 import { uploadVoice, useAttachmentUploads } from './useAttachmentUploads';
 import { useVoiceMessage, type SendVoice } from './useVoiceMessage';
 import type { UseChatThreadResult } from './useChatThread';

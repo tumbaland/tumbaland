@@ -32,7 +32,7 @@ export const useStreaks = (groupId?: string): UseStreaksReturn => {
   }, [groupId]);
 
   useEffect(() => {
-    fetchStreaks();
+    void fetchStreaks();
   }, [fetchStreaks]);
 
   return { streaks, loading, error, refetch: fetchStreaks };

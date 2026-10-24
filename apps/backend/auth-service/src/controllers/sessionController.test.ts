@@ -15,7 +15,7 @@ import { Types } from 'mongoose';
 import { User } from '../models/User';
 import { Session } from '../models/Session';
 import app from '../app';
-import { decodeJWT, generateJWT } from '../services/jwtService';
+import { decodeJWT, generateJWT, generateRefreshToken } from '../services/jwtService';
 import { makeSession } from '../test/sessionModelMock';
 
 const mockedFindOne = User.findOne as unknown as jest.Mock;
@@ -87,11 +87,8 @@ describe('a session token', () => {
     });
   });
 
-  it('is refused when it names no session and lives longer than a pre-sessions token did', async () => {
-    const token = generateJWT(
-      { id: USER_ID, email: 'ada@example.com', name: 'Ada', tokenVersion: 1 },
-      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-    );
+  it('is refused when it names no session, however recently it was signed', async () => {
+    const token = generateJWT({ id: USER_ID, email: 'ada@example.com', name: 'Ada', tokenVersion: 1 });
 
     const res = await request(app).get('/auth/verify').set('Cookie', `access_token=${token}`);
 
@@ -195,10 +192,10 @@ describe('GET /auth/verify with a session', () => {
     expect(sessions.deleteOne).not.toHaveBeenCalled();
   });
 
-  it('gives a pre-sessions token a session, so nobody is signed out by the change', async () => {
-    const token = generateJWT({ id: USER_ID, email: 'ada@example.com', name: 'Ada', tokenVersion: 1 });
+  it('gives a pre-sessions login a session, so nobody is signed out by the change', async () => {
+    const token = generateRefreshToken({ id: USER_ID, email: 'ada@example.com', name: 'Ada', tokenVersion: 1 });
 
-    const res = await request(app).get('/auth/verify').set('Cookie', `access_token=${token}`).set('User-Agent', IPHONE);
+    const res = await request(app).get('/auth/verify').set('Cookie', `refresh_token=${token}`).set('User-Agent', IPHONE);
 
     expect(res.status).toBe(200);
     expect(sessions.findOneAndUpdate).toHaveBeenCalledWith(
@@ -210,8 +207,8 @@ describe('GET /auth/verify with a session', () => {
   });
 
   it('gives the parallel calls an app makes when it opens one session between them, not one each', async () => {
-    const token = generateJWT({ id: USER_ID, email: 'ada@example.com', name: 'Ada', tokenVersion: 1 });
-    const verify = () => request(app).get('/auth/verify').set('Cookie', `access_token=${token}`).set('User-Agent', IPHONE);
+    const token = generateRefreshToken({ id: USER_ID, email: 'ada@example.com', name: 'Ada', tokenVersion: 1 });
+    const verify = () => request(app).get('/auth/verify').set('Cookie', `refresh_token=${token}`).set('User-Agent', IPHONE);
 
     await Promise.all([verify(), verify(), verify()]);
 
@@ -221,12 +218,12 @@ describe('GET /auth/verify with a session', () => {
   });
 
   it('uses the session another call just created when their inserts race', async () => {
-    const token = generateJWT({ id: USER_ID, email: 'ada@example.com', name: 'Ada', tokenVersion: 1 });
+    const token = generateRefreshToken({ id: USER_ID, email: 'ada@example.com', name: 'Ada', tokenVersion: 1 });
     const winner = makeSession({ userId: new Types.ObjectId(USER_ID), userAgent: IPHONE, lastSeenAt: new Date() });
     sessions.findOneAndUpdate.mockRejectedValueOnce(Object.assign(new Error('E11000 duplicate key'), { code: 11000 }));
     sessions.findOne.mockResolvedValue(winner);
 
-    const res = await request(app).get('/auth/verify').set('Cookie', `access_token=${token}`).set('User-Agent', IPHONE);
+    const res = await request(app).get('/auth/verify').set('Cookie', `refresh_token=${token}`).set('User-Agent', IPHONE);
 
     expect(res.status).toBe(200);
     const setCookie = res.headers['set-cookie'] as unknown as string[];

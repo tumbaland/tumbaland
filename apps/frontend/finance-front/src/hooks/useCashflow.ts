@@ -21,12 +21,12 @@ import {
  * split, both of which the dashboard shows, so those go stale together.
  */
 const invalidateCashflow = (queryClient: ReturnType<typeof useQueryClient>) => {
-  queryClient.invalidateQueries({ queryKey: ['transactions'] });
-  queryClient.invalidateQueries({ queryKey: ['cashflowSummary'] });
-  queryClient.invalidateQueries({ queryKey: ['cashflowAnalytics'] });
-  queryClient.invalidateQueries({ queryKey: ['cashflowRecurring'] });
-  queryClient.invalidateQueries({ queryKey: ['transactionCategories'] });
-  queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  void queryClient.invalidateQueries({ queryKey: ['transactions'] });
+  void queryClient.invalidateQueries({ queryKey: ['cashflowSummary'] });
+  void queryClient.invalidateQueries({ queryKey: ['cashflowAnalytics'] });
+  void queryClient.invalidateQueries({ queryKey: ['cashflowRecurring'] });
+  void queryClient.invalidateQueries({ queryKey: ['transactionCategories'] });
+  void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
 };
 
 export const useImportStatement = () => {

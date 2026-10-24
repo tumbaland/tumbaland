@@ -21,10 +21,8 @@ import {
   createActivityType,
   getActivityTypes,
   getActivityTypeById,
-  getActivityTypeBySlug,
   updateActivityType,
   deleteActivityType,
-  hardDeleteActivityType,
   reorderActivityTypes
 } from './activityType.service';
 
@@ -33,7 +31,6 @@ const mockedFindOne = ActivityType.findOne as unknown as jest.Mock;
 const mockedFind = ActivityType.find as unknown as jest.Mock;
 const mockedFindById = ActivityType.findById as unknown as jest.Mock;
 const mockedFindByIdAndUpdate = ActivityType.findByIdAndUpdate as unknown as jest.Mock;
-const mockedFindByIdAndDelete = ActivityType.findByIdAndDelete as unknown as jest.Mock;
 const mockedCountDocuments = ActivityType.countDocuments as unknown as jest.Mock;
 const mockedBulkWrite = ActivityType.bulkWrite as unknown as jest.Mock;
 
@@ -240,41 +237,6 @@ describe('getActivityTypeById', () => {
   });
 });
 
-describe('getActivityTypeBySlug', () => {
-  it('scopes by group when groupId is given', async () => {
-    mockedFindOne.mockResolvedValue({ _id: 't1' });
-
-    await getActivityTypeBySlug('reading', 'u1', 'g1');
-
-    expect(mockedFindOne).toHaveBeenCalledWith({
-      slug: 'reading',
-      isActive: true,
-      groupId: 'g1'
-    });
-  });
-
-  it('scopes by personal context when only userId is given', async () => {
-    mockedFindOne.mockResolvedValue(null);
-
-    await getActivityTypeBySlug('reading', 'u1');
-
-    expect(mockedFindOne).toHaveBeenCalledWith({
-      slug: 'reading',
-      isActive: true,
-      userId: 'u1',
-      $or: [{ groupId: { $exists: false } }, { groupId: null }]
-    });
-  });
-
-  it('queries by slug alone when neither is given', async () => {
-    mockedFindOne.mockResolvedValue(null);
-
-    await getActivityTypeBySlug('reading');
-
-    expect(mockedFindOne).toHaveBeenCalledWith({ slug: 'reading', isActive: true });
-  });
-});
-
 describe('updateActivityType', () => {
   // ActivityType.findById(...).select('userId groupId') resolves the stored scope.
   const mockStoredScope = (scope: Record<string, unknown> | null) => {
@@ -341,18 +303,6 @@ describe('deleteActivityType', () => {
   it('returns false when nothing was found', async () => {
     mockedFindByIdAndUpdate.mockResolvedValue(null);
     expect(await deleteActivityType('missing')).toBe(false);
-  });
-});
-
-describe('hardDeleteActivityType', () => {
-  it('returns true when a document was deleted', async () => {
-    mockedFindByIdAndDelete.mockResolvedValue({ _id: 't1' });
-    expect(await hardDeleteActivityType('t1')).toBe(true);
-  });
-
-  it('returns false when nothing was found', async () => {
-    mockedFindByIdAndDelete.mockResolvedValue(null);
-    expect(await hardDeleteActivityType('missing')).toBe(false);
   });
 });
 

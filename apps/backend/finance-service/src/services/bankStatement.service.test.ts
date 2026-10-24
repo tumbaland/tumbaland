@@ -8,7 +8,6 @@ import {
   classifyRow,
   categorize,
   StatementRow,
-  isInvestmentCategory,
   compileRules,
   matchCustomRule,
   ownerNameTest,
@@ -258,15 +257,6 @@ describe('classifyRow', () => {
   it('treats everything else as cash flow, falling back when no rule claims it', () => {
     const [row] = rowsOf(statement(line()));
     expect(classifyRow(row, own)).toEqual({ kind: 'cashflow', category: 'Uncategorised' });
-  });
-});
-
-describe('investment categories', () => {
-  it('marks the capital categories as non-consumption', () => {
-    expect(isInvestmentCategory('Investments')).toBe(true);
-    expect(isInvestmentCategory('Savings')).toBe(true);
-    expect(isInvestmentCategory('Pension')).toBe(true);
-    expect(isInvestmentCategory('Groceries')).toBe(false);
   });
 });
 

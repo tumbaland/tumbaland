@@ -61,15 +61,15 @@ const CollageListPage: React.FC = () => {
   const handleCreateCollage = async (input: CollageInput) => {
     const created = await createCollage(input);
     // jump straight into the editor for the new collage
-    navigate(appPath(`/collages/${created._id}`));
+    void navigate(appPath(`/collages/${created._id}`));
   };
 
   const handleViewCollage = (collage: Collage) => {
-    navigate(appPath(`/collages/${collage._id}?mode=view`));
+    void navigate(appPath(`/collages/${collage._id}?mode=view`));
   };
 
   const handleEditCollage = (collage: Collage) => {
-    navigate(appPath(`/collages/${collage._id}`));
+    void navigate(appPath(`/collages/${collage._id}`));
   };
 
   const handleEditDetails = (collage: Collage) => {

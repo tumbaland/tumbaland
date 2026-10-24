@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { currentGroupsOf, isAccessTokenClaims, isLegacySessionlessToken, logger } from '@tumbaland/backend-core';
+import { currentGroupsOf, isAccessTokenClaims, logger } from '@tumbaland/backend-core';
 import { verifyJWT, verifyRefreshToken, UserPayload } from '../services/jwtService';
 import { User, IUser } from '../models/User';
 import { ISession, Session } from '../models/Session';
@@ -18,7 +18,7 @@ declare global {
   namespace Express {
     interface Request {
       dbUser?: IUser;
-      /** The caller's live session; absent for a pre-sessions token or refresh cookie. */
+      /** The caller's live session; absent when `authenticateSession` admitted a pre-sessions refresh cookie. */
       authSession?: ISession;
     }
   }
@@ -26,14 +26,9 @@ declare global {
 
 /**
  * The session a token belongs to, if it is still live. `null` means the token
- * must be refused: its session was revoked or expired, or it names none and is
- * not a short-lived pre-sessions token either. `undefined` is such a legacy
- * token, which has no session to load but is otherwise acceptable.
+ * must be refused: it names no session, or its session was revoked or expired.
  */
-async function loadSession(decoded: UserPayload): Promise<ISession | null | undefined> {
-  if (decoded.sid === undefined) {
-    return isLegacySessionlessToken(decoded) ? undefined : null;
-  }
+async function loadSession(decoded: UserPayload): Promise<ISession | null> {
   if (typeof decoded.sid !== 'string' || !/^[a-f\d]{24}$/i.test(decoded.sid)) return null;
   return Session.findOne({ _id: decoded.sid, userId: decoded.id, expiresAt: { $gt: new Date() } });
 }
@@ -66,8 +61,10 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       return;
     }
 
-    // If token version doesn't match, token is invalid
-    if (decoded.tokenVersion && decoded.tokenVersion !== dbUser.tokenVersion) {
+    // If token version doesn't match, token is invalid. A token with no version
+    // counts as the first one, so "sign out everywhere" reaches it too instead
+    // of waving it through.
+    if ((decoded.tokenVersion ?? 1) !== (dbUser.tokenVersion ?? 1)) {
       res.status(401).json({ success: false, message: 'Token has been invalidated' });
       return;
     }
@@ -124,8 +121,8 @@ export const authenticateSession = async (req: Request, res: Response, next: Nex
     res.status(401).json({ success: false, message: 'User not found' });
     return;
   }
-  // Strict, unlike the access-token check: a refresh token always carries a
-  // version, and one from before an invalidation must not buy a new session.
+  // Strict: a refresh token always carries a version, and one from before an
+  // invalidation must not buy a new session.
   if ((claims.tokenVersion ?? 1) !== dbUser.tokenVersion) {
     res.status(401).json({ success: false, message: 'Token has been invalidated' });
     return;

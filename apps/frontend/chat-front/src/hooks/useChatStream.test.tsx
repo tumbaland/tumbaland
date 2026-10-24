@@ -209,9 +209,9 @@ describe('reconnecting', () => {
     });
     expect(onResync).not.toHaveBeenCalled();
     visibility = 'visible';
-    act(() => document.dispatchEvent(new Event('visibilitychange')));
+    void act(() => document.dispatchEvent(new Event('visibilitychange')));
     onResync.mockClear();
-    act(() => vi.advanceTimersByTime(POLL_INTERVAL_MS));
+    void act(() => vi.advanceTimersByTime(POLL_INTERVAL_MS));
     expect(onResync).toHaveBeenCalled();
     expect(FakeEventSource.instances).toHaveLength(1);
   });
@@ -334,7 +334,7 @@ describe('going to the background', () => {
       vi.advanceTimersByTime(2_000);
     });
     visibility = 'visible';
-    act(() => document.dispatchEvent(new Event('visibilitychange')));
+    void act(() => document.dispatchEvent(new Event('visibilitychange')));
 
     expect(stream.closed).toBe(true);
     expect(FakeEventSource.instances).toHaveLength(2);
@@ -352,7 +352,7 @@ describe('going to the background', () => {
 
     const afterHidden = FakeEventSource.instances.length;
     visibility = 'visible';
-    act(() => document.dispatchEvent(new Event('visibilitychange')));
+    void act(() => document.dispatchEvent(new Event('visibilitychange')));
 
     expect(FakeEventSource.instances.length).toBe(afterHidden + 1);
     // Push may have been dropped while away, so what arrived is fetched
@@ -368,7 +368,7 @@ describe('coming back online', () => {
     act(() => latest().fail());
 
     const before = FakeEventSource.instances.length;
-    act(() => window.dispatchEvent(new Event('online')));
+    void act(() => window.dispatchEvent(new Event('online')));
 
     expect(FakeEventSource.instances.length).toBe(before + 1);
   });

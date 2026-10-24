@@ -15,7 +15,7 @@ const PlansPage: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const [plansRes, subRes] = await Promise.all([
           paymentApi.listPlans(),

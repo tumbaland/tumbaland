@@ -65,7 +65,7 @@ const GroupsTab = () => {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, []);
 
   const handleCreateGroup = async () => {
     if (!createName.trim()) return;

@@ -23,7 +23,7 @@ export interface RegisterShutdownOptions {
 }
 
 /**
- * Registers `SIGINT` and `SIGTERM` handlers that drain the service before the
+ * Registers an `unhandledRejection` logger, and `SIGINT` and `SIGTERM` handlers that drain the service before the
  * process exits: end any open event streams, run the optional cleanup hook,
  * stop accepting new HTTP connections, then close the MongoDB connection.
  * `SIGTERM` matters most — it's the signal Docker/Kubernetes send on stop and rollout, and without a
@@ -78,6 +78,17 @@ export const registerShutdown = ({
       process.exit(1);
     }
   };
+
+  // A promise nobody awaited that rejects is a bug in one request or job, not a
+  // reason to take every other connection down with it: say so where the logs
+  // are read, and carry on. (Node's default is to exit.)
+  process.on('unhandledRejection', (reason) => {
+    logger.error('Unhandled promise rejection', {
+      service: serviceName,
+      error: reason instanceof Error ? reason.message : String(reason),
+      stack: reason instanceof Error ? reason.stack : undefined
+    });
+  });
 
   process.on('SIGINT', () => void shutdown('SIGINT'));
   process.on('SIGTERM', () => void shutdown('SIGTERM'));

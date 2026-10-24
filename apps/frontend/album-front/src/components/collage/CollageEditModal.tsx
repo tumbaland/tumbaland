@@ -83,7 +83,7 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
   };
 
   const handleRefreshAlbums = () => {
-    fetchAlbums();
+    void fetchAlbums();
   };
 
   return (

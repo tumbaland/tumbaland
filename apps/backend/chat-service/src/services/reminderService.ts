@@ -3,7 +3,7 @@ import { Conversation } from '../models/Conversation';
 import { IPlanCard, Message } from '../models/Message';
 import type { Caller } from './accessService';
 import { touchConversation } from './conversationService';
-import { toView } from './messageService';
+import { toView } from './messageView';
 import { notifyNewMessage } from './notificationService';
 import { planReminderPush, planReminderText } from './planText';
 import { isPushConfigured, sendToUsers } from './pushService';

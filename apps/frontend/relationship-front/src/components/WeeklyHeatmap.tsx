@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTenantFilter } from '@tumbaland/frontend-core';
-import { logger } from '@tumbaland/frontend-core';
+import { useAsyncData } from '../hooks/useAsyncData';
+import { journalYears } from '../utils/years';
 import {
   Box,
   Card,
@@ -24,6 +25,8 @@ interface WeeklyHeatmapProps {
   hiddenSlugs?: Set<string>;
 }
 
+const NO_ROWS: WeeklyHeatmapData[] = [];
+
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -45,36 +48,19 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
   height = 200,
   hiddenSlugs
 }) => {
-  const [data, setData] = useState<WeeklyHeatmapData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(year);
 
   // Get the current tenant's group ID
   const tenantGroupId = useTenantFilter();
 
-  // Generate available years (from 2024 to current year)
   const currentYear = new Date().getFullYear();
-  const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);
+  const availableYears = journalYears();
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const heatmapData = await getWeeklyHeatmapData(selectedYear, tenantGroupId);
-      logger.debug('Fetched heatmap data', { count: heatmapData.length });
-      setData(heatmapData);
-    } catch (err) {
-      logger.error('Error fetching heatmap data', err);
-      setError(err instanceof Error ? err.message : 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [selectedYear, tenantGroupId]);
+  const { data: loaded, loading, error } = useAsyncData(
+    () => getWeeklyHeatmapData(selectedYear, tenantGroupId),
+    [selectedYear, tenantGroupId]
+  );
+  const data = loaded ?? NO_ROWS;
 
   // Count for a day, excluding types the user hid from charts
   const effectiveCount = (d: WeeklyHeatmapData): number => {

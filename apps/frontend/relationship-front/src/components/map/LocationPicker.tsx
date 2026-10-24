@@ -99,7 +99,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ value, onChange, savedP
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
-      searchPlaces(query, { signal: controller.signal })
+      void searchPlaces(query, { signal: controller.signal })
         .then((hits) => {
           if (!controller.signal.aborted) setResults(hits);
         })

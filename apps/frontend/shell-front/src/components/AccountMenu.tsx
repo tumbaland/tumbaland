@@ -49,7 +49,7 @@ export function AccountMenu({
   // and reloading a module route signed out only shows "Access Restricted".
   const handleSignOut = async () => {
     onClose();
-    navigate('/');
+    void navigate('/');
     // Otherwise this device keeps showing their messages after they have gone.
     await forgetDeviceOnServer();
     await authService.logout();

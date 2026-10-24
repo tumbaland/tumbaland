@@ -16,7 +16,8 @@ function isThrottled(data: Record<string, unknown>): boolean {
 }
 
 function getThrottleMessage(data: Record<string, unknown>): string {
-  return String(data['Note'] || data['Information'] || 'Rate limit hit');
+  const notice = data['Note'] || data['Information'];
+  return typeof notice === 'string' ? notice : 'Rate limit hit';
 }
 
 /**
@@ -97,25 +98,30 @@ async function saveTimeSeries(
   timeSeries: Record<string, Record<string, string>>,
   interval: PriceInterval
 ): Promise<number> {
-  let saved = 0;
-  for (const [date, entry] of Object.entries(timeSeries)) {
-    await TickerPriceHistory.findOneAndUpdate(
-      { ticker: symbol, interval, date: new Date(date) },
-      {
-        ticker: symbol,
-        interval,
-        date: new Date(date),
-        price: parseFloat(entry['4. close']),
-        open: parseFloat(entry['1. open']),
-        high: parseFloat(entry['2. high']),
-        low: parseFloat(entry['3. low']),
-        volume: parseFloat(entry['5. volume'])
+  const operations = Object.entries(timeSeries).map(([date, entry]) => ({
+    updateOne: {
+      filter: { ticker: symbol, interval, date: new Date(date) },
+      update: {
+        $set: {
+          ticker: symbol,
+          interval,
+          date: new Date(date),
+          price: parseFloat(entry['4. close']),
+          open: parseFloat(entry['1. open']),
+          high: parseFloat(entry['2. high']),
+          low: parseFloat(entry['3. low']),
+          volume: parseFloat(entry['5. volume'])
+        }
       },
-      { upsert: true, new: true }
-    );
-    saved++;
-  }
-  return saved;
+      upsert: true
+    }
+  }));
+  if (operations.length === 0) return 0;
+
+  // One round trip for the series, not one per day: a weekly backfill is a
+  // decade or two of rows.
+  await TickerPriceHistory.bulkWrite(operations, { ordered: false });
+  return operations.length;
 }
 
 // Fetch historic OHLCV prices for a symbol and save to DB.

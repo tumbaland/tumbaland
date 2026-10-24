@@ -168,8 +168,9 @@ const MessageSchema = new Schema<IMessage>(
   { timestamps: true }
 );
 
-// Paging: newest first within one conversation, cursored on createdAt.
-MessageSchema.index({ conversationId: 1, createdAt: -1 });
+// Paging: newest first within one conversation, cursored on createdAt with the
+// id as tie-break.
+MessageSchema.index({ conversationId: 1, createdAt: -1, _id: -1 });
 
 // Idempotent send. Painful to add once there is data, so it exists from the
 // first version.

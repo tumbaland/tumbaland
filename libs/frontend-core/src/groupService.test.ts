@@ -1,11 +1,11 @@
 import { createGroupService } from './groupService';
 import { logger } from './monitoring';
 
-function mockFetchOnce(body: unknown, init: { ok?: boolean; statusText?: string } = {}) {
-  const { ok = true, statusText = 'OK' } = init;
+function mockFetchOnce(body: unknown, init: { ok?: boolean; status?: number } = {}) {
+  const { ok = true, status = ok ? 200 : 401 } = init;
   (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
     ok,
-    statusText,
+    status,
     json: async () => body
   });
 }
@@ -40,10 +40,10 @@ describe('createGroupService', () => {
     });
 
     it('throws when the response is not ok', async () => {
-      mockFetchOnce({}, { ok: false, statusText: 'Unauthorized' });
+      mockFetchOnce({ message: 'Unauthorized' }, { ok: false });
       const groupService = createGroupService(config);
 
-      await expect(groupService.getUserGroups()).rejects.toThrow('Failed to fetch groups: Unauthorized');
+      await expect(groupService.getUserGroups()).rejects.toThrow('Unauthorized');
     });
 
     it('throws when the API reports success:false', async () => {
@@ -84,11 +84,11 @@ describe('createGroupService', () => {
     });
 
     it('throws when the response is not ok', async () => {
-      mockFetchOnce({}, { ok: false, statusText: 'Unauthorized' });
+      mockFetchOnce({ message: 'Unauthorized' }, { ok: false });
       const groupService = createGroupService(config);
       const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
-      await expect(groupService.getUserGroupIds()).rejects.toThrow('Failed to fetch group IDs: Unauthorized');
+      await expect(groupService.getUserGroupIds()).rejects.toThrow('Unauthorized');
       expect(loggerErrorSpy).toHaveBeenCalledWith('Error fetching user group IDs', expect.any(Error));
       loggerErrorSpy.mockRestore();
     });
@@ -110,7 +110,7 @@ describe('createGroupService', () => {
 
   describe('getUserGroups error logging', () => {
     it('logs and rethrows on a non-ok response', async () => {
-      mockFetchOnce({}, { ok: false, statusText: 'Unauthorized' });
+      mockFetchOnce({ message: 'Unauthorized' }, { ok: false });
       const groupService = createGroupService(config);
       const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 

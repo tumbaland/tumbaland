@@ -26,7 +26,7 @@ import {
   thumbnailFileIdFor,
   withDownloadUrls
 } from './attachmentService';
-import { toView, type MessageView } from './messageService';
+import { toView, type MessageView } from './messageView';
 import { Message } from '../models/Message';
 
 beforeEach(() => {

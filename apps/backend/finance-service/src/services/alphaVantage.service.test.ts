@@ -1,6 +1,6 @@
 jest.mock('../models/TickerPriceHistory', () => ({
   __esModule: true,
-  default: { findOneAndUpdate: jest.fn() }
+  default: { bulkWrite: jest.fn() }
 }));
 
 // Quota accounting hits Mongo; the provider parsing under test here is
@@ -21,7 +21,7 @@ import {
 } from './alphaVantage.service';
 import { consumeQuota, releaseQuota } from './apiQuota.service';
 
-const mockedUpsert = TickerPriceHistory.findOneAndUpdate as unknown as jest.Mock;
+const mockedBulkWrite = TickerPriceHistory.bulkWrite as unknown as jest.Mock;
 
 const mockFetchJson = (body: unknown, init: { ok?: boolean; status?: number; statusText?: string } = {}) => {
   (global.fetch as unknown as jest.Mock).mockResolvedValue({
@@ -115,20 +115,34 @@ describe('fetchAndSaveAllStockHistory', () => {
         '2024-05-02': { '1. open': '10.5', '2. high': '12', '3. low': '10', '4. close': '11.5', '5. volume': '200' }
       }
     });
-    mockedUpsert.mockResolvedValue({});
+    mockedBulkWrite.mockResolvedValue({});
 
     const saved = await fetchAndSaveAllStockHistory('AAPL');
 
     expect(saved).toBe(2);
-    expect(mockedUpsert).toHaveBeenCalledTimes(2);
+    expect(mockedBulkWrite).toHaveBeenCalledTimes(1);
+    const operations = mockedBulkWrite.mock.calls[0][0];
+    expect(operations).toHaveLength(2);
     // The upsert key carries the interval: without it a daily re-fetch would no
     // longer match rows written before weekly closes existed, and would insert
     // duplicates of every date it already held.
-    expect(mockedUpsert).toHaveBeenCalledWith(
-      { ticker: 'AAPL', interval: 'daily', date: new Date('2024-05-01') },
-      expect.objectContaining({ ticker: 'AAPL', interval: 'daily', price: 10.5, open: 10, high: 11, low: 9, volume: 100 }),
-      { upsert: true, new: true }
-    );
+    expect(operations[0]).toEqual({
+      updateOne: {
+        filter: { ticker: 'AAPL', interval: 'daily', date: new Date('2024-05-01') },
+        update: {
+          $set: expect.objectContaining({
+            ticker: 'AAPL',
+            interval: 'daily',
+            price: 10.5,
+            open: 10,
+            high: 11,
+            low: 9,
+            volume: 100
+          })
+        },
+        upsert: true
+      }
+    });
   });
 
   it('stores the whole weekly series under its own interval', async () => {
@@ -138,16 +152,26 @@ describe('fetchAndSaveAllStockHistory', () => {
         '2026-08-07': { '1. open': '90', '2. high': '95', '3. low': '89', '4. close': '94', '5. volume': '900' }
       }
     });
-    mockedUpsert.mockResolvedValue({});
+    mockedBulkWrite.mockResolvedValue({});
 
     const saved = await fetchAndSaveWeeklyHistory('AAPL');
 
     expect(saved).toBe(2);
-    expect(mockedUpsert).toHaveBeenCalledWith(
-      { ticker: 'AAPL', interval: 'weekly', date: new Date('2015-01-20') },
-      expect.objectContaining({ ticker: 'AAPL', interval: 'weekly', price: 10.5 }),
-      { upsert: true, new: true }
-    );
+    expect(mockedBulkWrite).toHaveBeenCalledTimes(1);
+    expect(mockedBulkWrite.mock.calls[0][0][0]).toMatchObject({
+      updateOne: {
+        filter: { ticker: 'AAPL', interval: 'weekly', date: new Date('2015-01-20') },
+        update: { $set: expect.objectContaining({ ticker: 'AAPL', interval: 'weekly', price: 10.5 }) },
+        upsert: true
+      }
+    });
+  });
+
+  it('writes nothing when the series is empty', async () => {
+    mockFetchJson({ 'Weekly Time Series': {} });
+
+    await expect(fetchAndSaveWeeklyHistory('AAPL')).resolves.toBe(0);
+    expect(mockedBulkWrite).not.toHaveBeenCalled();
   });
 
   it('asks the weekly endpoint, which needs no outputsize to return everything', async () => {
@@ -180,7 +204,7 @@ describe('fetchAndSaveAllStockHistory', () => {
   it('returns 0 when there is no time series', async () => {
     mockFetchJson({});
     expect(await fetchAndSaveAllStockHistory('AAPL')).toBe(0);
-    expect(mockedUpsert).not.toHaveBeenCalled();
+    expect(mockedBulkWrite).not.toHaveBeenCalled();
   });
 
   it('throws TooManyRequestsError when throttled', async () => {

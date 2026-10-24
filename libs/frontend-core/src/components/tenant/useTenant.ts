@@ -374,7 +374,7 @@ export const useTenant = (
 
   // Initialize on mount and when user changes
   useEffect(() => {
-    refreshTenants();
+    void refreshTenants();
   }, [refreshTenants]);
 
   return {

@@ -85,7 +85,7 @@ const RecentActivitiesCards: React.FC = () => {
       }
     };
 
-    fetchData();
+    void fetchData();
   }, [selectedTimeline, tenantGroupId]);
 
   const handleTimelineChange = (event: SelectChangeEvent<number>) => {

@@ -197,14 +197,11 @@ export function findOwnAccounts(
  */
 export const INVESTMENT_CATEGORIES = new Set(['Investments', 'Savings', 'Pension']);
 
-export const isInvestmentCategory = (category: string): boolean =>
-  INVESTMENT_CATEGORIES.has(category);
-
 /**
  * Everything kept out of the income figure: capital returning is the same money
  * coming back, not earnings.
  */
-export const NON_EARNING_CATEGORIES = new Set([...INVESTMENT_CATEGORIES]);
+export const NON_EARNING_CATEGORIES = new Set(INVESTMENT_CATEGORIES);
 
 export const FALLBACK_CATEGORY: Record<TransactionType, string> = {
   income: 'Other income',

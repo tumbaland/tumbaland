@@ -136,11 +136,11 @@ describe('useCollageLive', () => {
 
     act(() => first.onerror?.());
     expect(first.closed).toBe(true);
-    act(() => vi.advanceTimersByTime(2500));
+    void act(() => vi.advanceTimersByTime(2500));
     expect(FakeEventSource.instances).toHaveLength(2);
 
     act(() => FakeEventSource.latest().emit('ready', { heartbeatMs: 1000, revision: 1 }));
-    act(() => vi.advanceTimersByTime(2100));
+    void act(() => vi.advanceTimersByTime(2100));
     expect(FakeEventSource.instances[1]!.closed).toBe(true);
   });
 
@@ -160,7 +160,7 @@ describe('useCollageLive', () => {
     renderHook(() => useCollageLive({ collageId: 'c1', session: 'tab-1', ...handlers() }));
 
     act(() => FakeEventSource.latest().emit('ready', { error: 'too_many_viewers' }));
-    act(() => vi.advanceTimersByTime(60_000));
+    void act(() => vi.advanceTimersByTime(60_000));
 
     expect(FakeEventSource.instances).toHaveLength(1);
   });

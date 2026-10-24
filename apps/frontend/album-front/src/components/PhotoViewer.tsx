@@ -123,7 +123,7 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
 
   const handleDownload = () => {
     if (!selectedPhoto) return;
-    downloadPhoto(selectedPhoto);
+    void downloadPhoto(selectedPhoto);
   };
 
   if (!selectedPhoto) return null;
