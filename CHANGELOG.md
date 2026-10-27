@@ -1,4 +1,15 @@
 # Tumbalog
+## [0.0.543](https://github.com/tumbaland/tumbaland/compare/app-v0.0.542...app-v0.0.543) (2026-10-27)
+
+### Features
+
+* add admin front and service ([bec7cc5](https://github.com/tumbaland/tumbaland/commit/bec7cc5cf53d9f1d116f16f90e6c48b81412d934))
+* remove todo ([548651d](https://github.com/tumbaland/tumbaland/commit/548651db08e19dde78ac77d5ae515ae384156de4))
+
+### Chores
+
+* **release:** @tumbaland/backend-core 1.50.0 ([452512f](https://github.com/tumbaland/tumbaland/commit/452512f381cb1aca5549c2906a258e6662cad45f))
+
 ## [0.0.542](https://github.com/tumbaland/tumbaland/compare/app-v0.0.541...app-v0.0.542) (2026-10-24)
 
 ### Features
