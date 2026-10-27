@@ -10,7 +10,8 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "backfill:user-days": "ts-node src/scripts/backfill-user-days.ts"
   },
   "dependencies": {
     "@tumbaland/backend-core": "1.49.0",

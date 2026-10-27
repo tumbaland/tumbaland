@@ -73,7 +73,7 @@ const userAgentOf = (req: Request): string | undefined => {
 };
 
 /** Set by Cloudflare in front of auth-api; `XX` and `T1` (Tor) say nothing useful. */
-const countryOf = (req: Request): string | undefined => {
+export const countryOf = (req: Request): string | undefined => {
   const country = req.headers?.['cf-ipcountry'];
   return typeof country === 'string' && /^[A-Z]{2}$/.test(country) && country !== 'XX' && country !== 'T1'
     ? country

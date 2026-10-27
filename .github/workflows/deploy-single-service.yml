@@ -16,9 +16,11 @@ on:
           - shell-front
           - auth-front
           - account-front
+          - admin-front
           - payment-front
           - group-front
           - chat-front
+          - admin-service
           - album-service
           - chat-service
           - auth-service
@@ -144,6 +146,8 @@ jobs:
           PAYMENT_URL: ${{ vars.PAYMENT_URL }}
           GROUP_FRONT_URL: ${{ vars.GROUP_FRONT_URL }}
           ACCOUNT_FRONT_URL: ${{ vars.ACCOUNT_FRONT_URL }}
+          ADMIN_API_URL: ${{ vars.ADMIN_API_URL }}
+          ADMIN_FRONT_URL: ${{ vars.ADMIN_FRONT_URL }}
           SHELL_FRONT_URL: ${{ vars.SHELL_FRONT_URL }}
           FILE_SERVICE_URL: ${{ vars.FILE_SERVICE_URL }}
           FILE_SERVICE_API_KEY: ${{ secrets.FILE_SERVICE_API_KEY }}

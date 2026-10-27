@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { API_KEY_SCOPES } from '@tumbaland/backend-core';
+import { ACTIVITY_MODULES, ACTIVITY_PLATFORMS, API_KEY_SCOPES } from '@tumbaland/backend-core';
 
 export const validateTokenSchema = z.object({
   idToken: z.string().min(1, 'Token is required')
@@ -36,3 +36,19 @@ export const createApiKeySchema = z.object({
   defaultTenant: z.string().min(1).optional(),
   expiresAt: z.coerce.date().min(new Date(), 'Expiry must be in the future').nullish()
 });
+
+/**
+ * One visit or page open, as shell-front reports it (see the activity hook
+ * there). Module names are checked by `recordActivity` against the fixed list,
+ * but rejected here too so a bad client gets a 400 instead of a silent 204.
+ */
+export const activitySchema = z
+  .object({
+    kind: z.enum(['visit', 'open']),
+    module: z.enum(ACTIVITY_MODULES).optional(),
+    platform: z.enum(ACTIVITY_PLATFORMS)
+  })
+  .refine((body) => body.kind !== 'open' || body.module !== undefined, {
+    message: 'module is required for an open',
+    path: ['module']
+  });

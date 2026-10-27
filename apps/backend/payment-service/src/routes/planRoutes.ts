@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken as authenticate, optionalAuth, validate } from '@tumbaland/backend-core';
+import { authenticateToken as authenticate, optionalAuth, requireAdmin, validate } from '@tumbaland/backend-core';
 import {
   listPlans,
   listAllPlans,
@@ -10,7 +10,6 @@ import {
   updatePlanStripePrices,
   getEntitlementCatalog
 } from '../controllers/planController';
-import { requireAdmin } from '../middleware/adminMiddleware';
 import {
   createPlanSchema,
   createPlansBulkSchema,

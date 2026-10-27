@@ -1,7 +1,6 @@
 import { Router } from 'express';
-import { authenticateToken as authenticate, validate } from '@tumbaland/backend-core';
+import { authenticateToken as authenticate, requireAdmin, validate } from '@tumbaland/backend-core';
 import { listOverrides, getOverride, upsertOverride, deleteOverride } from '../controllers/overrideController';
-import { requireAdmin } from '../middleware/adminMiddleware';
 import { upsertOverrideSchema } from '../validation/schemas';
 
 /**

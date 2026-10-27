@@ -14,7 +14,7 @@ import DocumentPage from '../components/DocumentPage';
 export const PRIVACY_DOC = {
   title: 'Privacy',
   intro: 'What Tumbaland stores, where it lives, and who else can see it.',
-  updated: '14 September 2026'
+  updated: '27 October 2026'
 };
 
 /** The policy itself: the /privacy page and the front page's reader both show it. */
@@ -72,6 +72,17 @@ export function PrivacyContent() {
           <tr>
             <td>Group membership, by email address</td>
             <td>Groups you create or are invited to.</td>
+          </tr>
+          <tr>
+            <td>
+              Which days you opened Tumbaland, how many times, and which parts of it you used: a
+              count per day, never what you looked at
+            </td>
+            <td>
+              Your device, each time you open the app or move to another part of it. Kept for as
+              long as your account exists, and used to see whether the service is used and to
+              improve it.
+            </td>
           </tr>
           <tr>
             <td>Server logs: request paths, timestamps, IP addresses and error traces</td>

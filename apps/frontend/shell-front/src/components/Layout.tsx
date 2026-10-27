@@ -3,12 +3,13 @@ import { ReactNode, useEffect, useState } from 'react';
 import { Loader, ProtectedRoute, surface, TenantSelector, useTenant } from '@tumbaland/frontend-core';
 import { AppNav } from './AppNav';
 import { RemoteOutlet } from './RemoteOutlet';
-import { CHAT_APP, getAppByRoute, isRouteActive } from '../config/apps';
+import { CHAT_APP, getAppByRoute, isAdminUser, isRouteActive } from '../config/apps';
 import { useConfig } from '../config/ConfigProvider';
 import { authService } from '../services/authService';
 import { useAuthState } from '../hooks/useAuthState';
 import { useUnreadChat } from '../hooks/useUnreadChat';
 import { useShowMoney } from '../hooks/useShowMoney';
+import { useActivity } from '../hooks/useActivity';
 import { useKeyboardAwareHeight } from '../hooks/useKeyboardAwareHeight';
 import { UpdatePrompt } from './UpdatePrompt';
 import { onWorkerMessage, registerServiceWorker } from '../services/serviceWorker';
@@ -73,8 +74,16 @@ export default function Layout({ children }: LayoutProps) {
   // sign-in is just stored rather than reloading the page a second time.
   const tenant = useTenant(GROUP_API_URL ?? '', authenticated ? user?.id : undefined, { waitsForReady: true });
 
-  const currentApp = getAppByRoute(location.pathname);
+  // The administration screens are for an administrator. For anyone else who is
+  // signed in, the address is treated as one that does not exist, rather than
+  // shown a refusal that confirms it does. Someone signed out still reaches the
+  // sign-in gate below, like any other module.
+  const routedApp = getAppByRoute(location.pathname);
+  const currentApp = routedApp?.adminOnly && authenticated && !isAdminUser(user) ? undefined : routedApp;
   const navigate = useNavigate();
+
+  // Visits and page opens, for the administrator's view of who uses what.
+  useActivity(authenticated, location.pathname);
   const [updateReady, setUpdateReady] = useState(false);
 
   // The unread count for the Chat button and the installed app's icon.

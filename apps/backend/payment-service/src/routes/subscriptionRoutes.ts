@@ -1,10 +1,9 @@
 import { Router } from 'express';
-import { authenticateToken as authenticate, validate } from '@tumbaland/backend-core';
+import { authenticateToken as authenticate, requireAdmin, validate } from '@tumbaland/backend-core';
 import { getMySubscription, listMySubscriptions, cancelSubscription } from '../controllers/subscriptionController';
 import { getCheckoutSessionStatus, createCheckoutSession } from '../controllers/stripeController';
 import { getMyEntitlements } from '../controllers/entitlementController';
 import { listGrants, grantSubscription, revokeGrant } from '../controllers/grantController';
-import { requireAdmin } from '../middleware/adminMiddleware';
 import { createCheckoutSessionSchema, grantSubscriptionSchema } from '../validation/schemas';
 
 const router = Router();

@@ -43,6 +43,7 @@ when the reason for wanting a tunnel is that nothing can reach the Pi at all.
    | `album-api.tumbaland.eu` | `account.tumbaland.eu` | `group.tumbaland.eu` |
    | `relationship.tumbaland.eu` | `file-service.tumbaland.eu` | `group-api.tumbaland.eu` |
    | `relationship-api.tumbaland.eu` | `api.tumbaland.eu` | `rabbitmq.tumbaland.eu` |
+   | `admin.tumbaland.eu` | `admin-api.tumbaland.eu` | |
    | `finance.tumbaland.eu` | `mcp.tumbaland.eu` | `rabbitmq-metrics.tumbaland.eu` |
    | `finance-api.tumbaland.eu` | `chat.tumbaland.eu` | `beszel.tumbaland.eu` |
    | | `chat-api.tumbaland.eu` | |

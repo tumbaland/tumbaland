@@ -30,8 +30,8 @@ jobs:
     steps:
       - id: compute
         run: |
-          FRONT="account-front album-front auth-front chat-front finance-front group-front payment-front relationship-front shell-front"
-          BACK="album-service auth-service chat-service file-service finance-service group-service mcp-service payment-service public-service relationship-service"
+          FRONT="account-front admin-front album-front auth-front chat-front finance-front group-front payment-front relationship-front shell-front"
+          BACK="admin-service album-service auth-service chat-service file-service finance-service group-service mcp-service payment-service public-service relationship-service"
           case "${{ github.event.inputs.target }}" in
             all)          SVCS="$FRONT $BACK" ;;
             all-frontend) SVCS="$FRONT" ;;
@@ -135,6 +135,8 @@ jobs:
           PAYMENT_URL: ${{ vars.PAYMENT_URL }}
           GROUP_FRONT_URL: ${{ vars.GROUP_FRONT_URL }}
           ACCOUNT_FRONT_URL: ${{ vars.ACCOUNT_FRONT_URL }}
+          ADMIN_API_URL: ${{ vars.ADMIN_API_URL }}
+          ADMIN_FRONT_URL: ${{ vars.ADMIN_FRONT_URL }}
           SHELL_FRONT_URL: ${{ vars.SHELL_FRONT_URL }}
           FILE_SERVICE_URL: ${{ vars.FILE_SERVICE_URL }}
           FILE_SERVICE_API_KEY: ${{ secrets.FILE_SERVICE_API_KEY }}

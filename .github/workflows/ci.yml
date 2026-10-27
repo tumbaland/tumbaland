@@ -155,6 +155,10 @@ jobs:
             # Shared by the collage editor, its server and the assistant's tools.
             collage-libs-changed: &collage-libs-changed
               - 'libs/collage-core/**'
+            apps/backend/admin-service:
+              - *root-shared
+              - *backend-libs-changed
+              - 'apps/backend/admin-service/**'
             apps/backend/album-service:
               - *root-shared
               - *backend-libs-changed
@@ -202,6 +206,11 @@ jobs:
               - *frontend-libs-changed
               - *frontend-shared
               - 'apps/frontend/account-front/**'
+            apps/frontend/admin-front:
+              - *root-shared
+              - *frontend-libs-changed
+              - *frontend-shared
+              - 'apps/frontend/admin-front/**'
             apps/frontend/album-front:
               - *root-shared
               - *frontend-libs-changed

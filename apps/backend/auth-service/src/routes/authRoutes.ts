@@ -13,6 +13,8 @@ import {
 import { AVATAR_TYPES, MAX_AVATAR_BYTES } from '../services/avatarService';
 import { getConnections, revokeConnection } from '../controllers/oauthConnectionController';
 import { getAuditTrail } from '../controllers/auditController';
+import { postActivity } from '../controllers/activityController';
+import { confirmDeletion, reopenAccount } from '../controllers/adminController';
 import { getSessions, revokeOtherSessions, revokeSession } from '../controllers/sessionController';
 import {
   requireApiKeysConfigured,
@@ -30,7 +32,8 @@ import {
   invalidateTokensSchema,
   updateProfileSchema,
   approveUserSchema,
-  createApiKeySchema
+  createApiKeySchema,
+  activitySchema
 } from '../validation/schemas';
 
 const router = Router();
@@ -119,6 +122,10 @@ router.delete('/sessions/:id', authenticateToken, requireApproved, revokeSession
 // nothing further to guard against here.
 router.get('/audit', authenticateToken, requireApproved, getAuditTrail);
 
+// A visit or a page open, counted for the admin screens. A session only, so no
+// key or connected assistant can make itself look like a person opening the app.
+router.post('/activity', authenticateToken, requireApproved, validate(activitySchema), postActivity);
+
 // Internal service endpoints for token management — service-to-service only, never user-facing.
 router.post('/internal/invalidate-tokens', requireInternalService, validate(invalidateTokensSchema), invalidateUserTokens);
 
@@ -141,6 +148,24 @@ router.post(
     }
     res.json({ success: true, user });
   }
+);
+
+// Closing an account that asked to be deleted, and taking it back. The role is
+// read from the database (`requireRole`), not the token, so these cannot be done
+// with a token signed before the role was taken away.
+router.post(
+  '/admin/users/:id/deletion/confirm',
+  authenticateToken,
+  requireApproved,
+  requireRole('admin'),
+  confirmDeletion
+);
+router.post(
+  '/admin/users/:id/deletion/reopen',
+  authenticateToken,
+  requireApproved,
+  requireRole('admin'),
+  reopenAccount
 );
 
 // List users (admin)

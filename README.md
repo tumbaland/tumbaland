@@ -5,7 +5,7 @@
 npm workspaces monorepo with three workspace groups:
 
 - `apps/backend/*` — Express + MongoDB services (auth, album, finance, relationship, payment,
-  group, file, public). Each service is a thin `routes → controllers → services → models` stack
+  group, file, public, mcp, admin). Each service is a thin `routes → controllers → services → models` stack
   built on `@tumbaland/backend-core`.
 - `apps/frontend/*` — Vite + React + MUI single-page apps, one per domain, plus `shell-front` which
   hosts the top-level shell/navigation. Each app owns a `ConfigProvider` (built on
@@ -39,7 +39,8 @@ npm workspaces monorepo with three workspace groups:
 | group-front | 3006 | | public-service | 5003 |
 | account-front | 3007 | | payment-service | 5005 |
 | chat-front | 3008 | | group-service | 5006 |
-| | | | mcp-service | 5007 |
+| admin-front | 3009 | | mcp-service | 5007 |
+| | | | admin-service | 5008 |
 
 Every app has an `.env.example` listing exactly what it reads, with localhost defaults: plain
 names for backend services, `VITE_*` for frontends. The root `.env.example` is the production

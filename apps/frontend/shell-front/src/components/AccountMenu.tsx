@@ -10,7 +10,7 @@ import MenuItem from '@mui/material/MenuItem';
 import MenuList from '@mui/material/MenuList';
 import Typography from '@mui/material/Typography';
 import LogoutIcon from '@mui/icons-material/Logout';
-import { getUserApps, isRouteActive } from '../config/apps';
+import { getUserApps, isAdminUser, isRouteActive } from '../config/apps';
 import { APP_VERSION } from '../config/releaseNotes';
 import { authService } from '../services/authService';
 import { forgetDeviceOnServer } from '../services/pushNotifications';
@@ -70,7 +70,7 @@ export function AccountMenu({
       </Box>
     </MenuItem>,
     <Divider key="account-divider" />,
-    ...getUserApps().map((app) => {
+    ...getUserApps({ isAdmin: isAdminUser(user) }).map((app) => {
       const Icon = app.icon;
       return (
         <MenuItem

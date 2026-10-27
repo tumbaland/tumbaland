@@ -40,6 +40,23 @@ export interface IUser extends Document {
    */
   deletionRequestedAt?: Date | null;
   /**
+   * When an administrator confirmed the request, which closes the account.
+   *
+   * Still not a deletion: the data is all where it was, and removing it stays a
+   * manual job. What changes is the account itself. Confirming signs the person
+   * out everywhere and cuts off their keys and connected apps, and sign-in is
+   * refused from then on (see `signIn`), so a closed account cannot quietly
+   * carry on being used while it waits for its data to be removed.
+   *
+   * The three states, in order: requested (`deletionRequestedAt`; works as
+   * before, the owner can cancel), confirmed (this field; closed, data still
+   * present) and removed (a later change; the document and its data are gone).
+   * An administrator reopens a confirmed one by clearing this and the request.
+   */
+  deletionConfirmedAt?: Date | null;
+  /** The administrator who confirmed it, as a user id. */
+  deletionConfirmedBy?: string | null;
+  /**
    * Whether "My money" is listed in this person's own menu. Off unless they
    * turn it on: a couple's app should not put someone's finances in the
    * navigation by default, and their partner has no use for an empty one.
@@ -63,6 +80,11 @@ const UserSchema = new Schema<IUser>(
     googlePicture: { type: String, default: null },
     googleName: { type: String, default: null },
     deletionRequestedAt: { type: Date, default: null },
+    // No default, unlike the request above: a sparse index skips a missing field
+    // but still indexes an explicit null, so leaving these unset is what keeps
+    // the "closed accounts" index the size of the closed accounts.
+    deletionConfirmedAt: { type: Date },
+    deletionConfirmedBy: { type: String },
     showMoney: { type: Boolean, default: false }
   },
   { timestamps: true }
@@ -75,5 +97,6 @@ const UserSchema = new Schema<IUser>(
  * a column of nulls is a full copy of the collection for no benefit.
  */
 UserSchema.index({ deletionRequestedAt: 1 }, { sparse: true });
+UserSchema.index({ deletionConfirmedAt: 1 }, { sparse: true });
 
 export const User = model<IUser>('User', UserSchema);

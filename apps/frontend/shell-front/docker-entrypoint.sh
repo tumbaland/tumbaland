@@ -17,6 +17,7 @@ cat <<EOF > /usr/share/nginx/html/config.json
   "VAPID_PUBLIC_KEY": "${VAPID_PUBLIC_KEY}",
   "AUTH_SERVICE_URL": "${AUTH_SERVICE_URL}",
   "ACCOUNT_FRONT_URL": "${ACCOUNT_FRONT_URL}",
+  "ADMIN_FRONT_URL": "${ADMIN_FRONT_URL}",
   "AUTH_FRONT_URL": "${AUTH_FRONT_URL}"
 }
 EOF

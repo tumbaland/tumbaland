@@ -4,6 +4,8 @@ jest.mock('../models/User', () => ({
   User: {
     findOne: jest.fn(),
     findOneAndUpdate: jest.fn(),
+    // Whether an administrator closed the account (see signIn); none is, unless a test says so.
+    exists: jest.fn(),
     // Renewal reads the stored picture; none stored unless a test says so.
     findById: jest.fn(() => ({ select: jest.fn().mockResolvedValue(null) }))
   }
@@ -22,10 +24,11 @@ import { makeSession } from '../test/sessionModelMock';
 import app from '../app';
 import { generateJWT, decodeJWT, generateRefreshToken } from '../services/jwtService';
 import { verifyGoogleToken } from '../services/googleAuthService';
-import { validateToken, verifyAuth, refreshToken, safeRedirectTarget } from './authController';
+import { ACCOUNT_CLOSED_MESSAGE, validateToken, verifyAuth, refreshToken, safeRedirectTarget } from './authController';
 
 const mockedFindOne = User.findOne as unknown as jest.Mock;
 const mockedFindOneAndUpdate = User.findOneAndUpdate as unknown as jest.Mock;
+const mockedExists = User.exists as unknown as jest.Mock;
 const mockedVerifyGoogleToken = verifyGoogleToken as unknown as jest.Mock;
 const SESSION_ID = 'a'.repeat(24);
 const sessions = Session as unknown as Record<'create' | 'findOne' | 'findOneAndUpdate' | 'find' | 'deleteOne' | 'deleteMany', jest.Mock>;
@@ -209,6 +212,21 @@ describe('POST /auth/validate', () => {
     expect(mockedFindOneAndUpdate).not.toHaveBeenCalled();
   });
 
+  it('refuses an account an administrator closed, without touching it or starting a session', async () => {
+    mockedVerifyGoogleToken.mockResolvedValue({ email: 'Ada@Example.com', name: 'Ada' });
+    mockedExists.mockResolvedValueOnce({ _id: 'db-user-1' });
+
+    const res = await request(app).post('/auth/validate').send({ idToken: 'good-token' });
+
+    expect(res.status).toBe(403);
+    expect(res.body).toMatchObject({ success: false, message: ACCOUNT_CLOSED_MESSAGE });
+    expect(mockedExists).toHaveBeenCalledWith({ email: 'ada@example.com', deletionConfirmedAt: { $ne: null } });
+    // Not even the last-login date or picture is updated on a closed account.
+    expect(mockedFindOneAndUpdate).not.toHaveBeenCalled();
+    expect(sessions.create).not.toHaveBeenCalled();
+    expect(res.headers['set-cookie']).toBeUndefined();
+  });
+
   it('keeps a picture the person uploaded instead of taking Google’s again', async () => {
     mockedVerifyGoogleToken.mockResolvedValue({ email: 'ada@example.com', name: 'Ada', picture: 'google.png' });
     mockedFindOneAndUpdate.mockResolvedValue({
@@ -385,6 +403,18 @@ describe('POST /auth/google/callback', () => {
     expect(new URL(res.headers.location).searchParams.get('error')).toBe('signin_failed');
   });
 
+  it('tells a closed account so, rather than calling it a failed sign-in', async () => {
+    mockedVerifyGoogleToken.mockResolvedValue(googleUser);
+    mockedExists.mockResolvedValueOnce({ _id: 'db-user-1' });
+
+    const res = await post(['login_nonce=nonce-1', `login_redirect=${encodeURIComponent(target)}`]);
+
+    expect(res.status).toBe(303);
+    expect(new URL(res.headers.location).searchParams.get('error')).toBe('account_closed');
+    const setCookie = (res.headers['set-cookie'] ?? []) as unknown as string[];
+    expect(setCookie.find((c) => c.startsWith('access_token='))).toBeUndefined();
+  });
+
   it('never redirects to another domain', async () => {
     mockedVerifyGoogleToken.mockResolvedValue(googleUser);
 
@@ -471,6 +501,54 @@ describe('GET /auth/verify', () => {
       success: true,
       authenticated: true,
       user: { email: 'user@example.com' }
+    });
+  });
+
+  describe('roles', () => {
+    const rolesIn = (res: request.Response): string[] | undefined => {
+      const cookie = (res.headers['set-cookie'] as unknown as string[] | undefined)?.find((c) => c.startsWith('access_token='));
+      if (!cookie) return undefined;
+      const token = decodeURIComponent(cookie.split(';')[0].slice('access_token='.length));
+      return decodeJWT(token)?.roles;
+    };
+    const signedIn = (roles?: string[]) =>
+      generateJWT({ id: '1', sid: SESSION_ID, email: 'user@example.com', name: 'User', tokenVersion: 1, ...(roles ? { roles } : {}) });
+    const account = (roles: string[]) => ({ email: 'user@example.com', tokenVersion: 1, isApproved: true, roles });
+
+    it('signs a new token at once when a role was granted since the token was signed', async () => {
+      mockedFindOne.mockResolvedValue(account(['admin']));
+
+      const res = await request(app).get('/auth/verify').set('Cookie', `access_token=${signedIn()}`);
+
+      expect(res.status).toBe(200);
+      expect(rolesIn(res)).toEqual(['admin']);
+      expect(res.body.user.roles).toEqual(['admin']);
+    });
+
+    it('signs a new token at once when a role was taken away', async () => {
+      mockedFindOne.mockResolvedValue(account([]));
+
+      const res = await request(app).get('/auth/verify').set('Cookie', `access_token=${signedIn(['admin'])}`);
+
+      expect(rolesIn(res)).toEqual([]);
+      expect(res.body.user.roles).toEqual([]);
+    });
+
+    it('leaves a fresh token alone when the roles are the same, in whatever order', async () => {
+      mockedFindOne.mockResolvedValue(account(['support', 'admin']));
+
+      const res = await request(app).get('/auth/verify').set('Cookie', `access_token=${signedIn(['admin', 'support'])}`);
+
+      expect(res.status).toBe(200);
+      expect(rolesIn(res)).toBeUndefined();
+    });
+
+    it('does not reissue for an account with no roles and a token with none', async () => {
+      mockedFindOne.mockResolvedValue(account([]));
+
+      const res = await request(app).get('/auth/verify').set('Cookie', `access_token=${signedIn()}`);
+
+      expect(rolesIn(res)).toBeUndefined();
     });
   });
 

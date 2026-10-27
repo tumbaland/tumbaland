@@ -4,6 +4,8 @@ export interface User {
   email: string;
   name: string;
   picture?: string;
+  /** What the session token says the account may do; `admin` is the only one the shell reads. */
+  roles?: string[];
 }
 
 export interface AuthResponse {

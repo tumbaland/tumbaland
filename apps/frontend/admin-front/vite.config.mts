@@ -1,0 +1,78 @@
+import { defineConfig, lazyPlugins } from 'vite-plus';
+import react from '@vitejs/plugin-react';
+import { federation } from '@module-federation/vite';
+import {
+  TUMBALAND_FEDERATION_SHARED,
+  TUMBALAND_REMOTE_ENTRY,
+  TUMBALAND_REMOTE_MODULE
+} from '@tumbaland/frontend-core/federation';
+import { resolve } from 'path';
+
+// https://vitejs.dev/config/
+export default defineConfig(({ mode }) => ({
+  plugins: lazyPlugins(() => [
+    react(),
+    // Besides running standalone, admin-front is a module-federation remote:
+    // shell-front loads `./App` from this origin's remoteEntry.js. Vitest has
+    // no use for the federation build, so it is left out there.
+    ...(process.env.VITEST
+      ? []
+      : [
+          federation({
+            name: 'admin',
+            filename: TUMBALAND_REMOTE_ENTRY,
+            exposes: { [TUMBALAND_REMOTE_MODULE]: './src/federation/RemoteApp.tsx' },
+            shared: {
+              ...TUMBALAND_FEDERATION_SHARED,
+              // Dev only, and only matters when this app is opened on its own.
+              // MUI's pre-bundled code imports the production JSX runtime, which
+              // nothing registers with Module Federation (app code uses the dev
+              // one), so its first `jsx()` call ran before the share had loaded
+              // and the page died with "jsx is not a function". Inside the
+              // shell the host has already set it up.
+              ...(mode === 'development' ? { 'react/jsx-runtime': { singleton: true } } : {})
+            },
+            dts: false
+          })
+        ])
+  ]),
+  server: {
+    port: 3009,
+    // Absolute asset URLs in dev, so the shell's page fetches them from here.
+    origin: 'http://localhost:3009'
+  },
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+      ...(mode === 'development' && {
+        '@tumbaland/frontend-core': resolve(__dirname, '../../../libs/frontend-core/src')
+      })
+    }
+  },
+  build: {
+    modulePreload: false,
+    target: 'esnext',
+    minify: false,
+    cssCodeSplit: false,
+    // Vite 8 transforms JSX via Oxc, not esbuild, so `esbuild.drop` is a no-op here (Oxc's
+    // transform step has no equivalent option and @vitejs/plugin-react needs Oxc for Fast
+    // Refresh, so it can't be disabled). Stripping console.* in prod builds only works through
+    // the Oxc-based minifier's compress option, applied here without touching `minify: false`.
+    rollupOptions: {
+      output: {
+        minify: mode === 'production' ? { compress: { dropConsole: true }, mangle: false, codegen: false } : false
+      }
+    }
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json-summary'],
+      exclude: ['src/main.tsx', 'src/vite-env.d.ts', 'src/test/**', '**/*.test.{ts,tsx}'],
+      thresholds: { statements: 90, branches: 80, functions: 90, lines: 90 }
+    }
+  }
+}));

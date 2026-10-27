@@ -13,8 +13,8 @@
   },
   "scripts": {
     "dev": "concurrently \"npm run dev:back\" \"npm run dev:front\"",
-    "dev:back": "concurrently \"npm run dev --workspace=auth-service\" \"npm run dev --workspace=public-service\" \"npm run dev --workspace=album-service\" \"npm run dev --workspace=finance-service\" \"npm run dev --workspace=relationship-service\" \"npm run dev --workspace=payment-service\" \"npm run dev --workspace=group-service\" \"npm run dev --workspace=file-service\" \"npm run dev --workspace=chat-service\" \"npm run dev --workspace=mcp-service\"",
-    "dev:front": "concurrently \"npm run dev --workspace=account-front\" \"npm run dev --workspace=auth-front\" \"npm run dev --workspace=shell-front\" \"npm run dev --workspace=album-front\" \"npm run dev --workspace=finance-front\" \"npm run dev --workspace=relationship-front\" \"npm run dev --workspace=payment-front\" \"npm run dev --workspace=group-front\" \"npm run dev --workspace=chat-front\"",
+    "dev:back": "concurrently \"npm run dev --workspace=auth-service\" \"npm run dev --workspace=public-service\" \"npm run dev --workspace=album-service\" \"npm run dev --workspace=finance-service\" \"npm run dev --workspace=relationship-service\" \"npm run dev --workspace=payment-service\" \"npm run dev --workspace=group-service\" \"npm run dev --workspace=file-service\" \"npm run dev --workspace=chat-service\" \"npm run dev --workspace=mcp-service\" \"npm run dev --workspace=admin-service\"",
+    "dev:front": "concurrently \"npm run dev --workspace=account-front\" \"npm run dev --workspace=auth-front\" \"npm run dev --workspace=shell-front\" \"npm run dev --workspace=album-front\" \"npm run dev --workspace=finance-front\" \"npm run dev --workspace=relationship-front\" \"npm run dev --workspace=payment-front\" \"npm run dev --workspace=group-front\" \"npm run dev --workspace=chat-front\" \"npm run dev --workspace=admin-front\"",
     "lint": "vp lint .",
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "npm run build --workspace=@tumbaland/frontend-core --workspace=@tumbaland/collage-core && playwright test",

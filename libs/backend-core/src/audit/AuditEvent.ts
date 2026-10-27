@@ -106,6 +106,10 @@ const AuditEventSchema = new Schema<IAuditEvent>(
 // Every listing is one account's trail, newest first.
 AuditEventSchema.index({ userId: 1, at: -1 });
 
+// The admin screens ask across every account — "all assistant calls this month" —
+// which the per-user index above cannot serve.
+AuditEventSchema.index({ action: 1, at: -1 });
+
 /**
  * Rows expire on their own.
  *

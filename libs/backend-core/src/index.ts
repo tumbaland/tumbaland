@@ -43,8 +43,12 @@ export * from './audit';
 // Server-Sent Events streams (headers, heartbeat, lifetime, shutdown)
 export * from './sse';
 
+// Visit counts (user_days), for the admin screens
+export * from './activity';
+
 // Middleware
 export { authenticateToken, optionalAuth } from './middleware/authMiddleware';
+export { requireAdmin } from './middleware/requireAdmin';
 export { USER_SESSIONS_COLLECTION, isCurrentSession } from './auth/session';
 export {
   requireInternalServiceToken,

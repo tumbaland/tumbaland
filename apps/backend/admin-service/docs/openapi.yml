@@ -1,0 +1,110 @@
+openapi: 3.0.3
+info:
+  title: Admin Service API
+  description: >
+    Who uses Tumbaland, and how. Read only. Every route needs the session of an
+    administrator: connected assistants and API keys are refused even when the
+    account behind them is one. Responses hold counts, dates and names, never
+    the content of entries, photos or messages and never a key or token.
+    Closing an account that asked to be deleted is auth-service's
+    (`/auth/admin/users/{id}/deletion/confirm`), which owns accounts.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5008
+    description: Development server
+  - url: https://admin-api.tumbaland.eu
+    description: Production server
+
+security:
+  - cookieAuth: []
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+  schemas:
+    Error:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string, example: admin required }
+    Envelope:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data: { type: object }
+  responses:
+    NotAdmin:
+      description: Not signed in as an administrator
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+paths:
+  /api/overview:
+    get:
+      summary: Activity across all accounts
+      description: >
+        People active per day, signups per week, whether each signup week came back
+        (weeks 1, 2, 4 and 8), page opens per week by module, pairs where both people
+        were active, assistant calls this month and the market-data budget used today.
+        Days are UTC.
+      parameters:
+        - { name: days, in: query, description: 'Length of the daily series, 1 to 365', schema: { type: integer, default: 30 } }
+      responses:
+        '200': { description: The overview, content: { application/json: { schema: { $ref: '#/components/schemas/Envelope' } } } }
+        '401': { description: No session }
+        '403': { $ref: '#/components/responses/NotAdmin' }
+
+  /api/users:
+    get:
+      summary: Every account, with how much it is used
+      description: Last visit, days active in the last 7 and 30, visits, most-opened modules, plan, storage, connected apps and keys, and assistant calls.
+      parameters:
+        - { name: sort, in: query, schema: { type: string, enum: [lastVisit, signup, activeDays30, visits30, email], default: lastVisit } }
+        - { name: order, in: query, schema: { type: string, enum: [asc, desc] } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, description: 'At most 100', schema: { type: integer, default: 25 } }
+        - { name: q, in: query, description: 'Part of an email or a name', schema: { type: string } }
+      responses:
+        '200': { description: A page of accounts, content: { application/json: { schema: { $ref: '#/components/schemas/Envelope' } } } }
+        '403': { $ref: '#/components/responses/NotAdmin' }
+
+  /api/users/{id}:
+    get:
+      summary: One account in detail
+      description: >
+        Visits for the last 90 days, pages opened and what the person added, changed or
+        deleted (counts only), quota against the plan including what a group owner pays
+        for, connected assistants, API keys (never the secret) and devices (as a label),
+        and what assistants did for the account in the last 30 days.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: The account, content: { application/json: { schema: { $ref: '#/components/schemas/Envelope' } } } }
+        '403': { $ref: '#/components/responses/NotAdmin' }
+        '404': { description: No such account }
+
+  /api/assistants:
+    get:
+      summary: Connected assistants across all accounts
+      description: Each registered app with its connected accounts and calls, and the tools ranked by the tokens they hand the model.
+      parameters:
+        - { name: days, in: query, description: 'Window, 1 to 365', schema: { type: integer, default: 30 } }
+      responses:
+        '200': { description: The assistants, content: { application/json: { schema: { $ref: '#/components/schemas/Envelope' } } } }
+        '403': { $ref: '#/components/responses/NotAdmin' }
+
+  /api/deletions:
+    get:
+      summary: The deletion queue
+      description: >
+        Accounts that asked to be deleted (oldest first), with whether they came back
+        since, their groups and what they own as counts, and the accounts an
+        administrator has closed whose data is still to be removed by hand.
+      responses:
+        '200': { description: Both lists, content: { application/json: { schema: { $ref: '#/components/schemas/Envelope' } } } }
+        '403': { $ref: '#/components/responses/NotAdmin' }

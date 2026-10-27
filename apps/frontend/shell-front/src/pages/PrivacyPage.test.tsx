@@ -46,6 +46,16 @@ describe('PrivacyPage', () => {
     render(<PrivacyPage />);
     expect(screen.getByText(/Last updated/)).toBeInTheDocument();
   });
+
+  it('says it counts which days and which parts, and that it never records what was looked at', () => {
+    // The administrator's usage screens read exactly this, so the policy has to
+    // name it. It is also kept apart from the claim that no analytics service
+    // is involved: it is counted on our own server.
+    render(<PrivacyPage />);
+    expect(screen.getByText(/Which days you opened Tumbaland/)).toBeInTheDocument();
+    expect(screen.getByText(/never what you looked at/)).toBeInTheDocument();
+    expect(screen.getByText(/Nothing is sent to an external analytics/)).toBeInTheDocument();
+  });
 });
 
 describe('ConnectPage', () => {

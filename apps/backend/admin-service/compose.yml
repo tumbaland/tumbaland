@@ -1,0 +1,33 @@
+services:
+  admin-service:
+    build:
+      # The repository root: images install from the root lockfile.
+      context: ../../..
+      dockerfile: docker/Dockerfile.back
+      args:
+        APP: admin-service
+        PORT: 5008
+    image: toomastahves/tumbaland-admin-service:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    stop_grace_period: 15s
+    ports:
+      - '5008:5008'
+    environment:
+      - PORT=5008
+      - NODE_ENV=production
+      - SERVICE_NAME=admin-service
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      # Plans and limits are asked of payment-service over the internal channel.
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
+      - PAYMENT_INTERNAL_URL=${PAYMENT_INTERNAL_URL}
+      # Group membership is asked of group-service on each request (backend-core currentGroupsOf).
+      - GROUP_INTERNAL_URL=${GROUP_INTERNAL_URL}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+    init: true
+    networks:
+      - tumbanet
+
+networks:
+  tumbanet:
+    external: true

@@ -65,6 +65,12 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 10s
 
+  - job_name: 'admin-service'
+    static_configs:
+      - targets: ['admin-service:5008']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
   - job_name: 'group-service'
     static_configs:
       - targets: ['group-service:5006']

@@ -22,6 +22,10 @@ import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import ToggleOnOutlinedIcon from '@mui/icons-material/ToggleOnOutlined';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import PeopleIcon from '@mui/icons-material/People';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 import { AppConfig } from './ConfigProvider';
 import { moduleAccent } from '@tumbaland/frontend-core';
@@ -42,6 +46,12 @@ export interface AppConfigItem {
   purchases?: boolean;
   /** In the main menu only for someone who turned it on under Profile > Features (see useShowMoney). */
   optIn?: boolean;
+  /**
+   * Listed, and framed, only for an administrator. The address is not a secret
+   * (anyone can type it), so the shell treats it like one that does not exist
+   * and the service behind it refuses everyone else regardless.
+   */
+  adminOnly?: boolean;
   menu?: ModuleMenuItem[];
 }
 
@@ -187,6 +197,21 @@ export const USER_APPS: AppConfigItem[] = [
       { label: 'Subscriptions', route: '/payments/subscriptions', icon: AutorenewIcon },
       { label: 'Payments', route: '/payments/history', icon: ReceiptLongIcon }
     ]
+  },
+  {
+    name: 'Admin',
+    route: '/admin',
+    remote: 'admin',
+    urlKey: 'ADMIN_FRONT_URL',
+    icon: AdminPanelSettingsIcon,
+    color: moduleAccent.profile,
+    adminOnly: true,
+    menu: [
+      { label: 'Overview', route: '/admin/overview', icon: DashboardIcon },
+      { label: 'Users', route: '/admin/users', icon: PeopleIcon },
+      { label: 'Assistants', route: '/admin/assistants', icon: SmartToyIcon },
+      { label: 'Deletions', route: '/admin/deletions', icon: DeleteOutlinedIcon }
+    ]
   }
 ];
 
@@ -204,8 +229,13 @@ export const EMBEDDABLE_APPS: RemoteApp[] = [...APPS, CHAT_APP, ...USER_APPS].fi
 /** Whether this platform may show the app at all: a native app lists no billing. */
 const isOffered = (app: AppConfigItem) => !app.purchases || canOfferPurchases();
 
-/** The account entries to list on this platform. */
-export const getUserApps = () => USER_APPS.filter(isOffered);
+/** The account entries to list on this platform, and the administration entry only for an administrator. */
+export const getUserApps = ({ isAdmin = false }: { isAdmin?: boolean } = {}) =>
+  USER_APPS.filter((app) => isOffered(app) && (!app.adminOnly || isAdmin));
+
+/** Whether the session token says this person is an administrator. */
+export const isAdminUser = (user: { roles?: string[] } | null | undefined): boolean =>
+  user?.roles?.includes('admin') === true;
 
 /**
  * The main menu for this person: every module, and Money only once they have

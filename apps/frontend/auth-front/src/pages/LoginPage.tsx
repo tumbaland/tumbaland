@@ -13,11 +13,18 @@ interface AuthenticatedUser {
   picture?: string;
 }
 
-/** Set by auth-service's /auth/google/callback when it could not sign the person in. */
-const initialError = (): string | null =>
-  new URLSearchParams(window.location.search).get('error') === 'signin_failed'
-    ? 'Sign-in did not go through. Please try again.'
-    : null;
+/**
+ * Set by auth-service's /auth/google/callback when it could not sign the person
+ * in: `account_closed` when an administrator closed their account at their
+ * request, `signin_failed` for anything else.
+ */
+const initialError = (): string | null => {
+  const error = new URLSearchParams(window.location.search).get('error');
+  if (error === 'account_closed') {
+    return 'This account was closed at your request. Write to us if this is a mistake.';
+  }
+  return error === 'signin_failed' ? 'Sign-in did not go through. Please try again.' : null;
+};
 
 const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);

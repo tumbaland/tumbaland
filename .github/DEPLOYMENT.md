@@ -225,6 +225,56 @@ Still used:
 - Variables: the `*_URL` / `GOOGLE_*` / `COOKIE_DOMAIN` / `CORS_ORIGIN` set, and
   optionally `DEPLOY_ROOT` (defaults to `$HOME/tumbaland`).
 
+## The administration area
+
+`admin-front` (`admin.tumbaland.eu`, shown in the shell under Account for an
+administrator only) and `admin-service` (`admin-api.tumbaland.eu`) show who uses
+Tumbaland: visits, the parts of the app they open, quota, connected apps and
+what assistants do. The service only reads. It returns counts, dates and names,
+never what is in a journal entry, a photo or a message, and never a key or a
+token.
+
+**Setting it up, once:**
+
+1. **Variables** in the repository settings: `ADMIN_API_URL`
+   (`https://admin-api.tumbaland.eu`) and `ADMIN_FRONT_URL`
+   (`https://admin.tumbaland.eu`). Add `https://admin.tumbaland.eu` to
+   `CORS_ORIGIN` as well, for the app opened on its own.
+2. **Cloudflare tunnel:** the hostnames `admin.tumbaland.eu` and
+   `admin-api.tumbaland.eu` (`apps/infra/cloudflared/README.md`), then run
+   *Deploy Infrastructure* for the proxy.
+3. **The role.** Nobody is an administrator by default. On the Pi, once:
+
+   ```sh
+   docker exec -it mongodb mongosh "$MONGODB_URI" --eval \
+     'db.users.updateOne({ email: "you@example.com" }, { $addToSet: { roles: "admin" } })'
+   ```
+
+   It reaches the session token at its next renewal (within about 15 minutes of
+   using the app), or at the next sign-in. Taking it away works the same way,
+   except that closing or reopening an account checks the database and not the
+   token, so it stops at once.
+4. **History.** Visits are counted from the release that shipped this. To fill
+   in the days the audit trail already proves someone was active, run once
+   after that release (it is safe to run again):
+
+   ```sh
+   docker exec <auth-service container> node dist/scripts/backfill-user-days.js          # what it would do
+   docker exec <auth-service container> node dist/scripts/backfill-user-days.js --apply
+   ```
+
+   Those days are marked and drawn striped, since they only know the person
+   wrote something.
+
+**Account deletion has three states.** *Requested* (`deletionRequestedAt`): the
+account works as before and the owner can cancel. *Closed*
+(`deletionConfirmedAt`, set from Admin > Deletions): signed out everywhere,
+sign-in refused, keys and connected assistants cut off, **data untouched**. *Removed*:
+not built; removing a closed account's data is still done by hand, and the
+"Closed, data still here" list on that page is the backlog for it. An
+assistant that already holds an access token keeps working for up to an hour
+after an account is closed. *Reopen* on the same page undoes a closure.
+
 No longer used, safe to delete once the first deploy succeeds: `SERVER_HOST`,
 `SERVER_USER`, `SERVER_SSH_KEY`.
 

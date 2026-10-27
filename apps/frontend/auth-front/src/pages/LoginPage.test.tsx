@@ -60,6 +60,20 @@ describe('LoginPage — unauthenticated flow', () => {
     Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
   });
 
+  it('tells a person whose account was closed so, rather than asking them to try again', async () => {
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...originalLocation, search: '?error=account_closed&redirect_uri=%2F' }
+    });
+
+    render(<LoginPage />);
+
+    expect((await screen.findAllByText(/This account was closed at your request/i)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/sign-in did not go through/i)).not.toBeInTheDocument();
+    Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
+  });
+
   it('uses the redirect_uri query param when starting Google Sign-In', async () => {
     const originalLocation = window.location;
     Object.defineProperty(window, 'location', {

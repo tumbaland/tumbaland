@@ -50,6 +50,10 @@ KEYS=(
   CHAT_INTERNAL_URL
   CHAT_FRONT_URL
   ACCOUNT_FRONT_URL
+  # The administration screens: where browsers reach admin-service, and where the
+  # shell loads the admin app from.
+  ADMIN_API_URL
+  ADMIN_FRONT_URL
   SHELL_FRONT_URL
   FILE_SERVICE_URL
   FILE_SERVICE_API_KEY

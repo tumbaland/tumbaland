@@ -9,7 +9,8 @@
     "public-service": 5003,
     "payment-service": 5005,
     "group-service": 5006,
-    "mcp-service": 5007
+    "mcp-service": 5007,
+    "admin-service": 5008
   },
   "nginx": {
     "shell-front": "nginx:1.26-alpine"

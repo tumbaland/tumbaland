@@ -24,6 +24,8 @@ export interface AppConfig {
   /** payment-service, for the plan and usage meters on the signed-in home page. */
   PAYMENT_API_URL?: string;
   ACCOUNT_FRONT_URL?: string;
+  /** The administration screens, which only an administrator is shown. */
+  ADMIN_FRONT_URL?: string;
   AUTH_SERVICE_URL?: string;
   AUTH_FRONT_URL?: string;
 }
@@ -47,6 +49,7 @@ const factory = createConfigProvider<AppConfig>({
     RELATIONSHIP_API_URL: import.meta.env.VITE_RELATIONSHIP_API_URL,
     PAYMENT_API_URL: import.meta.env.VITE_PAYMENT_API_URL,
     ACCOUNT_FRONT_URL: import.meta.env.VITE_ACCOUNT_FRONT_URL,
+    ADMIN_FRONT_URL: import.meta.env.VITE_ADMIN_FRONT_URL,
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,
     AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL
   }),

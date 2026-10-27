@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vite-plus/test';
-import { USER_APPS, getAppByRoute, getMainApps, getUserApps } from './apps';
+import { USER_APPS, getAppByRoute, getMainApps, getUserApps, isAdminUser } from './apps';
 
 const inNativeApp = () => {
   window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'android' };
@@ -46,4 +46,38 @@ it('offers Features among the Profile sections, where the switch lives', () => {
   const profile = USER_APPS.find((app) => app.name === 'Profile')!;
   expect(profile.menu?.map((item) => item.label)).toContain('Features');
   expect(profile.menu?.find((item) => item.label === 'Features')?.route).toBe('/account/features');
+});
+
+describe('the administration entry', () => {
+  it('is listed for an administrator and for nobody else', () => {
+    expect(getUserApps().map((app) => app.name)).not.toContain('Admin');
+    expect(getUserApps({ isAdmin: false }).map((app) => app.name)).not.toContain('Admin');
+    expect(getUserApps({ isAdmin: true }).map((app) => app.name)).toEqual(['Profile', 'Groups', 'Billing', 'Admin']);
+  });
+
+  it('is offered inside a native app too, since it sells nothing', () => {
+    inNativeApp();
+    expect(getUserApps({ isAdmin: true }).map((app) => app.name)).toEqual(['Profile', 'Groups', 'Admin']);
+  });
+
+  it('still resolves by address, so the shell can decide what to do with it', () => {
+    expect(getAppByRoute('/admin/users')?.name).toBe('Admin');
+    expect(getAppByRoute('/admin')?.adminOnly).toBe(true);
+  });
+
+  it('has the sections the admin app draws', () => {
+    const admin = USER_APPS.find((app) => app.name === 'Admin')!;
+    expect(admin.menu?.map((item) => item.label)).toEqual(['Overview', 'Users', 'Assistants', 'Deletions']);
+  });
+});
+
+describe('isAdminUser', () => {
+  it('reads the role the session token carries', () => {
+    expect(isAdminUser({ roles: ['admin'] })).toBe(true);
+    expect(isAdminUser({ roles: ['member'] })).toBe(false);
+    expect(isAdminUser({ roles: [] })).toBe(false);
+    expect(isAdminUser({})).toBe(false);
+    expect(isAdminUser(null)).toBe(false);
+    expect(isAdminUser(undefined)).toBe(false);
+  });
 });

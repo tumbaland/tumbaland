@@ -1,0 +1,29 @@
+{
+  "name": "admin-service",
+  "version": "1.0.0",
+  "author": "Tumbaland",
+  "license": "MIT",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "node --watch --require ts-node/register src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tumbaland/backend-core": "1.49.0",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "mongoose": "~9.11.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.6.5",
+    "jsonwebtoken": "^9.0.3",
+    "mongodb-memory-server": "^11.3.0",
+    "typescript": "^6.0.3"
+  }
+}

@@ -27,8 +27,9 @@ function renderMenu({
   route = '/finance',
   mobile = false,
   open = true,
-  whatsNewUnseen = false
-}: { route?: string; mobile?: boolean; open?: boolean; whatsNewUnseen?: boolean } = {}) {
+  whatsNewUnseen = false,
+  account = user
+}: { route?: string; mobile?: boolean; open?: boolean; whatsNewUnseen?: boolean; account?: User } = {}) {
   const onClose = vi.fn();
   const onOpenWhatsNew = vi.fn();
   const anchorEl = open ? document.body.appendChild(document.createElement('button')) : null;
@@ -38,7 +39,7 @@ function renderMenu({
         <Route path="*" element={<CurrentPath />} />
       </Routes>
       <AccountMenu
-        user={user}
+        user={account}
         anchorEl={anchorEl}
         currentRoute={route}
         mobile={mobile}
@@ -69,6 +70,21 @@ it('shows who is signed in, the account pages, appearance and sign out, and noth
     .filter((item) => item.getAttribute('aria-disabled') !== 'true')
     .map((item) => item.textContent);
   expect(actions).toEqual(['Profile', 'Groups', 'Billing', 'AutoLightDark', `What's new${APP_VERSION}`, 'Sign out']);
+});
+
+it('lists Admin for an administrator, last among the account pages', () => {
+  renderMenu({ account: { ...user, roles: ['admin'] } });
+
+  const actions = screen
+    .getAllByRole('menuitem')
+    .filter((item) => item.getAttribute('aria-disabled') !== 'true')
+    .map((item) => item.textContent);
+  expect(actions).toEqual(['Profile', 'Groups', 'Billing', 'Admin', 'AutoLightDark', `What's new${APP_VERSION}`, 'Sign out']);
+});
+
+it('lists no Admin for anyone with another role', () => {
+  renderMenu({ account: { ...user, roles: ['member'] } });
+  expect(screen.queryByRole('menuitem', { name: 'Admin' })).not.toBeInTheDocument();
 });
 
 it('lists no Billing inside a native app, where store billing rules apply', () => {

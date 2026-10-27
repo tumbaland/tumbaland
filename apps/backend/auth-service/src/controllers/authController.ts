@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { BadRequestError, logger, NotFoundError, UnauthorizedError } from '@tumbaland/backend-core';
+import { BadRequestError, ForbiddenError, logger, NotFoundError, UnauthorizedError } from '@tumbaland/backend-core';
 import { verifyGoogleToken } from '../services/googleAuthService';
 import { UserPayload } from '../services/jwtService';
 import { clearSessionCookies, renewSession, startSession } from '../services/sessionService';
@@ -28,11 +28,30 @@ interface GoogleIdentity {
   picture?: string;
 }
 
+/**
+ * What a person whose account an administrator closed is told at sign-in.
+ * Plain, and it says what to do: there is no one else for them to ask.
+ */
+export const ACCOUNT_CLOSED_MESSAGE = 'This account was closed at your request. Write to us if this is a mistake.';
+
+/** Its own type, so the redirect sign-in can send `account_closed` without matching on the wording. */
+export class AccountClosedError extends ForbiddenError {
+  constructor() {
+    super(ACCOUNT_CLOSED_MESSAGE);
+  }
+}
+
 /** Creates or updates the user and starts a session on this device. */
 const signIn = async (req: Request, res: Response, googleUser: GoogleIdentity, method: SignInMethod) => {
   const userEmail = googleUser.email || '';
   if (!userEmail) {
     throw new BadRequestError('Email not present in Google token');
+  }
+
+  // Before the upsert, so a closed account's last-login date, picture and name
+  // stay as they were when it was closed.
+  if (await User.exists({ email: userEmail.toLowerCase(), deletionConfirmedAt: { $ne: null } })) {
+    throw new AccountClosedError();
   }
 
   // Upsert DB user (automatic approval for new users)
@@ -150,7 +169,10 @@ export const googleRedirectCallback = async (req: Request, res: Response): Promi
       hadNonceCookie: Boolean(nonce)
     });
     const retry = new URL(authFrontUrl());
-    retry.searchParams.set('error', 'signin_failed');
+    retry.searchParams.set(
+      'error',
+      error instanceof AccountClosedError ? 'account_closed' : 'signin_failed'
+    );
     retry.searchParams.set('redirect_uri', redirectTarget);
     res.redirect(303, retry.toString());
     return;
@@ -200,13 +222,25 @@ export const verifyAuth = async (req: Request, res: Response): Promise<void> => 
     throw new UnauthorizedError('No authenticated user');
   }
 
-  const payload = await renewSession(req, res);
+  // The token carries the roles it was signed with, and is only re-signed every
+  // fifteen minutes. A role granted or taken away would otherwise wait that
+  // long, or for a new sign-in, to reach the apps: the shell hides the admin
+  // pages from a token that does not say admin, and the services behind it read
+  // the same claim. The account is already loaded, so comparing is free, and
+  // checking it here means a change applies the next time any app opens.
+  const payload = await renewSession(req, res, { reissue: rolesDiffer(req.user.roles, req.dbUser?.roles) });
 
   res.json({
     success: true,
     authenticated: true,
     user: payload
   });
+};
+
+/** Whether two role lists name different roles, whatever their order. A missing list is an empty one. */
+const rolesDiffer = (token: string[] | undefined, stored: string[] | undefined): boolean => {
+  const key = (roles: string[] | undefined) => [...(roles ?? [])].sort().join(',');
+  return key(token) !== key(stored);
 };
 
 export const refreshToken = async (req: Request, res: Response): Promise<void> => {

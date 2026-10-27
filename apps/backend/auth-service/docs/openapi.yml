@@ -507,7 +507,77 @@ paths:
       security:
         - bearerAuth: []
 
+  # Visit counting
+  /auth/activity:
+    post:
+      tags: [Profile]
+      summary: Count a visit or a page open
+      description: |
+        Reported by the shell when the app is opened (or comes back after half an hour
+        away) and when a page of it is opened, so the administrator can see who uses
+        what. A session only: connected assistants and keys are refused, since
+        software opening nothing is not a visit. Always answers 204.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, platform]
+              properties:
+                kind: { type: string, enum: [visit, open] }
+                module:
+                  type: string
+                  description: Required for an open. The route segment of the page.
+                  enum: [home, relationship, album, finance, chat, account, groups, payments, admin]
+                platform: { type: string, enum: [web, pwa, ios, android] }
+      responses:
+        '204': { description: Counted }
+        '400': { description: Not a visit or an open of a known page }
+        '401': { description: No session }
+        '403': { description: A connected assistant, not a person }
+      security:
+        - bearerAuth: []
+
   # Admin Endpoints
+  /auth/admin/users/{id}/deletion/confirm:
+    post:
+      tags: [Admin]
+      summary: Close an account that asked to be deleted
+      description: |
+        Signs the person out on every device (sessions deleted, token version bumped),
+        refuses their sign-in from then on, revokes their API keys and connected
+        assistants. **Deletes nothing**: their data stays until it is removed by hand.
+        An access token an assistant already holds works for up to an hour more.
+        The role is read from the database, not the token. An administrator cannot
+        close their own account.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Closed, with how many devices, apps and keys were cut off }
+        '403': { description: Not an administrator, or closing your own account }
+        '404': { description: No such account }
+        '409': { description: Has not asked to be deleted, is already closed, or changed while confirming }
+      security:
+        - bearerAuth: []
+
+  /auth/admin/users/{id}/deletion/reopen:
+    post:
+      tags: [Admin]
+      summary: Take a closure back
+      description: |
+        For a mistake. Clears the confirmation and the request with it, so the account
+        signs in again. Keys and connections that were revoked stay revoked.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Reopened }
+        '403': { description: Not an administrator }
+        '404': { description: No such account }
+        '409': { description: The account is not closed }
+      security:
+        - bearerAuth: []
+
   /auth/admin/approve:
     post:
       tags: [Admin]

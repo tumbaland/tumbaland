@@ -13,6 +13,8 @@ vi.mock('../services/authService', () => ({
   }
 }));
 
+vi.mock('../hooks/useActivity', () => ({ useActivity: vi.fn() }));
+
 vi.mock('./RemoteOutlet', () => ({
   RemoteOutlet: () => <div>remote module</div>
 }));
@@ -28,6 +30,7 @@ vi.mock('./ChatPanel', () => ({
 import Layout from './Layout';
 import { ConfigContext } from '../config/ConfigProvider';
 import { authService } from '../services/authService';
+import { useActivity } from '../hooks/useActivity';
 
 type AuthResult = Awaited<ReturnType<typeof authService.checkAuth>>;
 
@@ -35,10 +38,10 @@ type AuthResult = Awaited<ReturnType<typeof authService.checkAuth>>;
  * Layout's useAuthState calls checkAuth on every mount, so per-test sessions
  * are set with mockResolvedValue rather than a single mockResolvedValueOnce.
  */
-function setSession(authenticated: boolean) {
+function setSession(authenticated: boolean, roles?: string[]) {
   vi.mocked(authService.checkAuth).mockResolvedValue({
     authenticated,
-    user: authenticated ? { email: 'a@b.c' } : null
+    user: authenticated ? { email: 'a@b.c', roles } : null
   } as AuthResult);
 }
 
@@ -271,5 +274,56 @@ describe('the desktop chat panel', () => {
 
     expect(await screen.findByText('remote module')).toBeInTheDocument();
     expect(screen.queryByRole('complementary', { name: 'Chat' })).not.toBeInTheDocument();
+  });
+});
+
+describe('administration', () => {
+  const config = { ADMIN_FRONT_URL: 'https://admin.example' };
+
+  it('is framed for an administrator', async () => {
+    setSession(true, ['admin']);
+    renderAt('/admin/users', config);
+
+    expect(await screen.findByText('remote module')).toBeInTheDocument();
+  });
+
+  it('is an address that does not exist to anyone else who is signed in', async () => {
+    setSession(true, ['member']);
+    renderAt('/admin/users', config);
+
+    expect(await screen.findByText('page content')).toBeInTheDocument();
+    expect(screen.queryByText('remote module')).not.toBeInTheDocument();
+  });
+
+  it('is hidden from someone with no roles at all', async () => {
+    setSession(true);
+    renderAt('/admin', config);
+
+    expect(await screen.findByText('page content')).toBeInTheDocument();
+    expect(screen.queryByText('remote module')).not.toBeInTheDocument();
+  });
+
+  it('still sends someone signed out to the sign-in gate, like any module', async () => {
+    setSession(false);
+    renderAt('/admin', config);
+
+    expect(await screen.findByText('remote module')).toBeInTheDocument();
+  });
+});
+
+describe('visit counting', () => {
+  it('is told where the person is, once the session is known', async () => {
+    setSession(true);
+    renderAt('/album/albums', { ALBUM_FRONT_URL: 'https://album.example' });
+
+    await waitFor(() => expect(useActivity).toHaveBeenLastCalledWith(true, '/album/albums'));
+  });
+
+  it('is told they are signed out while the session is unknown or absent', () => {
+    setSession(false);
+    renderAt('/');
+
+    expect(useActivity).toHaveBeenCalledWith(false, '/');
+    expect(useActivity).not.toHaveBeenCalledWith(true, expect.anything());
   });
 });
