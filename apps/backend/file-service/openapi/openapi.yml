@@ -20,6 +20,8 @@ servers:
     description: Production server
 
 tags:
+  - name: Health
+    description: Service health.
   - name: Internal
     description: Server-to-server calls, guarded by the X-Internal-Api-Key header.
   - name: Public
@@ -37,6 +39,8 @@ components:
       description: Shared secret used by other backend services for server-to-server calls.
 
 paths:
+  /health:
+    $ref: 'paths/health.yml'
   /internal/upload-url:
     $ref: 'paths/internal-upload-url.yml'
   /internal/download-url:

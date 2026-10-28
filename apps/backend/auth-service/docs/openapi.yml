@@ -18,11 +18,31 @@ tags:
     description: User profile management
   - name: Admin
     description: Administrative operations for user management
+  - name: Security
+    description: API keys, connected assistants, signed-in devices and the audit trail
+  - name: OAuth
+    description: How an assistant connects over MCP
   - name: Internal
     description: Internal service operations
 
 components:
   schemas:
+    ApiKeyScope:
+      type: string
+      enum: [relationship:read, relationship:write, album:read, album:write, finance:read, finance:write]
+    ApiKey:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        prefix: { type: string, description: 'The start of the key, to tell keys apart' }
+        scopes: { type: array, items: { $ref: '#/components/schemas/ApiKeyScope' } }
+        tenants: { type: array, items: { type: string }, description: 'Personal, or group ids the key may act in' }
+        defaultTenant: { type: string }
+        createdAt: { type: string, format: date-time }
+        lastUsedAt: { type: string, format: date-time, nullable: true }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        revokedAt: { type: string, format: date-time, nullable: true }
     Error:
       type: object
       properties:
@@ -296,9 +316,19 @@ components:
       description: Internal service token for inter-service communication
 
 paths:
+  /health:
+    get:
+      summary: Readiness, including database connectivity
+      description: Public. Liveness for the orchestrator is `/health/live`, mounted by backend-core.
+      security: []
+      responses:
+        '200': { description: Healthy }
+        '503': { description: Database unreachable }
+
   # Authentication Endpoints
   /auth/validate:
     post:
+      security: []
       tags: [Authentication]
       summary: Validate Google OAuth token and authenticate user
       description: |
@@ -336,6 +366,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /auth/google/callback:
+    post:
+      tags: [Authentication]
+      summary: Google's redirect-mode sign-in lands here
+      description: |
+        Google posts the ID token as a form (`credential`), not JSON. Checked
+        against the sign-in nonce cookie set when sign-in began, then the
+        browser is sent on to where it was going, signed in. Rate limited like
+        `/auth/validate`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [credential]
+              properties:
+                credential: { type: string, description: Google ID token }
+      responses:
+        '302': { description: 'Signed in, or back to the sign-in page with an error' }
 
   /auth/refresh:
     post:
@@ -508,6 +560,394 @@ paths:
         - bearerAuth: []
 
   # Visit counting
+  /auth/profile/deletion:
+    post:
+      tags: [Profile]
+      summary: Ask for the account to be deleted
+      description: |
+        A request only. Nothing is removed or disabled; the account works as
+        before until an administrator closes it. Asking again keeps the first
+        date.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Requested
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  deletionRequestedAt: { type: string, format: date-time }
+                  message: { type: string }
+        '401': { description: 'Not signed in' }
+    delete:
+      tags: [Profile]
+      summary: Take back a deletion request
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Withdrawn
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  deletionRequestedAt: { type: string, nullable: true, enum: [null] }
+                  message: { type: string }
+        '401': { description: 'Not signed in' }
+
+  /auth/profile/picture:
+    put:
+      tags: [Profile]
+      summary: Set the profile picture
+      description: The body is the image itself, not JSON. Answers with the picture's new public URL.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          image/jpeg: { schema: { type: string, format: binary } }
+          image/png: { schema: { type: string, format: binary } }
+          image/webp: { schema: { type: string, format: binary } }
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  picture: { type: string, description: The avatar URL }
+        '400': { description: 'Not an accepted image' }
+        '401': { description: 'Not signed in' }
+        '413': { description: 'Image too large' }
+    delete:
+      tags: [Profile]
+      summary: Remove the profile picture
+      description: Falls back to the Google one, when there is one.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  picture: { type: string, nullable: true }
+
+  /auth/avatars/{userId}:
+    get:
+      tags: [Profile]
+      summary: Someone's profile picture
+      description: Public, because it is shown in image tags on every origin. Cached for a year; a new picture gets a new URL.
+      security: []
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: The image
+          content:
+            image/*: { schema: { type: string, format: binary } }
+        '404': { description: 'No picture' }
+
+  /auth/api-keys:
+    get:
+      tags: [Security]
+      summary: The caller's API keys
+      description: |
+        Keys let a script or tool act for the person. Only from a signed-in
+        session, never with a key itself. 503 when this server has no
+        encryption key configured.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: '#/components/schemas/ApiKey' } }
+        '401': { description: 'Not signed in' }
+        '503': { description: 'API keys are not configured on this server' }
+    post:
+      tags: [Security]
+      summary: Make a new API key
+      description: |
+        The one response that carries the full token without a reveal. The
+        default tenant is always part of the grant.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, scopes]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 60 }
+                scopes: { type: array, minItems: 1, items: { $ref: '#/components/schemas/ApiKeyScope' } }
+                tenants: { type: array, maxItems: 50, items: { type: string } }
+                defaultTenant: { type: string }
+                expiresAt: { type: string, format: date-time, nullable: true, description: In the future }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: 
+                    allOf:
+                      - $ref: '#/components/schemas/ApiKey'
+                      - type: object
+                        properties:
+                          token: { type: string, description: The full key }
+        '400': { description: 'Invalid, or a group the caller is not in' }
+        '401': { description: 'Not signed in' }
+
+  /auth/api-keys/{id}/reveal:
+    post:
+      tags: [Security]
+      summary: Show a key again
+      description: |
+        A POST rather than a GET, so the secret never lands in a URL, a history
+        or an access log. Strictly rate limited, and audited. Revoked keys can
+        still be revealed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { token: { type: string } } }
+        '404': { description: 'No such key' }
+        '429': { description: 'Too many attempts' }
+
+  /auth/api-keys/{id}/revoke:
+    post:
+      tags: [Security]
+      summary: Turn a key off, keeping its record
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/ApiKey' }
+        '404': { description: 'No such key' }
+
+  /auth/api-keys/{id}:
+    delete:
+      tags: [Security]
+      summary: Delete a key and its record
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { id: { type: string } } }
+        '404': { description: 'No such key' }
+
+  /auth/connections:
+    get:
+      tags: [Security]
+      summary: Assistants connected through OAuth, such as Claude
+      description: |
+        One row per grant. `lastRenewedAt` moves when the assistant renews its
+        access, not on every tool call: those are checked without a lookup.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: 
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        clientId: { type: string }
+                        clientName: { type: string }
+                        scopes: { type: array, items: { $ref: '#/components/schemas/ApiKeyScope' } }
+                        tenants: { type: array, items: { type: string } }
+                        defaultTenant: { type: string }
+                        tenantNames: { type: object, additionalProperties: { type: string } }
+                        createdAt: { type: string, format: date-time }
+                        lastRenewedAt: { type: string, format: date-time, nullable: true }
+                        revokedAt: { type: string, format: date-time, nullable: true }
+        '401': { description: 'Not signed in' }
+
+  /auth/connections/{clientId}:
+    delete:
+      tags: [Security]
+      summary: Disconnect an assistant
+      description: Revokes every grant the application holds for the caller.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: clientId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { clientId: { type: string }, revoked: { type: integer } } }
+        '404': { description: 'No active connection for that application' }
+
+  /auth/sessions:
+    get:
+      tags: [Security]
+      summary: The devices signed in to this account
+      description: Only from a signed-in session, so nothing automated can list or end them.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: 
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        device: { type: string, example: 'Chrome on Android' }
+                        country: { type: string, nullable: true }
+                        method: { type: string, description: How it signed in }
+                        createdAt: { type: string, format: date-time }
+                        lastSeenAt: { type: string, format: date-time }
+                        expiresAt: { type: string, format: date-time }
+                        current: { type: boolean, description: This browser }
+        '401': { description: 'Not signed in' }
+
+  /auth/sessions/revoke-others:
+    post:
+      tags: [Security]
+      summary: Sign out every other device
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { revoked: { type: integer } } }
+
+  /auth/sessions/{id}:
+    delete:
+      tags: [Security]
+      summary: Sign one device out
+      description: Ending the current session signs this browser out too.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { signedOut: { type: boolean, description: True when it was this browser } } }
+        '404': { description: 'No such session' }
+
+  /auth/audit:
+    get:
+      tags: [Security]
+      summary: What happened in this account, and who did it
+      description: |
+        The trail every service writes: the person, an API key or a connected
+        assistant, adding, changing, removing or reading. Only from a signed-in
+        session: an assistant must not be able to read the record of what
+        assistants did.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: actorKind, in: query, schema: { type: string, enum: [person, assistant, key] } }
+        - { name: action, in: query, schema: { type: string, enum: [create, update, delete, read, call] } }
+        - { name: resource, in: query, schema: { type: string } }
+        - { name: credentialId, in: query, schema: { type: string }, description: One key or connection }
+        - { name: service, in: query, schema: { type: string }, example: relationship-service }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: 
+                    type: object
+                    properties:
+                      events: { type: array, items: { type: object } }
+                      total: { type: integer }
+                      page: { type: integer }
+                      totalPages: { type: integer }
+        '401': { description: 'Not signed in' }
+
   /auth/activity:
     post:
       tags: [Profile]
@@ -535,7 +975,7 @@ paths:
         '204': { description: Counted }
         '400': { description: Not a visit or an open of a known page }
         '401': { description: No session }
-        '403': { description: A connected assistant, not a person }
+        '403': { description: 'A connected assistant, not a person' }
       security:
         - bearerAuth: []
 
@@ -554,10 +994,10 @@ paths:
       parameters:
         - { name: id, in: path, required: true, schema: { type: string } }
       responses:
-        '200': { description: Closed, with how many devices, apps and keys were cut off }
-        '403': { description: Not an administrator, or closing your own account }
+        '200': { description: 'Closed, with how many devices, apps and keys were cut off' }
+        '403': { description: 'Not an administrator, or closing your own account' }
         '404': { description: No such account }
-        '409': { description: Has not asked to be deleted, is already closed, or changed while confirming }
+        '409': { description: 'Has not asked to be deleted, is already closed, or changed while confirming' }
       security:
         - bearerAuth: []
 
@@ -724,3 +1164,169 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
         - internalAuth: []
+
+  /.well-known/oauth-authorization-server:
+    get:
+      tags: [OAuth]
+      summary: OAuth authorization server metadata (RFC 8414)
+      description: How an assistant finds the endpoints below. PKCE with S256 only; public clients, no client secret.
+      security: []
+      responses:
+        '200':
+          description: Metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issuer: { type: string }
+                  authorization_endpoint: { type: string }
+                  token_endpoint: { type: string }
+                  registration_endpoint: { type: string }
+                  scopes_supported: { type: array, items: { $ref: '#/components/schemas/ApiKeyScope' } }
+                  response_types_supported: { type: array, items: { type: string, enum: [code] } }
+                  grant_types_supported: { type: array, items: { type: string, enum: [authorization_code, refresh_token] } }
+                  code_challenge_methods_supported: { type: array, items: { type: string, enum: [S256] } }
+                  token_endpoint_auth_methods_supported: { type: array, items: { type: string, enum: [none] } }
+                  authorization_response_iss_parameter_supported: { type: boolean }
+
+  /oauth/register:
+    post:
+      tags: [OAuth]
+      summary: Register an assistant as a client (RFC 7591)
+      description: |
+        Open on purpose: assistants register themselves, and a client id grants
+        nothing until a person consents. Redirect URIs must be https or
+        loopback. Rate limited on its own budget.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [redirect_uris]
+              properties:
+                client_name: { type: string }
+                redirect_uris: { type: array, minItems: 1, items: { type: string, format: uri } }
+      responses:
+        '201':
+          description: Registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  client_id: { type: string }
+                  client_name: { type: string }
+                  redirect_uris: { type: array, items: { type: string } }
+        '400': { description: 'No redirect_uris, or one that is neither https nor loopback' }
+        '429': { description: 'Too many registrations' }
+
+  /oauth/authorize:
+    get:
+      tags: [OAuth]
+      summary: Ask the person for consent
+      description: |
+        Signed out: sends the browser to sign in first, then back here. Signed
+        in: answers with the consent page, server-rendered so it cannot be
+        imitated by the client. A bad client or redirect URI is shown as an
+        error page and never redirected to.
+      security:
+        - {}
+        - bearerAuth: []
+      parameters:
+        - { name: response_type, in: query, required: true, schema: { type: string, enum: [code] } }
+        - { name: client_id, in: query, required: true, schema: { type: string } }
+        - { name: redirect_uri, in: query, required: true, schema: { type: string } }
+        - { name: code_challenge, in: query, required: true, schema: { type: string } }
+        - { name: code_challenge_method, in: query, required: true, schema: { type: string, enum: [S256] } }
+        - { name: scope, in: query, schema: { type: string }, description: Space-separated scopes }
+        - { name: state, in: query, schema: { type: string } }
+        - { name: resource, in: query, schema: { type: string }, description: The MCP server the token is for }
+      responses:
+        '200':
+          description: The consent page
+          content:
+            text/html: { schema: { type: string } }
+        '302': { description: Signed out; to the sign-in page and back }
+        '400': { description: Unknown client or redirect URI }
+    post:
+      tags: [OAuth]
+      summary: The person's decision on the consent page
+      description: |
+        Posted as a form by the consent page. Approve sends the browser back to
+        the assistant with a code; deny sends it back with
+        `error=access_denied`. Only from a signed-in, approved session.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [decision, client_id, redirect_uri]
+              properties:
+                decision: { type: string, enum: [approve, deny] }
+                client_id: { type: string }
+                redirect_uri: { type: string }
+                code_challenge: { type: string }
+                state: { type: string }
+                scope: { type: string }
+                resource: { type: string }
+                tenant:
+                  type: array
+                  items: { type: string }
+                  description: The journals the person ticked to share; the field repeats once per tick
+                defaultTenant: { type: string, description: The one used when a call names none }
+                consent_token: { type: string, description: Ties the decision to the page that was shown }
+      responses:
+        '302': { description: 'Back to the assistant, with a code or an error' }
+        '400': { description: Unknown client or redirect URI }
+
+  /oauth/token:
+    post:
+      tags: [OAuth]
+      summary: Trade a code, or a refresh token, for an access token
+      description: |
+        Authenticated by what it carries: the code with its PKCE verifier, or
+        the refresh token. Errors follow RFC 6749 (`error`, `error_description`).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [grant_type, client_id]
+              properties:
+                grant_type: { type: string, enum: [authorization_code, refresh_token] }
+                client_id: { type: string }
+                code: { type: string }
+                redirect_uri: { type: string }
+                code_verifier: { type: string }
+                refresh_token: { type: string }
+      responses:
+        '200':
+          description: Tokens
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  token_type: { type: string, enum: [Bearer] }
+                  expires_in: { type: integer }
+                  refresh_token: { type: string }
+                  scope: { type: string }
+        '400':
+          description: 'invalid_request, invalid_grant or unsupported_grant_type'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+                  error_description: { type: string }
+        '401': { description: invalid_client }

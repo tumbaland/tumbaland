@@ -1,32 +1,3 @@
-put:
-  tags: [Internal]
-  summary: Delete all files under a path prefix
-  description: |
-    Alias of `DELETE` on the same path (both are wired to the same
-    handler) — used where the caller's HTTP client prefers `PUT` for a
-    bulk mutation. Registered before `/internal/files/{fileId}` so the
-    literal `folder` segment isn't swallowed by the wildcard.
-  security:
-    - internalApiKey: []
-  requestBody:
-    required: true
-    content:
-      application/json:
-        schema:
-          $ref: '../components/schemas/DeleteFolderRequest.yml'
-  responses:
-    '200':
-      description: Files deleted.
-      content:
-        application/json:
-          schema:
-            $ref: '../components/schemas/DeleteFolderResponse.yml'
-    '400':
-      $ref: '../components/responses/BadRequest.yml'
-    '401':
-      $ref: '../components/responses/Unauthorized.yml'
-    '500':
-      $ref: '../components/responses/ServerError.yml'
 delete:
   tags: [Internal]
   summary: Delete all files under a path prefix

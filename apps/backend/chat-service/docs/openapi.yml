@@ -26,8 +26,65 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
+    internalToken:
+      type: apiKey
+      in: header
+      name: x-internal-token
+      description: Shared secret between Tumbaland's services. No browser reaches these routes.
 
   schemas:
+    LiveShare:
+      type: object
+      properties:
+        userId: { type: string }
+        name: { type: string }
+        position:
+          type: object
+          nullable: true
+          properties:
+            lat: { type: number }
+            lng: { type: number }
+            accuracy: { type: number, nullable: true }
+            heading: { type: number, nullable: true }
+            speed: { type: number, nullable: true }
+            at: { type: string, format: date-time }
+        destination:
+          type: object
+          nullable: true
+          properties:
+            lat: { type: number }
+            lng: { type: number }
+            label: { type: string, nullable: true }
+            distanceM: { type: number, nullable: true, description: Straight-line metres from the position }
+        pinLabel: { type: string, nullable: true, description: 'What a pin is: "Home", or an address' }
+        fixed: { type: boolean, description: 'A pin: one place that stays put' }
+        startedAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        watchers:
+          type: array
+          items:
+            type: object
+            properties:
+              userId: { type: string }
+              name: { type: string }
+              radiusM: { type: integer }
+              distanceM: { type: number, nullable: true }
+              notified: { type: boolean }
+    SavedPlace:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string, example: Home }
+        lat: { type: number }
+        lng: { type: number }
+        address: { type: string }
+    PlaceResult:
+      type: object
+      properties:
+        name: { type: string, example: Viru väljak 4 }
+        detail: { type: string, example: 'Kesklinn, Tallinn, Estonia' }
+        lat: { type: number }
+        lng: { type: number }
     Attachment:
       type: object
       required: [fileId, mimetype, sizeBytes]
@@ -69,7 +126,7 @@ components:
               text/plain,
               text/csv
             ]
-        name: { type: string, nullable: true, description: The uploaded file's name, kept for documents }
+        name: { type: string, nullable: true, description: 'The uploaded file''s name, kept for documents' }
         sizeBytes: { type: integer }
         width: { type: integer, nullable: true }
         height: { type: integer, nullable: true }
@@ -195,6 +252,24 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
 
+  /api/chat/conversations/mine:
+    post:
+      summary: Make sure the caller has a conversation in each of their groups, and list them
+      description: |
+        What the app opens with. No body: the groups come from the session, not
+        from the client. Creating is idempotent, as with `POST /conversations`.
+      responses:
+        '200':
+          description: The caller's conversations, with who is online
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: '#/components/schemas/Conversation' } }
+        '401': { description: Not signed in }
+
   /api/chat/unread:
     get:
       summary: Total unread across every conversation, for the nav badge
@@ -269,7 +344,7 @@ paths:
               type: object
               required: [deviceId]
               properties:
-                deviceId: { type: string, description: The calling tab, made up by the client per page load. }
+                deviceId: { type: string, description: 'The calling tab, made up by the client per page load.' }
       responses:
         '201': { description: Ringing }
         '409': { description: Busy }
@@ -336,7 +411,7 @@ paths:
                     candidate: { type: object, nullable: true }
       responses:
         '204': { description: Relayed }
-        '409': { description: The call is not connected, or this device is not in it }
+        '409': { description: 'The call is not connected, or this device is not in it' }
 
   /api/chat/search:
     get:
@@ -401,6 +476,71 @@ paths:
               schema: { type: string }
         '429': { description: Too many open streams for this user }
 
+  /api/chat/conversations/{id}:
+    get:
+      summary: One conversation as a thread opens it
+      description: |
+        Its members with their pictures, how far each of the others has read,
+        who is online, where its photos go and how it looks. The messages come
+        separately, from `/messages`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: The conversation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: 
+                    type: object
+                    properties:
+                      id: { type: string }
+                      groupId: { type: string }
+                      title: { type: string }
+                      members:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            userId: { type: string }
+                            email: { type: string }
+                            name: { type: string }
+                            picture: { type: string, nullable: true }
+                            joinedAt: { type: string, format: date-time }
+                      reads:
+                        type: array
+                        description: The others only, never the caller
+                        items:
+                          type: object
+                          properties:
+                            userId: { type: string }
+                            lastReadMessageId: { type: string, nullable: true }
+                            lastReadAt: { type: string, format: date-time }
+                      photoAlbum:
+                        type: object
+                        properties:
+                          mode: { type: string, enum: [unset, off, album] }
+                          albumId: { type: string, nullable: true }
+                          albumName: { type: string, nullable: true }
+                      appearance:
+                        type: object
+                        properties:
+                          theme: { type: string }
+                          backgroundFileId: { type: string, nullable: true }
+                          backgroundUrl: { type: string, nullable: true }
+                      presence:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            userId: { type: string }
+                            online: { type: boolean }
+                            lastActiveAt: { type: string, format: date-time, nullable: true, description: Null when never seen }
+        '404': { description: 'No such conversation, or not one of the caller''s' }
+
   /api/chat/conversations/{id}/messages:
     parameters:
       - { in: path, name: id, required: true, schema: { type: string } }
@@ -427,7 +567,7 @@ paths:
                         type: array
                         items: { $ref: '#/components/schemas/Message' }
                       nextCursor: { type: string, nullable: true }
-        '404': { description: No such conversation, or not the caller's to read }
+        '404': { description: 'No such conversation, or not the caller''s to read' }
     post:
       summary: Send a message
       description: |
@@ -464,7 +604,7 @@ paths:
                   success: { type: boolean }
                   data: { $ref: '#/components/schemas/Message' }
         '200': { description: Already stored under this clientId }
-        '400': { description: Empty message, bad replyTo, or missing clientId }
+        '400': { description: 'Empty message, bad replyTo, or missing clientId' }
         '429': { description: Sending too fast }
 
   /api/chat/conversations/{id}/messages/{messageId}:
@@ -514,12 +654,16 @@ paths:
         '400': { description: Not an emoji }
 
   /api/chat/conversations/{id}/albums:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
     get:
       summary: The conversation group's albums, for the "photos go to" picker
       responses:
         '200': { description: '`[{ id, name, photoCount }]`, most recently changed first' }
 
   /api/chat/conversations/{id}/photo-album:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
     put:
       summary: Where this conversation's photos and videos are saved in Album
       description: |
@@ -544,6 +688,8 @@ paths:
         '400': { description: The album is not in this conversation's group }
 
   /api/chat/conversations/{id}/appearance:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
     put:
       summary: How the thread looks, for everyone in it
       description: |
@@ -566,9 +712,12 @@ paths:
                 backgroundFileId: { type: string, nullable: true, description: 'null removes the background' }
       responses:
         '200': { description: '`{ theme, backgroundFileId, backgroundUrl }`' }
-        '400': { description: No such theme, or the background is not a photo from this conversation }
+        '400': { description: 'No such theme, or the background is not a photo from this conversation' }
 
   /api/chat/conversations/{id}/messages/{messageId}/album:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: messageId, in: path, required: true, schema: { type: string } }
     put:
       summary: Put a sent message's files, or one of them, in another album
       description: |
@@ -586,7 +735,7 @@ paths:
       responses:
         '200': { description: The updated message }
         '400': { description: The album is not in this conversation's group }
-        '404': { description: No such message, or no such file on it }
+        '404': { description: 'No such message, or no such file on it' }
     delete:
       summary: Take a message's files, or one (`?fileId=`), back out of their album (files stay in chat)
       responses:
@@ -672,3 +821,396 @@ paths:
                 endpoint: { type: string, format: uri }
       responses:
         '204': { description: Removed }
+
+  /api/chat/conversations/{id}/live:
+    get:
+      summary: Who in this conversation is sharing where they are
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: The shares, the caller's own included
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: '#/components/schemas/LiveShare' } }
+    put:
+      summary: Start sharing where the caller is, live or as a pin
+      description: |
+        Live sends the phone's position as it moves, with an optional
+        destination, for up to four hours. A pin (`fixed: true`) is one place
+        that stays put: "come and get me here". Starting again replaces the
+        caller's current share.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                minutes: { type: integer, minimum: 5, maximum: 240 }
+                destination:
+                  type: object
+                  nullable: true
+                  properties:
+                    lat: { type: number, minimum: -90, maximum: 90 }
+                    lng: { type: number, minimum: -180, maximum: 180 }
+                    label: { type: string, maxLength: 200 }
+                fixed: { type: boolean }
+                pinLabel: { type: string, maxLength: 200, nullable: true }
+      responses:
+        '200':
+          description: The share as started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/LiveShare' }
+    delete:
+      summary: Stop sharing
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Stopped }
+
+  /api/chat/conversations/{id}/live/position:
+    post:
+      summary: The caller's position, sent every few seconds while sharing
+      description: |
+        Rate limited to 60 a minute, which only a client stuck in a loop
+        reaches. Anyone watching who is now inside their radius is told by push.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lat, lng]
+              properties:
+                lat: { type: number, minimum: -90, maximum: 90 }
+                lng: { type: number, minimum: -180, maximum: 180 }
+                accuracy: { type: number, minimum: 0, maximum: 100000, nullable: true }
+                heading: { type: number, minimum: 0, maximum: 360, nullable: true }
+                speed: { type: number, minimum: 0, maximum: 1000, nullable: true }
+      responses:
+        '200':
+          description: The share with its new position
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/LiveShare' }
+        '404': { description: The caller is not sharing }
+        '429': { description: Too many location updates }
+
+  /api/chat/conversations/{id}/live/{userId}/watch:
+    put:
+      summary: Be told when someone sharing is close
+      description: |
+        "Tell me when they are close": where the caller is waiting, and how
+        close counts. One push when they come inside the radius.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: userId, in: path, required: true, schema: { type: string }, description: The person sharing }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lat, lng, radiusM]
+              properties:
+                lat: { type: number, minimum: -90, maximum: 90 }
+                lng: { type: number, minimum: -180, maximum: 180 }
+                radiusM: { type: integer, minimum: 100, maximum: 20000 }
+      responses:
+        '200':
+          description: Their share, with the caller among its watchers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/LiveShare' }
+    delete:
+      summary: Stop waiting to be told
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Their share, without the caller among its watchers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/LiveShare' }
+
+  /api/chat/places/search:
+    get:
+      summary: Places matching a name, nearest first when a point is given
+      description: |
+        Looked up in a public geocoder, so rate limited to 60 a minute.
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string, minLength: 2, maxLength: 120 } }
+        - { name: lat, in: query, schema: { type: number, minimum: -90, maximum: 90 } }
+        - { name: lng, in: query, schema: { type: number, minimum: -180, maximum: 180 } }
+      responses:
+        '200':
+          description: Matching places
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: '#/components/schemas/PlaceResult' } }
+        '429': { description: Too many place lookups }
+
+  /api/chat/places/reverse:
+    get:
+      summary: The address at a point, or null
+      parameters:
+        - { name: lat, in: query, required: true, schema: { type: number, minimum: -90, maximum: 90 } }
+        - { name: lng, in: query, required: true, schema: { type: number, minimum: -180, maximum: 180 } }
+      responses:
+        '200':
+          description: The address, or null where there is none
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, allOf: [{ $ref: '#/components/schemas/PlaceResult' }], nullable: true }
+        '429': { description: Too many place lookups }
+
+  /api/chat/conversations/{id}/places:
+    get:
+      summary: The places saved in this conversation, to pick again
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Saved places
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: '#/components/schemas/SavedPlace' } }
+    post:
+      summary: Save a place for everyone in the conversation
+      description: Up to 50 per conversation.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, lat, lng]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 60 }
+                lat: { type: number, minimum: -90, maximum: 90 }
+                lng: { type: number, minimum: -180, maximum: 180 }
+                address: { type: string, maxLength: 200 }
+      responses:
+        '201':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/SavedPlace' }
+        '400': { description: 'Invalid, or the conversation already has 50 places' }
+
+  /api/chat/conversations/{id}/places/{placeId}:
+    delete:
+      summary: Forget a saved place
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: placeId, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Deleted }
+
+  /api/chat/conversations/{id}/attachments/upload-url:
+    post:
+      summary: Permission to upload one file, and where to put it
+      description: |
+        The bytes go straight from the browser to file-service; only the
+        permission check and the storage quota pass through here. Per-file
+        limits depend on the kind (image, video, voice, document). For a video,
+        `posterUploadFileId` says where to put the poster frame the browser
+        made.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filename, mimetype, sizeBytes]
+              properties:
+                filename: { type: string, minLength: 1, maxLength: 255 }
+                mimetype: { type: string, description: 'An allowed image, video, audio or document type' }
+                sizeBytes: { type: integer, minimum: 1 }
+      responses:
+        '201':
+          description: Where to PUT the file
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: 
+                    type: object
+                    properties:
+                      uploadUrl: { type: string }
+                      fileId: { type: string }
+                      posterUploadFileId: { type: string, nullable: true }
+                      expiresInMinutes: { type: integer }
+        '400': { description: 'Not an allowed type, or too large' }
+        '402': { description: Not enough storage left on the plan }
+
+  /api/chat/conversations/{id}/attachments/thumbnail:
+    post:
+      summary: Make the display copy of an uploaded image
+      description: |
+        A resized webp, which also converts an iPhone's HEIC. Called after the
+        upload lands and before the message is sent. A failure comes back as a
+        null id rather than an error: the client falls back to the original.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileId, mimetype]
+              properties:
+                fileId: { type: string, maxLength: 512 }
+                mimetype: { type: string }
+      responses:
+        '200':
+          description: The thumbnail's file id, or null
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { thumbnailFileId: { type: string, nullable: true } } }
+        '400': { description: The file is not in this conversation }
+
+  /api/chat/conversations/{id}/collages:
+    post:
+      summary: Make a collage from this conversation's album and post its card
+      description: |
+        Idempotent on `clientId`, so a retry cannot make a second collage.
+        201 when it was made now, 200 when the same `clientId` already had.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientId, title]
+              properties:
+                clientId: { type: string, minLength: 8, maxLength: 100 }
+                title: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        '201':
+          description: The collage card, as a message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Message' }
+        '200': { description: Already made for this clientId; the same card }
+        '400': { description: The conversation has no album to make it from }
+
+  /internal/collage-activity:
+    post:
+      summary: Someone opened a collage made from a chat
+      description: Called by album-service. Nudges the others in the conversation who are not looking at it already.
+      security:
+        - internalToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversationId, collageId, title, userId, name, presentUserIds]
+              properties:
+                conversationId: { type: string }
+                collageId: { type: string }
+                title: { type: string, maxLength: 200 }
+                userId: { type: string }
+                name: { type: string, maxLength: 200 }
+                presentUserIds: { type: array, maxItems: 50, items: { type: string } }
+      responses:
+        '200':
+          description: Who was told
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { notified: { type: integer } } }
+        '401': { description: Missing or wrong internal token }
+
+  /internal/plan-reminder:
+    post:
+      summary: A plan in the journal is coming up
+      description: Called by relationship-service's reminder sweep. Posts the reminder into the group's conversation.
+      security:
+        - internalToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planId, userId, title, date, timeZone, remindAt]
+              properties:
+                planId: { type: string }
+                groupId: { type: string }
+                userId: { type: string }
+                title: { type: string, maxLength: 200 }
+                date: { type: string, format: date }
+                endDate: { type: string, format: date }
+                time: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$', example: '19:30' }
+                timeZone: { type: string, example: Europe/Tallinn }
+                place: { type: string, maxLength: 200 }
+                remindAt: { type: string }
+      responses:
+        '200': { description: 'Posted, or already posted for this plan' }
+        '401': { description: Missing or wrong internal token }

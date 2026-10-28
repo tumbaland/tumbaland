@@ -126,6 +126,13 @@ components:
           type: string
           nullable: true
           example: "price_1234567890"
+        isPublic:
+          type: boolean
+          description: Shown on the pricing page
+        limits:
+          $ref: '#/components/schemas/PlanLimits'
+        effectiveLimits:
+          $ref: '#/components/schemas/PlanLimits'
         createdAt:
           type: string
           format: date-time
@@ -138,6 +145,43 @@ components:
         - priceMonthlyCents
         - features
         - isActive
+
+    PlanLimits:
+      type: object
+      description: Every key is optional. A ceiling is a whole number, or -1 for unlimited.
+      properties:
+        meters:
+          type: object
+          additionalProperties: { type: integer, minimum: -1 }
+          example: { storageBytes: 1073741824 }
+        features:
+          type: object
+          additionalProperties: { type: boolean }
+        retentionDays: { type: integer, minimum: -1 }
+
+    ResolvedEntitlements:
+      type: object
+      properties:
+        email: { type: string }
+        planCode: { type: string }
+        status: { type: string, nullable: true }
+        limits: { $ref: '#/components/schemas/PlanLimits' }
+        upgradeTo: { type: string }
+        isComp: { type: boolean, description: Granted by an admin rather than bought }
+        hasOverride: { type: boolean, description: A per-person override adjusted the plan's limits }
+
+    EntitlementOverride:
+      type: object
+      properties:
+        userEmail: { type: string }
+        meters: { type: object, additionalProperties: { type: integer, minimum: -1 } }
+        features: { type: object, additionalProperties: { type: boolean } }
+        retentionDays: { type: integer, minimum: -1 }
+        reason: { type: string }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        grantedBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
 
     Subscription:
       type: object
@@ -494,6 +538,7 @@ paths:
   # Health check endpoint
   /health:
     get:
+      security: []
       tags:
         - Health
       summary: Health check
@@ -639,6 +684,188 @@ paths:
       security:
         - bearerAuth: []
         - internalAuth: []
+
+  /api/plans/all:
+    get:
+      tags: [Plans]
+      summary: List every plan, hidden and inactive ones included
+      description: Requires admin privileges. Each plan carries `effectiveLimits`.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  plans:
+                    type: array
+                    items: { $ref: '#/components/schemas/Plan' }
+        '401':
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /api/plans/catalog:
+    get:
+      tags: [Plans]
+      summary: The meters and features a plan can limit, with labels and units
+      description: |
+        Requires admin privileges. An admin form builds its limits fields from
+        this, so a meter added in backend-core appears there with no frontend
+        change.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  catalog:
+                    type: object
+                    description: The meter and feature vocabulary from backend-core
+        '401':
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /api/plans/{code}:
+    patch:
+      tags: [Plans]
+      summary: Edit a plan
+      description: |
+        Requires admin privileges. Any of the fields, at least one. `code` cannot
+        change: subscriptions store it.
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string }
+          example: pro
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name: { type: string }
+                description: { type: string }
+                priceMonthlyCents: { type: integer, minimum: 0 }
+                priceYearlyCents: { type: integer, minimum: 0 }
+                features: { type: array, items: { type: string } }
+                limits: { $ref: '#/components/schemas/PlanLimits' }
+                isActive: { type: boolean }
+                isPublic: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  plan: { $ref: '#/components/schemas/Plan' }
+        '400':
+          description: No updatable field, or an invalid one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No such plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /api/plans/{code}/limits:
+    put:
+      tags: [Plans]
+      summary: Set a plan's limits
+      description: |
+        Requires admin privileges. Merges into the stored limits, or replaces
+        them with `?replace=true`. Unknown meter or feature keys are refused by
+        name rather than dropped. A ceiling is a whole number, or -1 for
+        unlimited.
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string }
+          example: pro
+        - name: replace
+          in: query
+          schema: { type: boolean, default: false }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlanLimits' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  plan: { $ref: '#/components/schemas/Plan' }
+                  effectiveLimits: { $ref: '#/components/schemas/PlanLimits' }
+        '400':
+          description: Empty, or an unknown key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No such plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
 
   /api/plans/{code}/stripe-prices:
     patch:
@@ -901,6 +1128,340 @@ paths:
         - internalAuth: []
 
   # Payment Endpoints
+  /api/subscriptions/me/entitlements:
+    get:
+      tags: [Subscriptions]
+      summary: The caller's plan, limits and live meter readings
+      description: For the usage meters and the pricing page's "you're using 340 MB of 1 GB" line.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ResolvedEntitlements'
+                  - type: object
+                    properties:
+                      success: { type: boolean }
+                      usage:
+                        type: object
+                        additionalProperties: { type: number }
+                        description: Current reading per meter
+        '401':
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /api/subscriptions/grants:
+    get:
+      tags: [Subscriptions]
+      summary: Every comp grant, newest first
+      description: |
+        Requires admin privileges. A grant is an ordinary subscription with
+        `isComp` set and no Stripe ids, so a comped account resolves its limits
+        exactly as a paying one does.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  grants:
+                    type: array
+                    items: { $ref: '#/components/schemas/Subscription' }
+        '403':
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+    post:
+      tags: [Subscriptions]
+      summary: Give someone a plan without payment
+      description: |
+        Requires admin privileges. One grant per person: granting again moves
+        the existing one to the new plan (200) instead of adding a second (201).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, planCode]
+              properties:
+                email: { type: string, format: email }
+                planCode: { type: string }
+                reason: { type: string, maxLength: 500 }
+                expiresAt: { type: string, format: date-time, description: Omit for an open-ended grant }
+      responses:
+        '201':
+          description: Granted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  grant: { $ref: '#/components/schemas/Subscription' }
+        '200':
+          description: The existing grant, moved to this plan
+        '400':
+          description: Invalid email or date
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No such plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /api/subscriptions/grants/{email}:
+    delete:
+      tags: [Subscriptions]
+      summary: Take a grant back, at once
+      description: Requires admin privileges. Ends now, not at period end; nothing was paid for.
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema: { type: string, format: email }
+          description: The person's email, matched case-insensitively
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  grant: { $ref: '#/components/schemas/Subscription' }
+        '403':
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No active grant for that person
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /api/entitlement-overrides:
+    get:
+      tags: [Subscriptions]
+      summary: Every per-person limit adjustment
+      description: |
+        Requires admin privileges. An override is a bump on top of whatever plan
+        someone is on: "give this friend 20 GB", rather than a different plan.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  overrides:
+                    type: array
+                    items: { $ref: '#/components/schemas/EntitlementOverride' }
+        '403':
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /api/entitlement-overrides/{email}:
+    get:
+      tags: [Subscriptions]
+      summary: One person's override, with the limits it results in
+      description: Requires admin privileges.
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema: { type: string, format: email }
+          description: The person's email, matched case-insensitively
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  override: { $ref: '#/components/schemas/EntitlementOverride' }
+                  planCode: { type: string }
+                  effectiveLimits: { $ref: '#/components/schemas/PlanLimits' }
+        '403':
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No override for that person
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+    put:
+      tags: [Subscriptions]
+      summary: Set one person's override
+      description: |
+        Requires admin privileges. Replaces the override whole, so leaving a
+        field out removes that adjustment. `reason` is required, and at least
+        one limit must be adjusted.
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema: { type: string, format: email }
+          description: The person's email, matched case-insensitively
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/PlanLimits'
+                - type: object
+                  required: [reason]
+                  properties:
+                    reason: { type: string, minLength: 1, maxLength: 500 }
+                    expiresAt: { type: string, format: date-time }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  override: { $ref: '#/components/schemas/EntitlementOverride' }
+                  planCode: { type: string }
+                  effectiveLimits: { $ref: '#/components/schemas/PlanLimits' }
+        '400':
+          description: No limit adjusted, no reason, or an invalid date
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+    delete:
+      tags: [Subscriptions]
+      summary: Remove one person's override
+      description: Requires admin privileges. Answers with the limits that apply now.
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema: { type: string, format: email }
+          description: The person's email, matched case-insensitively
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  planCode: { type: string }
+                  effectiveLimits: { $ref: '#/components/schemas/PlanLimits' }
+        '403':
+          description: Not an admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No override for that person
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /internal/entitlements:
+    get:
+      tags: [Subscriptions]
+      summary: Someone's plan and limits, for another service
+      description: |
+        Called by the other services to enforce limits. Service-to-service only;
+        no browser reaches it.
+      parameters:
+        - name: email
+          in: query
+          required: true
+          schema: { type: string, format: email }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ResolvedEntitlements'
+                  - type: object
+                    properties:
+                      success: { type: boolean }
+        '400':
+          description: email missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or wrong internal token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - internalAuth: []
+
   /api/payments/one-time:
     post:
       tags:

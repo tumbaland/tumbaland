@@ -44,6 +44,15 @@ components:
             $ref: '#/components/schemas/Error'
 
 paths:
+  /health:
+    get:
+      summary: Readiness, including database connectivity
+      description: Public. Liveness for the orchestrator is `/health/live`, mounted by backend-core.
+      security: []
+      responses:
+        '200': { description: Healthy }
+        '503': { description: Database unreachable }
+
   /api/overview:
     get:
       summary: Activity across all accounts

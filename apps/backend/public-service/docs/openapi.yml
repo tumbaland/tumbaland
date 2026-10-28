@@ -164,6 +164,9 @@ components:
         - timestamp
         - message
 
+# Every route here is unauthenticated.
+security: []
+
 paths:
   # Health check endpoint
   /health:

@@ -1,0 +1,18 @@
+get:
+  tags: [Health]
+  summary: Whether the service is up
+  description: |
+    Answers without touching storage. Liveness for the orchestrator is
+    `/health/live`, mounted by backend-core in every service.
+  security: []
+  responses:
+    '200':
+      description: Up.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status: { type: string, example: ok }
+              service: { type: string, example: file-service }
+              timestamp: { type: string, format: date-time }

@@ -21,6 +21,16 @@ servers:
     description: Production server
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: A session token, or an API key with the relationship scopes
+    internalAuth:
+      type: apiKey
+      in: header
+      name: x-internal-token
+      description: Shared secret between Tumbaland's services
   schemas:
     Error:
       type: object
@@ -135,6 +145,7 @@ components:
           minimum: 0
           example: 2
         location:
+          type: object
           allOf:
             - $ref: '#/components/schemas/ActivityLocation'
           nullable: true
@@ -314,6 +325,7 @@ components:
                 type: integer
                 minimum: 0
               location:
+                type: object
                 allOf:
                   - $ref: '#/components/schemas/ActivityLocation'
                 nullable: true
@@ -879,9 +891,6 @@ components:
                     - date
                     - hours
                     - activities
-              required:
-                - week
-                - days
             required:
               - week
               - days
@@ -1122,6 +1131,75 @@ components:
         - data
         - generatedAt
 
+    Milestone:
+      type: object
+      required: [kind, key, label, target, unit]
+      properties:
+        kind:
+          type: string
+          enum: [days-together, anniversary, type-count, total-count]
+        key:
+          type: string
+          description: Stable across refreshes, so it can key a list
+          example: "type-count:65f0c1:100"
+        label:
+          type: string
+          example: "100 walks"
+        target:
+          type: number
+        unit:
+          type: string
+          enum: [days, years, entries]
+        typeId:
+          type: string
+        color:
+          type: string
+        achievedOn:
+          type: string
+          format: date
+          description: Reached milestones only
+        daysAgo:
+          type: integer
+          description: Reached milestones only
+        remaining:
+          type: integer
+          description: Upcoming count milestones only; entries still to go
+        expectedOn:
+          type: string
+          format: date
+          description: Upcoming only; exact for dates, projected for counts
+        daysAway:
+          type: integer
+        projected:
+          type: boolean
+          description: True when expectedOn comes from the current pace rather than a fixed date
+    MilestonesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            since:
+              type: string
+              format: date
+              nullable: true
+              description: The day "together" counts from
+            daysTogether:
+              type: integer
+              nullable: true
+            recent:
+              type: array
+              items:
+                $ref: '#/components/schemas/Milestone'
+            upcoming:
+              type: array
+              items:
+                $ref: '#/components/schemas/Milestone'
+        generatedAt:
+          type: string
+          format: date-time
     StreakStatisticsResponse:
       type: object
       properties:
@@ -1383,6 +1461,7 @@ paths:
   # Health check endpoint
   /health:
     get:
+      security: []
       tags:
         - Health
       summary: Health check
@@ -1961,6 +2040,58 @@ paths:
         - bearerAuth: []
         - internalAuth: []
 
+  /api/activities/descriptions:
+    get:
+      tags:
+        - Activities
+      summary: Get the descriptions already used for an activity type
+      description: |
+        Every distinct non-empty description logged for the type in the scope,
+        sorted alphabetically ignoring case. The day editor offers them as
+        suggestions, so the same thing is written the same way each time.
+      parameters:
+        - name: typeId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Activity type ID
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by specific group ID (defaults to personal entries)
+      responses:
+        '200':
+          description: Descriptions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: string
+                    example: ["Dinner at home", "Walk by the sea"]
+        '400':
+          description: typeId is missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not a member of that group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
   /api/activities/recent:
     get:
       tags:
@@ -2528,6 +2659,44 @@ paths:
                 $ref: '#/components/schemas/StreakStatisticsResponse'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/statistics/milestones:
+    get:
+      tags:
+        - Statistics
+      summary: Get milestones just reached and coming up
+      description: |
+        Round numbers worth celebrating: days together, anniversaries, and entry
+        counts per activity type and in total. `recent` holds what was reached
+        lately, most recent first; `upcoming` what is due soon, soonest first,
+        projected from the current pace where it is not a fixed date.
+
+        Reads the scope's dashboard settings, so types hidden from the dashboard
+        raise no milestones, and "together" counts from the configured start
+        date (or the first entry when there is none).
+      parameters:
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by specific group ID (defaults to personal entries)
+          example: "group456"
+      responses:
+        '200':
+          description: Milestones retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MilestonesResponse'
+        '403':
+          description: Not a member of that group
           content:
             application/json:
               schema:

@@ -8,3 +8,6 @@
  * The session check itself is tested in backend-core (src/auth/session.test.ts).
  */
 require('./dist/testing/serviceTestSetup');
+
+// The OpenAPI drift check, for a service's docs test.
+module.exports = require('./dist/testing/openapi');

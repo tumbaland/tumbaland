@@ -6,9 +6,9 @@ info:
   contact:
     name: Tumbaland Team
 servers:
-  - url: http://localhost:4002/api
+  - url: http://localhost:4002
     description: Development server
-  - url: https://album-api.tumbaland.eu/api
+  - url: https://album-api.tumbaland.eu
     description: Production server
 
 tags:
@@ -20,6 +20,8 @@ tags:
     description: Collage creation and management
   - name: Statistics
     description: Album service statistics and analytics
+  - name: Internal
+    description: Called by chat-service, never by a browser
 
 components:
   schemas:
@@ -638,14 +640,28 @@ components:
         - message
 
   securitySchemes:
+    internalAuth:
+      type: apiKey
+      in: header
+      name: x-internal-token
+      description: Shared secret between Tumbaland's services. chat-service calls the internal routes.
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
 
 paths:
+  /health:
+    get:
+      summary: Readiness, including database connectivity
+      description: Public. Liveness for the orchestrator is `/health/live`, mounted by backend-core.
+      security: []
+      responses:
+        '200': { description: Healthy }
+        '503': { description: Database unreachable }
+
   # Album Endpoints
-  /albums:
+  /api/albums:
     get:
       tags: [Albums]
       summary: Get all albums
@@ -733,7 +749,7 @@ paths:
       security:
         - bearerAuth: []
 
-  /albums/{id}:
+  /api/albums/{id}:
     get:
       tags: [Albums]
       summary: Get album by ID
@@ -863,7 +879,7 @@ paths:
       security:
         - bearerAuth: []
 
-  /albums/{id}/cover:
+  /api/albums/{id}/cover:
     put:
       tags: [Albums]
       summary: Set album cover photo
@@ -961,7 +977,7 @@ paths:
         - bearerAuth: []
 
   # Photo Endpoints
-  /photos:
+  /api/photos:
     post:
       tags: [Photos]
       summary: Create photo
@@ -1000,7 +1016,7 @@ paths:
       security:
         - bearerAuth: []
 
-  /photos/album/{albumId}/sheet:
+  /api/photos/album/{albumId}/sheet:
     get:
       tags: [Photos]
       summary: An album as a numbered sheet of pictures
@@ -1110,7 +1126,7 @@ paths:
       security:
         - bearerAuth: []
 
-  /photos/album/{albumId}:
+  /api/photos/album/{albumId}:
     get:
       tags: [Photos]
       summary: Get photos by album
@@ -1167,7 +1183,7 @@ paths:
       security:
         - bearerAuth: []
 
-  /photos/{id}:
+  /api/photos/{id}:
     get:
       tags: [Photos]
       summary: Get photo by ID
@@ -1297,8 +1313,9 @@ paths:
       security:
         - bearerAuth: []
 
-  /photos/by-file/{fileId}:
+  /api/photos/by-file/{fileId}:
     get:
+      security: []
       tags: [Photos]
       summary: Get photo by file ID
       description: Retrieve a photo by its MinIO file ID (public endpoint for file service)
@@ -1329,7 +1346,142 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /photos/upload-url:
+  /api/photos/memories:
+    get:
+      tags: [Photos]
+      summary: On this day, in earlier years
+      description: Photos from around today's date in each earlier year, most recent year first, capped per year.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: groupId, in: query, schema: { type: string }, description: "The group's photos instead of the caller's own" }
+        - { name: windowDays, in: query, schema: { type: integer, minimum: 0, maximum: 30, default: 3 }, description: Days either side that still count as this day }
+        - { name: limitPerYear, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 12 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: 
+                    type: object
+                    properties:
+                      date: { type: string, format: date }
+                      windowDays: { type: integer }
+                      totalPhotos: { type: integer, description: 'Every match, before the per-year cap' }
+                      years:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            year: { type: integer }
+                            yearsAgo: { type: integer }
+                            photoCount: { type: integer }
+                            photos:
+                              type: array
+                              items:
+                                allOf:
+                                  - $ref: '#/components/schemas/Photo'
+                                  - type: object
+                                    properties:
+                                      albumName: { type: string }
+                                      memoryDate: { type: string, format: date }
+                                      dateSource: { type: string, enum: [taken, uploaded] }
+
+  /api/photos/recent:
+    get:
+      tags: [Photos]
+      summary: The newest photos, for the dashboard
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: groupId, in: query, schema: { type: string }, description: "The group's photos instead of the caller's own" }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 8 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { photos: { type: array, items: { allOf: [{ $ref: '#/components/schemas/Photo' }, { type: object, properties: { albumName: { type: string }, takenAt: { type: string, format: date-time }, dateSource: { type: string, enum: [taken, uploaded] } } }] } } } }
+
+  /api/photos/random:
+    get:
+      tags: [Photos]
+      summary: A photo or a few at random, to rediscover
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: groupId, in: query, schema: { type: string }, description: "The group's photos instead of the caller's own" }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 10, default: 1 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { photos: { type: array, items: { allOf: [{ $ref: '#/components/schemas/Photo' }, { type: object, properties: { albumName: { type: string }, takenAt: { type: string, format: date-time }, dateSource: { type: string, enum: [taken, uploaded] } } }] } } } }
+
+  /api/photos/album/{albumId}/tags:
+    get:
+      tags: [Photos]
+      summary: The tags used in an album, with how many photos carry each
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: albumId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { tags: { type: array, items: { type: object, properties: { tag: { type: string }, count: { type: integer } } } } } }
+        '404': { description: 'No such album, or not one the caller can see' }
+
+  /api/photos/tags:
+    put:
+      tags: [Photos]
+      summary: Add and remove tags on several photos at once
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [photoIds]
+              description: At least one tag to add or remove.
+              properties:
+                photoIds: { type: array, minItems: 1, items: { type: string } }
+                add: { type: array, items: { type: string } }
+                remove: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object }
+        '400': { description: 'No photos, or no tags to add or remove' }
+
+  /api/photos/upload-url:
     post:
       tags: [Photos]
       summary: Get upload signed URL
@@ -1378,7 +1530,7 @@ paths:
         - bearerAuth: []
 
   # Collage Endpoints
-  /collages:
+  /api/collages:
     get:
       tags: [Collages]
       summary: Get collages
@@ -1461,7 +1613,181 @@ paths:
       security:
         - bearerAuth: []
 
-  /collages/{id}/preview:
+  /api/collages/{id}/shapes:
+    get:
+      tags: [Collages]
+      summary: The width-to-height ratio of some of a collage's photos
+      description: For laying photos out without loading them. `photos` is a comma-separated list of ids.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: photos, in: query, required: true, schema: { type: string }, example: '65f0c1aa,65f0c1ab' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, additionalProperties: { type: number }, description: Ratio by photo id }
+        '400': { description: 'Too many photos at a time' }
+
+  /api/collages/{id}/albums:
+    post:
+      tags: [Collages]
+      summary: Let a collage use photos from more albums
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [add]
+              properties:
+                add: { type: array, minItems: 1, maxItems: 50, items: { type: string, pattern: '^[a-f0-9]{24}$' } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object }
+        '403': { description: 'An album the caller cannot see' }
+
+  /api/collages/{id}/changes:
+    post:
+      tags: [Collages]
+      summary: Save a batch of edits
+      description: |
+        The editor's autosave, and how an assistant edits a collage it made.
+        Each change puts an item, removes one, reorders a layer or changes
+        settings. Everyone else with the collage open gets the batch on the
+        live stream, except the tab that sent it (`session`).
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [changes]
+              properties:
+                changes:
+                  type: array
+                  minItems: 1
+                  maxItems: 1000
+                  items:
+                    type: object
+                    required: [type]
+                    properties:
+                      type: { type: string, enum: [put, remove, order, settings] }
+                      layer: { type: string, enum: [photos, texts] }
+                      item: { type: object, description: 'For put: the item, with its id' }
+                      index: { type: integer, minimum: 0 }
+                      id: { type: string, description: 'For remove' }
+                      ids: { type: array, items: { type: string }, description: 'For order: the new order' }
+                      values: { type: object, description: 'For settings: viewport, colours, transparency, title' }
+                session: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { revision: { type: integer } } }
+        '403': { description: 'Not the callers to edit (an assistant may only edit collages it made)' }
+        '429': { description: 'Too many saves' }
+
+  /api/collages/{id}/live:
+    get:
+      tags: [Collages]
+      summary: The open editor's stream of everyone else's edits
+      description: |
+        Server-sent events: changes, who else is here, what they have selected,
+        and where an item is mid-drag. One request that stays open as long as
+        the editor does. People only, not keys or assistants.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: session, in: query, required: true, schema: { type: string }, description: This tab }
+      responses:
+        '200':
+          description: The event stream
+          content:
+            text/event-stream: { schema: { type: string } }
+        '400': { description: 'No session' }
+        '404': { description: 'No such collage' }
+
+  /api/collages/{id}/presence:
+    post:
+      tags: [Collages]
+      summary: This tab is here, and what it has selected
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session, selection]
+              properties:
+                session: { type: string, minLength: 8, maxLength: 64 }
+                selection: { type: string, nullable: true, maxLength: 100 }
+      responses:
+        '204': { description: Told the others }
+
+  /api/collages/{id}/moving:
+    post:
+      tags: [Collages]
+      summary: Where an item is mid-drag, or null once let go
+      description: Sent many times a second while dragging, on its own rate budget.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session, item]
+              properties:
+                session: { type: string, minLength: 8, maxLength: 64 }
+                item:
+                  type: object
+                  nullable: true
+                  properties:
+                    id: { type: string }
+                    x: { type: number }
+                    y: { type: number }
+                    width: { type: number }
+                    height: { type: number }
+                    rotation: { type: number }
+      responses:
+        '204': { description: Told the others }
+
+  /api/collages/{id}/preview:
     get:
       tags: [Collages]
       summary: Look at a collage
@@ -1526,7 +1852,7 @@ paths:
       security:
         - bearerAuth: []
 
-  /collages/{id}:
+  /api/collages/{id}:
     get:
       tags: [Collages]
       summary: Get collage by ID
@@ -1657,7 +1983,7 @@ paths:
         - bearerAuth: []
 
   # Statistics Endpoints
-  /statistics:
+  /api/statistics:
     get:
       tags: [Statistics]
       summary: Get album statistics
@@ -1683,3 +2009,194 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
         - bearerAuth: []
+
+  /internal/groups/{groupId}/albums:
+    get:
+      tags: [Internal]
+      summary: A group's albums, for chat's album picker
+      security:
+        - internalAuth: []
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { type: object, properties: { id: { type: string }, name: { type: string }, photoCount: { type: integer } } } }
+    post:
+      tags: [Internal]
+      summary: Make an album in a group, from chat
+      security:
+        - internalAuth: []
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, userId]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+                userId: { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { id: { type: string }, name: { type: string }, photoCount: { type: integer } } }
+
+  /internal/groups/{groupId}/albums/{albumId}:
+    get:
+      tags: [Internal]
+      summary: One of a group's albums
+      security:
+        - internalAuth: []
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string } }
+        - { name: albumId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { id: { type: string }, name: { type: string }, photoCount: { type: integer } } }
+        '404': { description: 'Not in that group' }
+
+  /internal/groups/{groupId}/collages:
+    post:
+      tags: [Internal]
+      summary: Make a collage from a chat's album
+      description: Idempotent on `clientId`.
+      security:
+        - internalAuth: []
+      parameters:
+        - { name: groupId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientId, userId, albumId, conversationId, title]
+              properties:
+                clientId: { type: string, minLength: 8, maxLength: 100 }
+                userId: { type: string }
+                albumId: { type: string }
+                conversationId: { type: string }
+                title: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { id: { type: string }, title: { type: string } } }
+
+  /internal/chat-photos:
+    post:
+      tags: [Internal]
+      summary: Put a photo or video sent in chat into an album
+      description: |
+        An entry pointing at chat's own file, never a copy. Idempotent on the
+        file: a retry returns the entry already made.
+      security:
+        - internalAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [groupId, albumId, conversationId, messageId, fileId, mimetype, size, takenAt]
+              properties:
+                groupId: { type: string }
+                albumId: { type: string }
+                conversationId: { type: string }
+                messageId: { type: string }
+                fileId: { type: string, maxLength: 512 }
+                thumbnailFileId: { type: string, nullable: true }
+                posterFileId: { type: string, nullable: true }
+                mimetype: { type: string, pattern: '^(image|video)/' }
+                size: { type: integer, minimum: 0 }
+                width: { type: integer, nullable: true }
+                height: { type: integer, nullable: true }
+                takenAt: { type: string, format: date-time }
+      responses:
+        '201':
+          description: Added, or the entry already there
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { photoId: { type: string }, albumId: { type: string }, albumName: { type: string } } }
+
+  /internal/chat-photos/{messageId}/move:
+    post:
+      tags: [Internal]
+      summary: Move a message's photos to another album
+      security:
+        - internalAuth: []
+      parameters:
+        - { name: messageId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [groupId, albumId]
+              properties:
+                groupId: { type: string }
+                albumId: { type: string }
+                fileIds: { type: array, maxItems: 20, items: { type: string }, description: Some of them; all when absent }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { moved: { type: integer }, albumId: { type: string }, albumName: { type: string } } }
+
+  /internal/chat-photos/{messageId}:
+    delete:
+      tags: [Internal]
+      summary: Take a message's photos out of their album
+      description: The photos stay in the chat. One file with `fileId`, or all of them.
+      security:
+        - internalAuth: []
+      parameters:
+        - { name: messageId, in: path, required: true, schema: { type: string } }
+        - { name: fileId, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { removed: { type: integer } } }

@@ -1,5 +1,6 @@
 import { overrideSessionCheckForTests } from '../auth/session';
 import { overrideMembershipLookupForTests } from '../groups/membership';
+import { recordMountPaths } from './openapi';
 
 /**
  * Jest setup for service test suites: they sign session tokens without a
@@ -15,3 +16,6 @@ overrideSessionCheckForTests(async () => true);
 // No group-service either: a test token's own `groups` claim is taken as the
 // person's membership. The live lookup is tested in groups/membership.test.ts.
 overrideMembershipLookupForTests(async (user) => user.groups ?? []);
+
+// Before any app is built, so the OpenAPI drift check can see where routers are mounted.
+recordMountPaths();

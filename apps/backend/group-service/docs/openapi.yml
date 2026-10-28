@@ -316,6 +316,7 @@ paths:
   # Health check endpoint
   /health:
     get:
+      security: []
       tags:
         - Health
       summary: Health check
