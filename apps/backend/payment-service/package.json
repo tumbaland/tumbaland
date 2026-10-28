@@ -14,7 +14,7 @@
     "reconcile:usage": "ts-node src/scripts/reconcile-usage.ts"
   },
   "dependencies": {
-    "@tumbaland/backend-core": "1.50.0",
+    "@tumbaland/backend-core": "1.51.0",
     "cookie-parser": "^1.4.7",
     "dotenv": "^18.0.9",
     "express": "^5.3.0",
