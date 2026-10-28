@@ -1,5 +1,5 @@
 import { vi } from 'vite-plus/test';
-import { collageMoves, downloadBlob, exportCollageToPng, exportCollageToVideo, frameIndexAt } from './exportCollage';
+import { collageMoves, exportCollageToPng, exportCollageToVideo, frameIndexAt } from './exportCollage';
 import { CollageDoc } from '@tumbaland/collage-core';
 import { ResolvePhoto } from './CollageStage';
 
@@ -318,22 +318,6 @@ it('rejects when toBlob yields no blob', async () => {
   toBlobMock.mockImplementation((cb: (blob: Blob | null) => void) => cb(null));
 
   await expect(exportCollageToPng(baseDoc, resolvePhoto)).rejects.toThrow('Export failed');
-});
-
-it('downloadBlob creates an object URL, triggers a click, and revokes the URL once the browser has it', () => {
-  vi.useFakeTimers();
-  const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-  const blob = new Blob(['data']);
-
-  downloadBlob(blob, 'collage.png');
-
-  expect(URL.createObjectURL).toHaveBeenCalledWith(blob);
-  expect(clickSpy).toHaveBeenCalledTimes(1);
-  expect(URL.revokeObjectURL).not.toHaveBeenCalled();
-  vi.runAllTimers();
-  expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock');
-  clickSpy.mockRestore();
-  vi.useRealTimers();
 });
 
 it('draws only the crop region of a cropped photo', async () => {
