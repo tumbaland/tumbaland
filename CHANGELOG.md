@@ -1,4 +1,19 @@
 # Tumbalog
+## [0.0.544](https://github.com/tumbaland/tumbaland/compare/app-v0.0.543...app-v0.0.544) (2026-10-28)
+
+### Features
+
+* improve docs ([5e135d2](https://github.com/tumbaland/tumbaland/commit/5e135d2e619b26c5c5add95f1ba34f2f6b1c7f73))
+* split code into smaller ([747a03a](https://github.com/tumbaland/tumbaland/commit/747a03a46d95b0da3d51dcac6c8372937dbc7871))
+* split files into smaller ([741fca7](https://github.com/tumbaland/tumbaland/commit/741fca77dec83422d7088dbddf36c8d97ed24a80))
+* split test files into smaller ([c726b3f](https://github.com/tumbaland/tumbaland/commit/c726b3f62556d62bb02f9ef4b47cf91948cec2a6))
+* use common functions ([83ad803](https://github.com/tumbaland/tumbaland/commit/83ad803545a8113b7ebec3aa8d71091dc309096e))
+
+### Chores
+
+* **release:** @tumbaland/backend-core 1.51.0 ([1e165c4](https://github.com/tumbaland/tumbaland/commit/1e165c4098cfdca9bc48aef6df19e6d4bff22f5a))
+* **release:** @tumbaland/frontend-core 1.24.0 ([a1c35d2](https://github.com/tumbaland/tumbaland/commit/a1c35d2503cd9509a2bd05d23a2bee9571b59908))
+
 ## [0.0.543](https://github.com/tumbaland/tumbaland/compare/app-v0.0.542...app-v0.0.543) (2026-10-27)
 
 ### Features
