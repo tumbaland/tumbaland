@@ -10,7 +10,7 @@ module.exports = {
     '^.+\\.ts$': ['ts-jest', { tsconfig: { types: ['jest', 'node'] } }]
   },
   coverageProvider: 'v8',
-  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.test.ts', '!src/index.ts', '!src/types/**'],
+  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.test.ts', '!src/index.ts', '!src/types/**', '!src/test/**'],
   coverageReporters: ['text', 'json-summary'],
   coverageThreshold: { global: { statements: 90, branches: 80, functions: 90, lines: 90 } }
 };
