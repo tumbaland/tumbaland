@@ -100,7 +100,7 @@ export async function resolveEntitlements(rawEmail: string): Promise<ResolvedEnt
     ...notExpired(now)
   }).populate<{ plan: IPlan }>('plan');
 
-  const best = pickBest(subs as unknown as RankableSubscription[]);
+  const best = pickBest(subs);
   const planCode = best?.plan?.code ?? best?.planCode ?? FALLBACK_PLAN;
 
   // A user with no subscription is on the free plan, and the free plan's

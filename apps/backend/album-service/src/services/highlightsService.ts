@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { ForbiddenError } from '@tumbaland/backend-core';
+import { assertMemberOf } from '@tumbaland/backend-core';
 import Album from '../models/Album';
 import Photo, { IPhoto } from '../models/Photo';
 import photoService, { PhotoWithSignedUrls } from './photoService';
@@ -46,9 +46,7 @@ class HighlightsService {
   private async albumsInScope(groupId: string | undefined, context: HighlightsContext): Promise<AlbumRow[]> {
     const { userId, userGroups } = context;
 
-    if (groupId && !userGroups.includes(groupId)) {
-      throw new ForbiddenError('Access denied: Not a member of this group');
-    }
+    assertMemberOf(groupId, userGroups, 'Access denied: Not a member of this group');
 
     const albumQuery = groupId ? { groupId } : { userId, groupId: { $exists: false } };
     return Album.find(albumQuery).select({ name: 1 }).lean<AlbumRow[]>();

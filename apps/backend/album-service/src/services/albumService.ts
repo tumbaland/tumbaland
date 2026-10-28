@@ -1,7 +1,7 @@
 import Album, { IAlbum } from '../models/Album';
 import Photo from '../models/Photo';
 import mongoose, { PipelineStage } from 'mongoose';
-import { canAccessResource, ForbiddenError, logger, NotFoundError } from '@tumbaland/backend-core';
+import { canAccessResource, ForbiddenError, logger, NotFoundError, assertMemberOf } from '@tumbaland/backend-core';
 import { deleteFile, getPhotoSignedUrl, getPhotoSignedUrlsBatch, SignedUrlData } from './fileServiceClient';
 
 interface AlbumMatchQuery {
@@ -302,9 +302,7 @@ class AlbumService {
 
     // Moving it into a group is writing into that group, and bills its storage
     // to that group's owner.
-    if (input.groupId && !userGroups.includes(input.groupId)) {
-      throw new ForbiddenError('Access denied');
-    }
+    assertMemberOf(input.groupId, userGroups);
 
     const updateData: Partial<Pick<IAlbum, 'name' | 'description' | 'isPublic' | 'tags' | 'coverPhotoId' | 'groupId'>> =
       {};

@@ -1,6 +1,6 @@
 import Trade, { ITrade, TradeType } from '../models/Trade';
 import Holding from '../models/Holding';
-import { BadRequestError, ForbiddenError, NotFoundError, canAccessResource } from '@tumbaland/backend-core';
+import { BadRequestError, ForbiddenError, NotFoundError, canAccessResource, assertMemberOf } from '@tumbaland/backend-core';
 import { tenantScope } from '../utils/scope';
 import { derivePosition, Position, EMPTY_POSITION } from './position.service';
 
@@ -113,9 +113,7 @@ function assertConsistent(data: Partial<TradeInput>, type: TradeType): void {
 }
 
 export const createTrade = async (data: TradeInput, userId: string, userGroups: string[] = []) => {
-  if (data.groupId && !userGroups.includes(data.groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(data.groupId, userGroups);
 
   assertConsistent(data, data.type);
 
@@ -150,9 +148,7 @@ export const updateTrade = async (
   }
 
   // Moving a trade into a group is writing into that group.
-  if (data.groupId && !userGroups.includes(data.groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(data.groupId, userGroups);
 
   const type = (data.type || existing.type) as TradeType;
   assertConsistent({ ...existing.toObject(), ...data }, type);

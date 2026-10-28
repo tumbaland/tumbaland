@@ -23,23 +23,27 @@ export function addMonths(date: Date, count: number): Date {
 // in the newer API version the installed SDK's bundled types describe, so
 // they aren't visible on Stripe.Invoice / Stripe.Subscription anymore.
 export function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | undefined {
-  const sub = (invoice as unknown as { subscription?: string | { id: string } }).subscription;
+  const sub = (invoice as { subscription?: string | { id: string } }).subscription;
   return typeof sub === 'string' ? sub : sub?.id;
 }
 
+/** `current_period_end` as the pinned API version sends it, in seconds. */
+export function legacyPeriodEnd(subscription: object): number | undefined {
+  return (subscription as { current_period_end?: number }).current_period_end;
+}
+
 export function periodEnd(sub: Stripe.Subscription): Date | undefined {
-  const legacy = (sub as unknown as { current_period_end?: number }).current_period_end;
-  const seconds = sub.cancel_at ?? legacy ?? sub.items?.data?.[0]?.current_period_end;
+  const seconds = sub.cancel_at ?? legacyPeriodEnd(sub) ?? sub.items?.data?.[0]?.current_period_end;
   return seconds ? new Date(seconds * 1000) : undefined;
 }
 
 export function computeRenewsAtFromSession(session: Stripe.Checkout.Session): Date | undefined {
   // Try to derive from the subscription's current_period_end if expanded; otherwise assume +1 month.
-  const sub = typeof session.subscription === 'object'
-    ? (session.subscription as unknown as { current_period_end?: number })
-    : null;
-  if (sub?.current_period_end) {
-    return new Date(sub.current_period_end * 1000);
+  const seconds = typeof session.subscription === 'object' && session.subscription
+    ? legacyPeriodEnd(session.subscription)
+    : undefined;
+  if (seconds) {
+    return new Date(seconds * 1000);
   }
   return addMonths(new Date(), 1);
 }

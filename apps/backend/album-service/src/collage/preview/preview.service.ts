@@ -1,6 +1,6 @@
 import { isValidObjectId } from 'mongoose';
 import { NotFoundError } from '@tumbaland/backend-core';
-import { CollageConfig, normalizeCollageConfig } from '@tumbaland/collage-core';
+import { normalizeCollageConfig } from '@tumbaland/collage-core';
 import Album from '../../models/Album';
 import Photo from '../../models/Photo';
 import { canReachAlbum, PhotoAccessContext, reachableAlbumIds } from '../../services/photoAccess';
@@ -38,7 +38,7 @@ export const collagePreview = async (
   const collage = await getCollageById(id, context.userId, context.userGroups);
   if (!collage) throw new NotFoundError('Collage not found');
 
-  const doc = normalizeCollageConfig(collage.config as unknown as CollageConfig);
+  const doc = normalizeCollageConfig(collage.config);
   const albums = await reachableAlbumIds(collage.albumIds, context, 'read');
   const photoIds = [...new Set(doc.photos.map((photo) => photo.photoId))].filter((photoId) => isValidObjectId(photoId));
 

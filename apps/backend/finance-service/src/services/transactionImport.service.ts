@@ -1,5 +1,5 @@
 import Transaction from '../models/Transaction';
-import { BadRequestError, ForbiddenError } from '@tumbaland/backend-core';
+import { BadRequestError, assertMemberOf } from '@tumbaland/backend-core';
 import { tenantScope } from '../utils/scope';
 import {
   readStatement,
@@ -83,9 +83,7 @@ export const importStatement = async (
       'This does not look like a SEB account statement — expected a "Kliendi konto" column'
     );
   }
-  if (options.groupId && !(options.userGroups || []).includes(options.groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(options.groupId, options.userGroups);
 
   const rows = readStatement(csv);
   if (rows.length === 0) {

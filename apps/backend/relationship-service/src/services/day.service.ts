@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { BadRequestError, ForbiddenError, escapeRegex } from '@tumbaland/backend-core';
+import { BadRequestError, escapeRegex, assertMemberOf } from '@tumbaland/backend-core';
 import { Activity, IActivity, IActivityLocation } from '../models/Activity';
 import { ActivityType, IActivityType } from '../models/ActivityType';
 import { DAY_PATTERN, parseDay } from '../utils/day';
@@ -74,9 +74,7 @@ export const getDays = async (options: {
 }): Promise<{ days: Day[]; total: number; page: number; totalPages: number }> => {
   const { userId, userGroupIds, groupId, page = 1, limit = 30, typeId, search, startDate, endDate } = options;
 
-  if (groupId && !userGroupIds.includes(groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(groupId, userGroupIds);
 
   const match: ActivityScopeQuery = scopeQuery(userId, groupId);
   if (typeId) match.typeId = new mongoose.Types.ObjectId(typeId);
@@ -135,9 +133,7 @@ export const saveDay = async (
   userGroupIds: string[],
   groupId?: string
 ): Promise<Day> => {
-  if (groupId && !userGroupIds.includes(groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(groupId, userGroupIds);
 
   const date = dayToDate(day);
   const scope = scopeQuery(userId, groupId);

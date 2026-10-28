@@ -2,7 +2,7 @@ import TrackedTicker from '../models/TrackedTicker';
 import Holding from '../models/Holding';
 import Trade from '../models/Trade';
 import TickerPriceHistory from '../models/TickerPriceHistory';
-import { canAccessResource, ConflictError, ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
+import { canAccessResource, ConflictError, ForbiddenError, NotFoundError, assertMemberOf } from '@tumbaland/backend-core';
 import { scopeFor } from '../utils/scope';
 
 export const getAllTrackedTickers = async (userId: string, userGroups: string[] = []) => {
@@ -45,9 +45,7 @@ export const createTrackedTicker = async (
   userGroups: string[] = []
 ) => {
   // If groupId is provided, verify user has access to that group
-  if (data.groupId && !userGroups.includes(data.groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(data.groupId, userGroups);
   
   const tracked = new TrackedTicker({
     ...data,
@@ -91,9 +89,7 @@ export const updateTrackedTicker = async (
   }
 
   // If groupId is being updated, verify user has access to the new group
-  if (data.groupId && !userGroups.includes(data.groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(data.groupId, userGroups);
 
   if (data.ticker !== undefined && data.ticker !== existingTicker.ticker) {
     await renameSymbol(existingTicker.ticker, data.ticker, scopeFor(existingTicker.userId, existingTicker.groupId));

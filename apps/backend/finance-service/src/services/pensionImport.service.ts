@@ -1,5 +1,5 @@
 import Transaction from '../models/Transaction';
-import { BadRequestError, ForbiddenError } from '@tumbaland/backend-core';
+import { BadRequestError, assertMemberOf } from '@tumbaland/backend-core';
 import { tenantScope } from '../utils/scope';
 import { readPensionStatement, Pillar, PensionContribution } from './pensionStatement.service';
 import type { ImportOptions } from './importTypes';
@@ -64,9 +64,7 @@ export const importPensionStatement = async (
   csv: string,
   options: ImportOptions
 ): Promise<PensionImportResult> => {
-  if (options.groupId && !(options.userGroups || []).includes(options.groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(options.groupId, options.userGroups);
 
   const { contributions, skipped, funds } = readPensionStatement(csv);
   if (contributions.length === 0) {

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { ForbiddenError } from '@tumbaland/backend-core';
+import { assertMemberOf } from '@tumbaland/backend-core';
 import { Activity } from '../models/Activity';
 import { scopeQuery } from './day.service';
 
@@ -70,9 +70,7 @@ export const getPlaces = async (options: {
 }): Promise<Place[]> => {
   const { userId, userGroupIds, groupId, typeId, startDate, endDate } = options;
 
-  if (groupId && !userGroupIds.includes(groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(groupId, userGroupIds);
 
   const match: PlaceMatch = {
     ...scopeQuery(userId, groupId),
@@ -178,9 +176,7 @@ export const getPlaceVisits = async (options: {
 }): Promise<PlaceVisit[]> => {
   const { userId, userGroupIds, groupId, lat, lng, limit = 50 } = options;
 
-  if (groupId && !userGroupIds.includes(groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(groupId, userGroupIds);
 
   // Half a rounding step either side reproduces $round's bucket as a range,
   // which an index can serve; $round in a $match could not.

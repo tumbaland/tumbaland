@@ -1,6 +1,6 @@
 import { CollageInput } from './collage.types';
 import { CollageMaker, CollageModel, ICollage } from './collage.model';
-import { applyChanges, CollageChange, StoredConfig } from './collageChanges';
+import { applyChanges, CollageChange } from './collageChanges';
 import Album from '../models/Album';
 import { getSignedUrlsBatch } from '../services/fileServiceClient';
 import mongoose, { PipelineStage } from 'mongoose';
@@ -10,7 +10,8 @@ import {
   ConflictError,
   ForbiddenError,
   logger,
-  NotFoundError
+  NotFoundError,
+  assertMemberOf
 } from '@tumbaland/backend-core';
 
 interface AggregatedPhoto {
@@ -62,9 +63,7 @@ export const createCollage = async (
   madeBy?: CollageMaker
 ): Promise<ICollage> => {
   // Creating a collage in a group is writing into that group.
-  if (data.groupId && !userGroups.includes(data.groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(data.groupId, userGroups);
 
   // Set the userId on the collage data
   const collageData = {
@@ -104,9 +103,7 @@ export const updateCollage = async (
   }
 
   // Moving a collage into a group is writing into that group.
-  if (data.groupId && !userGroups.includes(data.groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(data.groupId, userGroups);
 
   // Counted as a write like any other, so a batch of changes read before
   // this one is retried against it rather than stored over it.
@@ -156,7 +153,7 @@ export const applyCollageChanges = async (
       );
     }
 
-    const config = applyChanges((current.config ?? {}) as unknown as StoredConfig, changes);
+    const config = applyChanges({ ...current.config }, changes);
     // Collages from before revisions existed have no field at all, and
     // `{ revision: 0 }` would not match them.
     const seen = typeof current.revision === 'number' ? current.revision : { $exists: false };
@@ -397,9 +394,7 @@ export const getCollageList = async (
   if (userId) {
     if (groupId) {
       // If groupId is specified, filter by group (user must be member)
-      if (!userGroups.includes(groupId)) {
-        throw new ForbiddenError('Access denied');
-      }
+      assertMemberOf(groupId, userGroups);
       filter.groupId = groupId;
     } else {
       // No groupId specified: show only personal collages (no group). A null

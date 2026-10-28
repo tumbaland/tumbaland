@@ -1,4 +1,4 @@
-import { CollageConfig } from './collage.model';
+import type { CollageConfig } from '@tumbaland/collage-core';
 
 export interface CollageInput {
   title: string;

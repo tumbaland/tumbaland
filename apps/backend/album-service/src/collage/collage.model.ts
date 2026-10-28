@@ -1,35 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
-
-export interface CollageConfig {
-  version: string;
-  date: string;
-  viewport: {
-    width: number;
-    height: number;
-  };
-  theme: string;
-  photos: Array<{
-    photoId: string; // Reference to photo database ID
-    filename: string;
-    caption: string;
-    position: {
-      left: number;
-      top: number;
-    };
-    width: number;
-    height: number;
-    rotation: number;
-    frameVisible: boolean;
-    scaleX: string;
-    scaleY: string;
-  }>;
-  textSections: Array<Record<string, unknown>>;
-  title: {
-    text: string;
-    subtitle: string;
-  };
-  albumIds: string[]; // Updated: albumIds array to support multiple albums
-}
+import type { CollageConfig } from '@tumbaland/collage-core';
 
 export interface CollageMaker {
   kind: 'assistant';

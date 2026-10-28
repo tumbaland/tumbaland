@@ -1,5 +1,5 @@
 import Transaction from '../models/Transaction';
-import { BadRequestError, ForbiddenError } from '@tumbaland/backend-core';
+import { BadRequestError, assertMemberOf } from '@tumbaland/backend-core';
 import { tenantScope } from '../utils/scope';
 import { parseCsv } from './bankStatement.service';
 import { applyCategoryChanges, CategoryChange } from './categoryRule.service';
@@ -40,9 +40,7 @@ export const importCategories = async (
   csv: string,
   options: ImportOptions
 ): Promise<CategoryImportResult> => {
-  if (options.groupId && !(options.userGroups || []).includes(options.groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(options.groupId, options.userGroups);
 
   const [header, ...body] = parseCsv(csv.replace(/^\uFEFF/, ''));
   const columns = header.map((h) => h.trim().toLowerCase());

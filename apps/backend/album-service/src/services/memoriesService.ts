@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { ForbiddenError } from '@tumbaland/backend-core';
+import { assertMemberOf } from '@tumbaland/backend-core';
 import Album from '../models/Album';
 import Photo, { IPhoto } from '../models/Photo';
 import photoService, { PhotoWithSignedUrls } from './photoService';
@@ -110,9 +110,7 @@ class MemoriesService {
     const now = localToday(filter.now ?? new Date());
     const { userId, userGroups } = context;
 
-    if (groupId && !userGroups.includes(groupId)) {
-      throw new ForbiddenError('Access denied: Not a member of this group');
-    }
+    assertMemberOf(groupId, userGroups, 'Access denied: Not a member of this group');
 
     const date = now.toISOString().slice(0, 10);
     const albumQuery = groupId ? { groupId } : { userId, groupId: { $exists: false } };

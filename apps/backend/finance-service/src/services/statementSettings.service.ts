@@ -1,5 +1,5 @@
 import StatementSettings, { IStatementSettings } from '../models/StatementSettings';
-import { ForbiddenError } from '@tumbaland/backend-core';
+import { assertMemberOf } from '@tumbaland/backend-core';
 import { tenantScope } from '../utils/scope';
 import { ownerNameTest, OwnerNameTest } from './bankStatement.service';
 
@@ -37,9 +37,7 @@ export const saveSettings = async (
   userId: string,
   userGroups: string[] = []
 ): Promise<IStatementSettings> => {
-  if (input.groupId && !userGroups.includes(input.groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(input.groupId, userGroups);
 
   // Blank entries would match every counterparty and silently swallow the whole
   // statement as own-account transfers.

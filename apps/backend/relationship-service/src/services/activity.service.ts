@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { ForbiddenError, escapeRegex } from '@tumbaland/backend-core';
+import { escapeRegex, assertMemberOf } from '@tumbaland/backend-core';
 import { Activity, IActivity } from '../models/Activity';
 import { IActivityType } from '../models/ActivityType';
 
@@ -118,9 +118,7 @@ export const getActivities = async (
   // Apply permission filtering
   if (groupId) {
     // Check if user has access to the specific group
-    if (!userGroupIds.includes(groupId)) {
-      throw new ForbiddenError('Access denied');
-    }
+    assertMemberOf(groupId, userGroupIds);
     query.groupId = groupId;
   } else if (userId) {
     // Personal context - show only items without groupId (personal items only)
@@ -221,9 +219,7 @@ export const getActivityTypes = async (userId?: string, groupId?: string, userGr
 
   if (groupId) {
     // Check if user has access to the specific group
-    if (!userGroupIds.includes(groupId)) {
-      throw new ForbiddenError('Access denied');
-    }
+    assertMemberOf(groupId, userGroupIds);
     // The group's own types only — a personal type is never usable in a group.
     query.groupId = groupId;
   } else if (userId) {
@@ -250,7 +246,7 @@ export const getDescriptionsByTypeId = async (
   };
 
   if (groupId) {
-    if (!userGroupIds.includes(groupId)) throw new ForbiddenError('Access denied');
+    assertMemberOf(groupId, userGroupIds);
     matchQuery.groupId = groupId;
   } else {
     matchQuery.userId = userId;

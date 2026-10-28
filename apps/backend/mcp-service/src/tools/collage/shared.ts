@@ -1,11 +1,6 @@
-import {
-  CollageConfig,
-  CollageDoc,
-  normalizeCollageConfig,
-  shortIdsOf
-} from '@tumbaland/collage-core';
+import { CollageDoc, shortIdsOf } from '@tumbaland/collage-core';
 import { album, resolveAlbum } from '../../album';
-import { Collage, collages, EncodedImage, resolveCollage } from '../../collage';
+import { Collage, collages, docOf, EncodedImage, resolveCollage } from '../../collage';
 import { EditOp } from '../collageEdit';
 import { describeCollage, photoInfoOf, PhotoInfo } from '../collageText';
 import { Caller, tenantFor } from '../module';
@@ -38,7 +33,7 @@ export async function fetchCollage(caller: Caller, id: string, groupId?: string)
   const { collage, photos } = await collages.get(caller.token, id);
   return {
     collage,
-    doc: normalizeCollageConfig(collage.config as unknown as CollageConfig),
+    doc: docOf(collage.config),
     photos: photoInfoOf(photos),
     groupId
   };

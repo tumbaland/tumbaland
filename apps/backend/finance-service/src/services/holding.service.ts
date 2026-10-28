@@ -1,7 +1,7 @@
 import Holding from '../models/Holding';
 import TrackedTicker from '../models/TrackedTicker';
 import TickerPriceHistory from '../models/TickerPriceHistory';
-import { canAccessResource, ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
+import { canAccessResource, ForbiddenError, NotFoundError, assertMemberOf } from '@tumbaland/backend-core';
 import { BASE_CURRENCY, getRates } from './fxRate.service';
 import { getPositions } from './trade.service';
 import { EMPTY_POSITION } from './position.service';
@@ -110,9 +110,7 @@ export const getAllHoldings = async (userId: string, userGroups: string[] = []) 
 };
 
 export const createHolding = async (data: HoldingInput, userId: string, userGroups: string[] = []) => {
-  if (data.groupId && !userGroups.includes(data.groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(data.groupId, userGroups);
 
   const { displayName, currency, ...holdingData } = data;
   const holding = await new Holding({ ...holdingData, userId }).save();
@@ -164,9 +162,7 @@ export const updateHolding = async (
     throw new ForbiddenError('Access denied');
   }
 
-  if (data.groupId && !userGroups.includes(data.groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(data.groupId, userGroups);
 
   const { displayName: _displayName, ...holdingData } = data;
   return Holding.findByIdAndUpdate(id, holdingData, { new: true });

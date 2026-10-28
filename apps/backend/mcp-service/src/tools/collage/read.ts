@@ -1,11 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import {
-  CollageConfig,
-  normalizeCollageConfig
-} from '@tumbaland/collage-core';
 import { album, resolveAlbum } from '../../album';
-import { collages, resolveCollage } from '../../collage';
+import { collages, docOf, resolveCollage } from '../../collage';
 import { Caller, ToolModule, explain, journalSchema, ok, tenantFor } from '../module';
 import { image, text, load, describe } from './shared';
 import { collageArg } from './schemas';
@@ -30,7 +26,7 @@ export function registerReadTools(server: McpServer, caller: Caller): void {
         if (list.length === 0) return ok('There are no collages yet.');
 
         const lines = list.map((entry) => {
-          const doc = normalizeCollageConfig(entry.config as unknown as CollageConfig);
+          const doc = docOf(entry.config);
           const from = entry.albumIds
             .map((id) => albums.find((candidate) => candidate._id === id)?.name)
             .filter((name): name is string => !!name);

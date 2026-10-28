@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ForbiddenError, NotFoundError, canAccessResource, sendSuccess } from '@tumbaland/backend-core';
+import { NotFoundError, canAccessResource, sendSuccess, assertMemberOf } from '@tumbaland/backend-core';
 import * as ActivityTypeService from '../services/activityType.service';
 import { IActivityType } from '../models/ActivityType';
 import { createActivityTypeSchema } from '../validation/schemas';
@@ -21,9 +21,7 @@ const findReachable = async (req: Request, id: string): Promise<IActivityType> =
 
 /** Refuses a write that would put a type into a group the caller is not in. */
 const assertGroupMember = (req: Request, groupId?: string | null): void => {
-  if (groupId && !(req.userGroups || []).includes(groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(groupId, req.userGroups);
 };
 
 /**

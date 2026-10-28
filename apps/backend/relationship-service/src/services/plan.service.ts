@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
+import { BadRequestError, ConflictError, NotFoundError, assertMemberOf } from '@tumbaland/backend-core';
 import { Plan, IPlan } from '../models/Plan';
 import { Activity, IActivityLocation } from '../models/Activity';
 import { ActivityType, IActivityType } from '../models/ActivityType';
@@ -149,7 +149,7 @@ export const listPlans = async (options: {
   limit?: number;
 }): Promise<PlanView[]> => {
   const { userId, userGroupIds, groupId, startDate, endDate, upcoming, limit = 100 } = options;
-  if (groupId && !userGroupIds.includes(groupId)) throw new ForbiddenError('Access denied');
+  assertMemberOf(groupId, userGroupIds);
 
   const query: Record<string, unknown> = { ...scopeQuery(userId, groupId) };
   if (endDate) query.date = { $lte: endDate };
@@ -169,7 +169,7 @@ export const listPlans = async (options: {
 };
 
 export const createPlan = async (input: PlanInput, userId: string, userGroupIds: string[]): Promise<PlanView> => {
-  if (input.groupId && !userGroupIds.includes(input.groupId)) throw new ForbiddenError('Access denied');
+  assertMemberOf(input.groupId, userGroupIds);
   assertSpan(input.date, input.endDate);
   await assertType(input.typeId, userId, userGroupIds, input.groupId);
 

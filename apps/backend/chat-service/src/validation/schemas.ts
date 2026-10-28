@@ -55,7 +55,7 @@ export const ALLOWED_UPLOAD_TYPES = [
   ...ALLOWED_VIDEO_TYPES,
   ...ALLOWED_AUDIO_TYPES,
   ...ALLOWED_DOCUMENT_TYPES
-];
+] as const;
 
 export const isDocumentType = (mimetype: string): boolean =>
   (ALLOWED_DOCUMENT_TYPES as readonly string[]).includes(mimetype);
@@ -81,7 +81,7 @@ const attachmentSchema = z.object({
   fileId: z.string().min(1, 'fileId required'),
   posterFileId: z.string().optional(),
   thumbnailFileId: z.string().optional(),
-  mimetype: z.enum(ALLOWED_UPLOAD_TYPES as unknown as [string, ...string[]]),
+  mimetype: z.enum(ALLOWED_UPLOAD_TYPES),
   /** The file's own name, shown on a document. Photos and videos do not need one. */
   name: z.string().max(255).optional(),
   sizeBytes: z.number().int().nonnegative(),
@@ -142,13 +142,13 @@ export const markReadSchema = z.object({
 
 export const uploadUrlSchema = z.object({
   filename: z.string().min(1, 'filename required').max(255),
-  mimetype: z.enum(ALLOWED_UPLOAD_TYPES as unknown as [string, ...string[]]),
+  mimetype: z.enum(ALLOWED_UPLOAD_TYPES),
   sizeBytes: z.number().int().positive()
 });
 
 export const thumbnailSchema = z.object({
   fileId: z.string().min(1, 'fileId required').max(512),
-  mimetype: z.enum(ALLOWED_UPLOAD_TYPES as unknown as [string, ...string[]])
+  mimetype: z.enum(ALLOWED_UPLOAD_TYPES)
 });
 
 /** Where the conversation's photos go: an existing group album, a new one, or nowhere. */

@@ -1,6 +1,6 @@
 import Album from '../models/Album';
 import Photo from '../models/Photo';
-import { ForbiddenError } from '@tumbaland/backend-core';
+import { assertMemberOf } from '@tumbaland/backend-core';
 
 export interface StatisticsFilter {
   groupId?: string;
@@ -61,9 +61,7 @@ class StatisticsService {
 
     if (groupId) {
       // Filter by specific group
-      if (!userGroups.includes(groupId)) {
-        throw new ForbiddenError('Access denied: Not a member of this group');
-      }
+      assertMemberOf(groupId, userGroups, 'Access denied: Not a member of this group');
       albumMatchQuery.groupId = groupId;
       photoMatchQuery.albumId = {
         $in: (await Album.find({ groupId }).distinct('_id')).map((id) => id.toString())

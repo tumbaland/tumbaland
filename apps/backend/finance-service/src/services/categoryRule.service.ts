@@ -1,6 +1,6 @@
 import CategoryRule, { ICategoryRule, MatchType } from '../models/CategoryRule';
 import Transaction, { TransactionType } from '../models/Transaction';
-import { BadRequestError, ForbiddenError, NotFoundError, canAccessResource } from '@tumbaland/backend-core';
+import { BadRequestError, ForbiddenError, NotFoundError, canAccessResource, assertMemberOf } from '@tumbaland/backend-core';
 import { tenantScope } from '../utils/scope';
 import { hasNestedRepetition } from '../utils/nestedRepetition';
 import {
@@ -52,9 +52,7 @@ const nextPriority = async (scope: Record<string, unknown>): Promise<number> => 
 };
 
 const assertGroupAccess = (groupId: string | undefined, userGroups: string[]): void => {
-  if (groupId && !userGroups.includes(groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(groupId, userGroups);
 };
 
 export const listRules = async (

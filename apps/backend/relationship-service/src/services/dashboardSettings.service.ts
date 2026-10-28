@@ -1,4 +1,4 @@
-import { ForbiddenError } from '@tumbaland/backend-core';
+import { assertMemberOf } from '@tumbaland/backend-core';
 import { DashboardSettings, IDashboardSettings } from '../models/DashboardSettings';
 
 export interface DashboardSettingsData {
@@ -25,9 +25,7 @@ const scopeQuery = (userId: string, groupId?: string) =>
   groupId ? { groupId } : { userId, $or: [{ groupId: { $exists: false } }, { groupId: null }] };
 
 const assertGroupAccess = (userGroupIds: string[], groupId?: string) => {
-  if (groupId && !userGroupIds.includes(groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(groupId, userGroupIds);
 };
 
 export const getDashboardSettings = async (

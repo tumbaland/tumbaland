@@ -3,6 +3,7 @@ import { logger, NotFoundError } from '@tumbaland/backend-core';
 import { Subscription } from '../models/Subscription';
 import { IPlan } from '../models/Plan';
 import { ensureStripe, stripe } from '../services/stripeService';
+import { legacyPeriodEnd } from '../services/subscriptionLifecycle';
 
 export const getMySubscription = async (req: Request, res: Response): Promise<void> => {
   const email = req.user!.email;
@@ -42,12 +43,9 @@ export const cancelSubscription = async (req: Request, res: Response): Promise<v
     try {
       ensureStripe();
       const updated = await stripe.subscriptions.update(sub.stripeSubscriptionId, { cancel_at_period_end: true });
-      // Reflect upcoming cancellation locally. This service pins an older Stripe API
-      // version (see stripeService.ts) where `current_period_end` was a flat field on
-      // the subscription itself; the installed SDK's bundled types describe a newer
-      // version where it moved onto each subscription item, so the field this
-      // integration actually relies on isn't visible on Stripe.Subscription anymore.
-      const legacyCurrentPeriodEnd = (updated as unknown as { current_period_end?: number }).current_period_end;
+      // Reflect upcoming cancellation locally. `legacyPeriodEnd` reads the flat
+      // `current_period_end` this service's pinned Stripe API version sends.
+      const legacyCurrentPeriodEnd = legacyPeriodEnd(updated);
       if (updated.cancel_at) {
         sub.cancelAt = new Date(updated.cancel_at * 1000);
       } else if (legacyCurrentPeriodEnd) {

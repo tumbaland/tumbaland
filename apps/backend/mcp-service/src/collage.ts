@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { callService, serviceUrl, TumbalandError } from './http';
 import { parseResponse } from './schemas';
+import { normalizeCollageConfig, type CollageConfig, type CollageDoc } from '@tumbaland/collage-core';
 
 /**
  * A thin client over album-service's collage API, and the two pictures it
@@ -18,6 +19,13 @@ const call = <T>(
   body?: unknown,
   query?: Record<string, string | number | boolean | undefined>
 ): Promise<T> => callService<T>(serviceUrl('ALBUM'), apiKey, method, path, body, query);
+
+/**
+ * A collage's config as a document. It arrives as an untyped record because the
+ * schema below must not reject a collage over a field this server does not use;
+ * `normalizeCollageConfig` is what makes sense of whatever version was stored.
+ */
+export const docOf = (config: Record<string, unknown>): CollageDoc => normalizeCollageConfig(config as unknown as CollageConfig);
 
 export const collageSchema = z
   .object({

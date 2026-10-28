@@ -1,5 +1,5 @@
 import AssetClass, { IAssetClass } from '../models/AssetClass';
-import { canAccessResource, ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
+import { canAccessResource, ForbiddenError, NotFoundError, assertMemberOf } from '@tumbaland/backend-core';
 
 export const getPersonalAssetClasses = async (userId: string) => {
   // Get only personal asset classes (no group association)
@@ -45,9 +45,7 @@ export const updateAssetClass = async (id: string, data: Partial<IAssetClass>, u
   await loadAccessible(id, userId, userGroupIds);
 
   // Moving a class into a group is writing into that group.
-  if (data.groupId && !userGroupIds.includes(data.groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  assertMemberOf(data.groupId, userGroupIds);
 
   return AssetClass.findByIdAndUpdate(id, data, { new: true });
 };
