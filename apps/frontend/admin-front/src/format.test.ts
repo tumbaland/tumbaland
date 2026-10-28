@@ -37,7 +37,7 @@ describe('numbers', () => {
     [1024 ** 3, '1 GB'],
     [50 * 1024 ** 3, '50 GB'],
     [3 * 1024 ** 4, '3 TB'],
-    [5000 * 1024 ** 4, '5000 TB']
+    [5000 * 1024 ** 4, '4.88 PB']
   ])('writes %d bytes as %s', (bytes, expected) => {
     expect(formatBytes(bytes)).toBe(expected);
   });

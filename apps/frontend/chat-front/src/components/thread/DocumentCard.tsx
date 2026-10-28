@@ -1,8 +1,8 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
-import { ink, surface } from '@tumbaland/frontend-core';
-import { extensionLabel, formatSize } from '../../services/documents';
+import { formatBytes, ink, surface } from '@tumbaland/frontend-core';
+import { extensionLabel } from '../../services/documents';
 import type { Attachment } from '../../types';
 import { downloadAttachment } from './Lightbox';
 
@@ -59,7 +59,7 @@ export function DocumentCard({ attachment }: DocumentCardProps) {
           {name}
         </Typography>
         <Typography variant="caption" sx={{ color: ink.muted }}>
-          {unavailable ? 'Not available' : formatSize(attachment.sizeBytes)}
+          {unavailable ? 'Not available' : formatBytes(attachment.sizeBytes)}
         </Typography>
       </Box>
     </Box>

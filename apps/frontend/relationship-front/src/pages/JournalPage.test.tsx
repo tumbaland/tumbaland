@@ -302,6 +302,7 @@ it('exports a CSV when the Export button is clicked', async () => {
   (URL as unknown as Record<string, unknown>).createObjectURL = createObjectURL;
   (URL as unknown as Record<string, unknown>).revokeObjectURL = revokeObjectURL;
   const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  const timers = vi.spyOn(globalThis, 'setTimeout');
 
   renderPage();
   await screen.findByText('May 2024');
@@ -310,7 +311,11 @@ it('exports a CSV when the Export button is clicked', async () => {
 
   expect(createObjectURL).toHaveBeenCalled();
   expect(clickSpy).toHaveBeenCalled();
+  // Released a minute later, once the browser has read the blob.
+  expect(revokeObjectURL).not.toHaveBeenCalled();
+  (timers.mock.calls.find(([, ms]) => ms === 60_000)![0] as () => void)();
   expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock');
+  timers.mockRestore();
 });
 
 it('shows the place on an entry chip when one was logged', async () => {

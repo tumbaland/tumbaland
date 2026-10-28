@@ -2,10 +2,11 @@ import { downloadPhoto } from './downloadPhoto';
 import { Photo } from '../types';
 
 vi.mock('@tumbaland/frontend-core', () => ({
+  downloadBlob: vi.fn(),
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() }
 }));
 
-import { logger } from '@tumbaland/frontend-core';
+import { downloadBlob, logger } from '@tumbaland/frontend-core';
 
 function makePhoto(overrides: Partial<Photo> = {}): Pick<Photo, 'signedUrl' | 'originalName' | '_id' | 'mimetype'> {
   return {
@@ -70,9 +71,7 @@ it('falls back to the blob-download link when file sharing is unsupported', asyn
 
   await downloadPhoto(makePhoto());
 
-  expect(URL.createObjectURL).toHaveBeenCalledWith(fakeBlob);
-  expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
-  expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock');
+  expect(downloadBlob).toHaveBeenCalledWith(fakeBlob, 'photo.jpg');
 });
 
 it('falls back to opening the URL directly when the fetch fails', async () => {

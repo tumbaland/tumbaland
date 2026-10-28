@@ -1,23 +1,14 @@
 /** How the screens write numbers, dates and the names the services use. */
 
+import { formatBytes } from '@tumbaland/frontend-core';
+
 const NUMBER = new Intl.NumberFormat();
 
 export const formatCount = (value: number): string => NUMBER.format(value);
 
 export const formatPercent = (fraction: number): string => `${Math.round(fraction * 100)}%`;
 
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const units = ['KB', 'MB', 'GB', 'TB'];
-  let value = bytes / 1024;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
-  }
-  // One decimal below ten, none above: 1.5 GB, 250 MB.
-  return `${value < 10 ? value.toFixed(1).replace(/\.0$/, '') : Math.round(value)} ${units[unit]}`;
-}
+export { formatBytes };
 
 /** `-1` is how a plan says there is no ceiling. */
 export const formatLimit = (limit: number, unit: 'bytes' | 'count'): string =>

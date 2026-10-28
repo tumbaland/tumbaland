@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, Typography, Box, useTheme, useMediaQuery } from '@mui/material';
 import { TrendingUp } from '@mui/icons-material';
+import { formatCurrency } from '../utils/numberUtils';
 
 interface YearlyResult {
   year: number;
@@ -38,15 +39,6 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal, mcBands
     updateWidth();
     return () => ro.disconnect();
   }, []);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('et-EE', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
 
   const chartLines = [
     {

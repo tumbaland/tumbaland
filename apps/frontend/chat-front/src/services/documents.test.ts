@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { documentMimetype, extensionLabel, formatSize, isDocumentType } from './documents';
+import { documentMimetype, extensionLabel, isDocumentType } from './documents';
 
 describe('documentMimetype', () => {
   it('keeps the browser type when it is a document', () => {
@@ -19,12 +19,6 @@ describe('documentMimetype', () => {
 });
 
 describe('labels', () => {
-  it('formats sizes', () => {
-    expect(formatSize(500)).toBe('500 B');
-    expect(formatSize(2048)).toBe('2 KB');
-    expect(formatSize(2.5 * 1024 * 1024)).toBe('2.5 MB');
-  });
-
   it('labels a document by its extension, or its type when the name has none', () => {
     expect(extensionLabel('letter.docx', 'x')).toBe('DOCX');
     expect(extensionLabel(null, 'application/pdf')).toBe('PDF');

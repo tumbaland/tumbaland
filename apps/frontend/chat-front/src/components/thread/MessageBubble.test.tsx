@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MessageBubble, albumLabel, canChange, isJumbo } from './MessageBubble';
+import { MessageBubble } from './MessageBubble';
+import { albumLabel, canChange, isJumbo } from './messageBubbleUtils';
 import type { ThreadMessage } from '../../types';
 
 const message = (overrides: Partial<ThreadMessage> = {}): ThreadMessage => ({

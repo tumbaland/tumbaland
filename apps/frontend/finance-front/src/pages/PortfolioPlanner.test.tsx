@@ -316,6 +316,7 @@ it('downloads a CSV of the projection', async () => {
   const realURL = URL;
   vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
   const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  const timers = vi.spyOn(globalThis, 'setTimeout');
 
   render(<PortfolioPlanner />);
   await screen.findByText('Efficient Frontier');
@@ -324,7 +325,11 @@ it('downloads a CSV of the projection', async () => {
 
   expect(createObjectURL).toHaveBeenCalled();
   expect(clickSpy).toHaveBeenCalled();
+  // Released a minute later, once the browser has read the blob.
+  expect(revokeObjectURL).not.toHaveBeenCalled();
+  (timers.mock.calls.find(([, ms]) => ms === 60_000)![0] as () => void)();
   expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock');
+  timers.mockRestore();
 
   clickSpy.mockRestore();
   // Restore only what this test stubbed. `vi.unstubAllGlobals()` would also

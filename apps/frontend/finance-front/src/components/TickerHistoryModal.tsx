@@ -22,6 +22,7 @@ import {
   fetchAllTickerPriceHistory
 } from '../services/tickerPriceHistoryService';
 import { localDayKey } from '../utils/dates';
+import { downsample } from '../utils/downsample';
 import { ConfirmationModal } from '@tumbaland/frontend-core';
 
 interface TickerHistoryModalProps {
@@ -153,21 +154,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
     });
 
   // Downsample for chart if too many points
-  function downsampleHistory(data: TickerPriceHistory[], maxPoints: number = 500): TickerPriceHistory[] {
-    if (data.length <= maxPoints) return data;
-    const step = Math.ceil(data.length / maxPoints);
-    const result: TickerPriceHistory[] = [];
-    for (let i = 0; i < data.length; i += step) {
-      result.push(data[i]);
-    }
-    // Always include last point for completeness
-    if (result[result.length - 1] !== data[data.length - 1]) {
-      result.push(data[data.length - 1]);
-    }
-    return result;
-  }
-
-  const chartHistory = downsampleHistory(filteredHistory);
+  const chartHistory = downsample(filteredHistory);
 
   // For statistics, always use the full filteredHistory
   const statsPrices = filteredHistory.map((h) => h.price);

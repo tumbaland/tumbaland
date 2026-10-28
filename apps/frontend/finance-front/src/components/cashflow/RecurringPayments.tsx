@@ -13,6 +13,7 @@ import {
   Typography
 } from '@mui/material';
 import { TrendingUp as TrendingUpIcon } from '@mui/icons-material';
+import { formatDay as sharedFormatDay } from '@tumbaland/frontend-core';
 import { Cadence, RecurringPayment, RecurringReport } from '../../services/cashflowService';
 import { formatPrice } from '../../utils/numberUtils';
 
@@ -36,8 +37,7 @@ const CADENCE_LABELS: Record<Cadence, string> = {
  */
 const VARIABLE_THRESHOLD = 0.15;
 
-const formatDay = (day: string): string =>
-  new Date(`${day}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+const formatDay = (day: string): string => sharedFormatDay(day, { month: 'short', day: 'numeric' });
 
 const dueLabel = (payment: RecurringPayment): string => {
   if (payment.status === 'lapsed') return `stopped after ${formatDay(payment.lastCharge)}`;

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, useCallback, useEffect, useRef, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -23,17 +23,16 @@ import {
   STALE_MS,
   ageText,
   currentPosition,
-  distanceBetween,
   formatDistance,
   kmh
 } from '../../services/live';
 import { apartBetween, buildLivePoints } from '../../services/liveMap';
 import type { ConversationMember, LiveShare, PickedPlace, SavedPlace } from '../../types';
-import type { MapPoint } from './LiveMap';
 import { PlaceField, type PlaceOption } from './PlaceField';
 import { SavePlaceDialog } from './SavePlaceDialog';
 import { useNow } from './useNow';
 import { loadLiveMap } from './loadLiveMap';
+import { Centred, MapArea, Watchers, destinationPoint, savedAt } from './DriveParts';
 
 const LiveMap = lazy(loadLiveMap);
 
@@ -63,65 +62,6 @@ const YOUR_LOCATION: PlaceOption = {
   name: 'Your location',
   detail: 'Where this phone says you are'
 };
-
-/** The map, or what stands in for it until there is a position to show. */
-function MapArea({ children }: { children: ReactNode }) {
-  return (
-    <Box sx={{ flex: 1, minHeight: 220, position: 'relative', bgcolor: surface.sunken }}>
-      <Suspense
-        fallback={
-          <Centred>
-            <CircularProgress />
-          </Centred>
-        }
-      >
-        {children}
-      </Suspense>
-    </Box>
-  );
-}
-
-function Centred({ children }: { children: ReactNode }) {
-  return (
-    <Box sx={{ display: 'grid', placeItems: 'center', gap: 1, height: '100%', p: 2, textAlign: 'center' }}>
-      {children}
-    </Box>
-  );
-}
-
-const destinationPoint = (
-  destination: { lat: number; lng: number; label?: string | null },
-  extra: Partial<MapPoint> = {}
-): MapPoint => ({
-  id: 'destination',
-  lat: destination.lat,
-  lng: destination.lng,
-  color: DESTINATION_COLOR,
-  label: destination.label || 'Destination',
-  kind: 'place',
-  ...extra
-});
-
-/** Who is waiting, and how close the sharer is to telling them. */
-function Watchers({ share }: { share: LiveShare | null }) {
-  return (
-    <>
-      {share?.watchers.map((watcher) => (
-        <Typography key={watcher.userId} variant="body2" sx={{ color: ink.muted }}>
-          {watcher.notified
-            ? `${watcher.name} has been told you are close`
-            : `${watcher.name} is told at ${formatDistance(watcher.radiusM)}${
-                watcher.distanceM !== null ? ` · ${formatDistance(watcher.distanceM)} away` : ''
-              }`}
-        </Typography>
-      ))}
-    </>
-  );
-}
-
-/** The saved place at a point, if there is one: "Home". */
-const savedAt = (places: SavedPlace[], point: { lat: number; lng: number } | null) =>
-  point ? places.find((place) => distanceBetween(place, point) < 30) : undefined;
 
 /**
  * Sharing where one is, for the person sharing. First a map with where they

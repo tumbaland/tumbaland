@@ -14,7 +14,7 @@ describe('DocumentCard', () => {
 
     expect(screen.getByText('plan.pdf')).toBeInTheDocument();
     expect(screen.getByText('PDF')).toBeInTheDocument();
-    expect(screen.getByText('2.3 MB')).toBeInTheDocument();
+    expect(screen.getByText('2.29 MB')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Download plan.pdf' }));
     expect(download).toHaveBeenCalledWith(attachment);
   });

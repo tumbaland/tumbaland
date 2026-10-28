@@ -37,13 +37,6 @@ export function documentMimetype(file: Pick<File, 'name' | 'type'>): string | nu
   return BY_EXTENSION[extension] ?? null;
 }
 
-/** "2.4 MB", for the line under a document's name. */
-export function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 /** "PDF", "DOCX": the short label for a document's tile. */
 export function extensionLabel(name: string | null | undefined, mimetype: string): string {
   const fromName = name?.includes('.') ? name.split('.').pop() : undefined;

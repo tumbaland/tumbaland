@@ -2,7 +2,6 @@ import { useRef, useState, type MouseEvent } from 'react';
 import { keyframes } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
-import Link from '@mui/material/Link';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
@@ -15,9 +14,11 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import ReplyIcon from '@mui/icons-material/Reply';
 import { brand, ink, surface } from '@tumbaland/frontend-core';
 import { chatColors } from './themes';
-import { linkify } from './linkify';
-import type { Attachment, ThreadMessage } from '../../types';
+import type { ThreadMessage } from '../../types';
 import { DocumentCard } from './DocumentCard';
+import { QuoteBlock, type QuoteView } from './QuoteBlock';
+import { MessageText } from './MessageText';
+import { albumLabel, canChange, isJumbo } from './messageBubbleUtils';
 import { MediaGrid } from './MediaGrid';
 import { isDocumentType } from '../../services/documents';
 import { isAudioType, isVisualType } from '../../services/voice';
@@ -64,51 +65,6 @@ export interface MessageBubbleProps {
   onLove?: (messageId: string) => void;
 }
 
-/** What a reply shows above its own content. */
-export interface QuoteView {
-  /** "You", the other person, or empty when it is not known. */
-  name: string;
-  text: string;
-  unsent: boolean;
-  /** Scrolls to the original. Absent where it cannot be found. */
-  onOpen?: () => void;
-}
-
-/**
- * How many code points still count as "just emoji".
- *
- * A message that is only emoji is drawn large and without a bubble. It is a
- * small thing and it is most of what makes a chat feel like a chat rather than
- * a comment thread.
- */
-const JUMBO_LIMIT = 3;
-
-/** Whether the body is nothing but emoji, in a small enough quantity. */
-export function isJumbo(body: string): boolean {
-  const trimmed = body.trim();
-  if (!trimmed) return false;
-
-  const points = [...trimmed];
-  if (points.length > JUMBO_LIMIT * 4) return false;
-
-  // Extended_Pictographic covers emoji proper; the rest of the class allows the
-  // joiners, skin-tone modifiers and variation selectors a single emoji is
-  // built from, so a thumbs-up with a tone is one emoji rather than three.
-  const emojiOnly = /^(\p{Extended_Pictographic}|\p{Emoji_Component}|\u200d|\ufe0f|\s)+$/u;
-  if (!emojiOnly.test(trimmed)) return false;
-
-  const glyphs = [...trimmed.replace(/\s/g, '')].filter((point) =>
-    /\p{Extended_Pictographic}/u.test(point)
-  ).length;
-  return glyphs > 0 && glyphs <= JUMBO_LIMIT;
-}
-
-/** Whether the sender may still edit or unsend this message. */
-export function canChange(message: ThreadMessage, mine: boolean): boolean {
-  const stored = message.delivery !== 'pending' && message.delivery !== 'failed';
-  return mine && stored && !message.deletedAt && message.kind !== 'system';
-}
-
 /**
  * The album's pencil and minus, on a device with a mouse: there only while
  * the message is pointed at or they have the keyboard's focus, so a thread of
@@ -117,20 +73,6 @@ export function canChange(message: ThreadMessage, mine: boolean): boolean {
 const revealOnHover = (hovered: boolean) => ({
   '@media (hover: hover)': { opacity: hovered ? 1 : 0, '&:focus-visible': { opacity: 1 } }
 });
-
-/**
- * The line under a message's photos: "In Rome", or, when they went different
- * ways, "2 of 3 in Rome" or "In 2 albums".
- */
-export function albumLabel(attachments: Attachment[]): string {
-  const photos = attachments.filter((attachment) => isVisualType(attachment.mimetype));
-  const saved = photos.filter((attachment) => attachment.albumId);
-  const albums = new Set(saved.map((attachment) => attachment.albumId));
-  const name = saved[0]?.albumName ?? 'album';
-  if (albums.size > 1) return `In ${albums.size} albums`;
-  if (saved.length < photos.length) return `${saved.length} of ${photos.length} in ${name}`;
-  return `In ${name}`;
-}
 
 /** Two taps closer together than this are a double tap. */
 const DOUBLE_TAP_MS = 300;
@@ -156,99 +98,8 @@ const SWIPE_DECIDE_PX = 10;
 const SWIPE_REPLY_PX = 56;
 const SWIPE_MAX_PX = 72;
 
-/**
- * The message a reply answers, at the top of its bubble. A tap goes to it.
- */
-function QuoteBlock({ quote, mine }: { quote: QuoteView; mine: boolean }) {
-  const text = quote.unsent ? 'Message unsent' : quote.text;
-  const clickable = Boolean(quote.onOpen);
-  return (
-    <Box
-      component={clickable ? 'button' : 'div'}
-      type={clickable ? 'button' : undefined}
-      onClick={quote.onOpen}
-      aria-label={clickable ? `Reply to ${quote.name || 'a message'}: ${text}. Show it` : undefined}
-      sx={{
-        display: 'block',
-        width: '100%',
-        minWidth: 120,
-        mb: 0.75,
-        px: 1,
-        py: 0.5,
-        border: 'none',
-        borderLeft: `3px solid ${mine ? 'rgba(255,255,255,0.85)' : chatColors.bubble}`,
-        borderRadius: 1.5,
-        bgcolor: mine ? 'rgba(255,255,255,0.16)' : surface.sunken,
-        color: 'inherit',
-        font: 'inherit',
-        textAlign: 'left',
-        cursor: clickable ? 'pointer' : 'default'
-      }}
-    >
-      {quote.name && (
-        <Typography variant="caption" component="span" sx={{ display: 'block', fontWeight: 700, lineHeight: 1.3 }}>
-          {quote.name}
-        </Typography>
-      )}
-      <Typography
-        variant="caption"
-        component="span"
-        sx={{
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          lineHeight: 1.35,
-          opacity: 0.85,
-          fontStyle: quote.unsent ? 'italic' : 'normal',
-          whiteSpace: 'pre-wrap'
-        }}
-      >
-        {text}
-      </Typography>
-    </Box>
-  );
-}
-
 /** How long a touch must be held before it counts as a long press. */
 const LONG_PRESS_MS = 450;
-
-/**
- * The text, with its web addresses as links. They open in a new tab, so a
- * conversation is never navigated away from, and send no referrer: the page
- * on the other end has no business knowing which chat it was shared in.
- */
-function MessageText({ text, mine }: { text: string; mine: boolean }) {
-  return (
-    <>
-      {linkify(text).map((part, index) =>
-        part.kind === 'text' ? (
-          part.text
-        ) : (
-          <Link
-            key={index}
-            href={part.href}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-            // A long press on a bubble opens the reaction picker. On a link
-            // the browser's own long press (preview, copy) is the one wanted.
-            onTouchStart={(event) => event.stopPropagation()}
-            sx={{
-              color: mine ? 'inherit' : chatColors.link,
-              textDecorationColor: 'currentColor',
-              textUnderlineOffset: '2px',
-              // A long address with nowhere to break would widen the bubble
-              // past the screen.
-              overflowWrap: 'anywhere'
-            }}
-          >
-            {part.text}
-          </Link>
-        )
-      )}
-    </>
-  );
-}
 
 export function MessageBubble({
   message,

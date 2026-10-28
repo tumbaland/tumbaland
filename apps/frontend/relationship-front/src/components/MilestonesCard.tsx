@@ -11,7 +11,7 @@ import {
   alpha
 } from '@mui/material';
 import { Flag, Celebration } from '@mui/icons-material';
-import { useTenantFilter, useActivePalette } from '@tumbaland/frontend-core';
+import { formatDay, useTenantFilter, useActivePalette } from '@tumbaland/frontend-core';
 import { useMilestones } from '../hooks/useMilestones';
 import { Milestone } from '../services/statistics';
 
@@ -19,14 +19,6 @@ interface MilestonesCardProps {
   /** how many rows each column shows */
   maxItems?: number;
 }
-
-/** YYYY-MM-DD read as a local day, so a UTC-midnight key never renders as the day before. */
-const formatDay = (day: string): string =>
-  new Date(`${day}T00:00:00`).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
 
 const inLabel = (days: number): string => {
   if (days <= 0) return 'today';

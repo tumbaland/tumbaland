@@ -11,7 +11,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import WallpaperIcon from '@mui/icons-material/Wallpaper';
 import PhotoAlbumOutlinedIcon from '@mui/icons-material/PhotoAlbumOutlined';
 import Button from '@mui/material/Button';
-import { TOUCH_TARGET } from '@tumbaland/frontend-core';
+import { downloadBlob, TOUCH_TARGET } from '@tumbaland/frontend-core';
 import type { Attachment } from '../../types';
 import { isVideo } from './MediaGrid';
 
@@ -52,17 +52,9 @@ export async function downloadAttachment(attachment: Pick<Attachment, 'url' | 'f
     const response = await fetch(attachment.url);
     if (!response.ok) throw new Error(`Download failed with ${response.status}`);
     const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
     // A document keeps the name it was sent under.
     const extension = attachment.mimetype.split('/')[1]?.split(/[;+]/)[0] || 'bin';
-    link.download = attachment.name || `tumbaland-${attachment.fileId}.${extension}`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    // Revoked later, not now: some mobile browsers read the blob after click() returns.
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    downloadBlob(blob, attachment.name || `tumbaland-${attachment.fileId}.${extension}`);
   } catch {
     window.open(attachment.url, '_blank', 'noopener');
   }

@@ -1,4 +1,4 @@
-import { createApiClient } from '@tumbaland/frontend-core';
+import { createApiClient, localDayKey } from '@tumbaland/frontend-core';
 import { getGlobalConfig } from '../config/ConfigProvider';
 
 /**
@@ -134,10 +134,8 @@ export const getMilestones = async (groupId?: string): Promise<Milestones> => {
   return data;
 };
 
-const pad = (n: number) => String(n).padStart(2, '0');
 /** Today in the browser's zone; the UTC date is still yesterday just after midnight in Tallinn. */
-export const localToday = (now: Date = new Date()): string =>
-  `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+export const localToday = localDayKey;
 
 /** The next few plans not yet logged, from today on (a trip under way included). */
 export const getUpcomingPlans = async (groupId?: string, limit = 3): Promise<HomePlan[]> => {

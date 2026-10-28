@@ -10,7 +10,7 @@ import {
   alpha
 } from '@mui/material';
 import { LocalFireDepartment, EmojiEvents, HistoryToggleOff } from '@mui/icons-material';
-import { useTenantFilter, useActivePalette } from '@tumbaland/frontend-core';
+import { formatDay, useTenantFilter, useActivePalette } from '@tumbaland/frontend-core';
 import { useStreaks } from '../hooks/useStreaks';
 import { TypeCadence } from '../services/statistics';
 import StatCard from './StatCard';
@@ -37,14 +37,6 @@ const lastTimeLabel = (days: number): string => {
   if (days === 1) return 'yesterday';
   return `${days} days ago`;
 };
-
-/** YYYY-MM-DD read as a local day, so a UTC-midnight key never renders as the day before. */
-const formatDay = (day: string): string =>
-  new Date(`${day}T00:00:00`).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
 
 /**
  * The dashboard's opinion: how long the logging streak is, and which activity

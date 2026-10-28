@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router';
 import { Card, Chip, Stack, Typography } from '@mui/material';
 import { HistoryToggleOff as HistoryIcon } from '@mui/icons-material';
+import { formatDay } from '@tumbaland/frontend-core';
 import { useMemories } from '../hooks/useMemories';
 import { MemoryPhoto } from '../types';
 import { appPath } from '../appBase';
@@ -11,12 +12,7 @@ interface OnThisDayProps {
   groupId?: string;
 }
 
-const formatFullDay = (day: string): string =>
-  new Date(`${day}T00:00:00`).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+const formatFullDay = (day: string): string => formatDay(day, { year: 'numeric', month: 'long', day: 'numeric' });
 
 const yearsAgoLabel = (yearsAgo: number): string => (yearsAgo === 1 ? 'a year ago' : `${yearsAgo} years ago`);
 

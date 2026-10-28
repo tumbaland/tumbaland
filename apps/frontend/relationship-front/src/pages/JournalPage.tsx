@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -23,22 +23,18 @@ import EventIcon from '@mui/icons-material/Event';
 import { useSearchParams } from 'react-router';
 import { useTenantFilter } from '@tumbaland/frontend-core';
 import { logger } from '@tumbaland/frontend-core';
-import { Day, Plan } from '../services/types';
+import { Day } from '../services/types';
 import { useJournalDays } from '../hooks/useJournalDays';
-import { getPlan, getPlans } from '../services/plans';
+import { getPlan } from '../services/plans';
+import { useJournalExport } from '../hooks/useJournalExport';
+import { usePlanEditor } from '../hooks/usePlanEditor';
 import DayEditorDialog from '../components/DayEditorDialog';
 import ActivityTypesDialog from '../components/ActivityTypesDialog';
 import JournalCalendar, { CalendarMonth, currentMonth } from '../components/JournalCalendar';
 import { dayLabel, monthLabel, todayKey } from '../utils/dates';
-import { downloadCsv, journalCsv } from '../utils/journalExport';
 import EntryChip from '../components/EntryChip';
 import PlanEditorDialog from '../components/PlanEditorDialog';
 import PlanRow from '../components/PlanRow';
-
-/** How many upcoming plans the list shows above the logged days. */
-const COMING_UP = 5;
-/** Bigger pages for the export, so a long history takes few round trips. */
-const EXPORT_PAGE_SIZE = 200;
 
 const JournalPage: React.FC = () => {
   const tenantGroupId = useTenantFilter();
@@ -64,7 +60,7 @@ const JournalPage: React.FC = () => {
     reload,
     loadMore
   } = useJournalDays(tenantGroupId);
-  const [exporting, setExporting] = useState(false);
+  const { exporting, exportCsv } = useJournalExport({ fetchPage, setError });
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorDate, setEditorDate] = useState(todayKey());
@@ -87,35 +83,8 @@ const JournalPage: React.FC = () => {
       { replace: true }
     );
 
-  const [planEditorOpen, setPlanEditorOpen] = useState(false);
-  const [planEditorPlan, setPlanEditorPlan] = useState<Plan | null>(null);
-  const [planEditorDate, setPlanEditorDate] = useState<string | undefined>(undefined);
-  const [comingUp, setComingUp] = useState<Plan[]>([]);
-
-  const loadComingUp = useCallback(async () => {
-    try {
-      setComingUp(
-        await getPlans({
-          groupId: tenantGroupId,
-          upcoming: true,
-          startDate: todayKey(),
-          limit: COMING_UP
-        })
-      );
-    } catch (e) {
-      logger.error('Failed to load upcoming plans', e);
-    }
-  }, [tenantGroupId]);
-
-  useEffect(() => {
-    void loadComingUp();
-  }, [loadComingUp]);
-
-  const openPlan = (plan: Plan | null, date?: string) => {
-    setPlanEditorPlan(plan);
-    setPlanEditorDate(date);
-    setPlanEditorOpen(true);
-  };
+  const planEditor = usePlanEditor(tenantGroupId);
+  const { comingUp, loadComingUp, openPlan } = planEditor;
 
   const reloadAll = () => {
     void reload();
@@ -175,35 +144,7 @@ const JournalPage: React.FC = () => {
         logger.error('Failed to open the linked plan', e);
         setError('That plan is not in this journal any more');
       });
-  }, [linkedPlan, setSearchParams]);
-
-  /**
-   * Exports every day matching the current filters, not just the pages already
-   * scrolled into view — it re-fetches the full set rather than serialising
-   * component state, which would silently export 30 days or 60 depending on
-   * how many times "Load older days" had been pressed.
-   */
-  const handleExportCSV = async () => {
-    setExporting(true);
-    setError(null);
-
-    let allDays: Day[];
-    try {
-      const first = await fetchPage(1, EXPORT_PAGE_SIZE);
-      allDays = first.days;
-      for (let nextPage = 2; nextPage <= first.totalPages; nextPage++) {
-        allDays = allDays.concat((await fetchPage(nextPage, EXPORT_PAGE_SIZE)).days);
-      }
-    } catch (e) {
-      logger.error('Failed to export the journal', e);
-      setError('Failed to export the journal');
-      setExporting(false);
-      return;
-    }
-
-    downloadCsv('journal_export.csv', journalCsv(allDays));
-    setExporting(false);
-  };
+  }, [linkedPlan, setSearchParams, openPlan]);
 
   // group loaded days by month for section headers
   const groupedByMonth = useMemo(() => {
@@ -354,7 +295,7 @@ const JournalPage: React.FC = () => {
           </Button>
           <Button
             startIcon={<DownloadIcon />}
-            onClick={() => void handleExportCSV()}
+            onClick={() => void exportCsv()}
             disabled={days.length === 0 || exporting}
             size="small"
             sx={{ textTransform: 'none' }}
@@ -499,10 +440,10 @@ const JournalPage: React.FC = () => {
       />
 
       <PlanEditorDialog
-        open={planEditorOpen}
-        plan={planEditorPlan}
-        date={planEditorDate}
-        onClose={() => setPlanEditorOpen(false)}
+        open={planEditor.open}
+        plan={planEditor.plan}
+        date={planEditor.date}
+        onClose={planEditor.close}
         onSaved={reloadAll}
         onDeleted={reloadAll}
         onLogged={(date) => openEditor(date, false)}

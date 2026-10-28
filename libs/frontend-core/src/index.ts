@@ -120,6 +120,11 @@ export type { GroupSelectorProps } from './components/GroupSelector';
 export { clearShare, isMedia, readShare, sharedMessage } from './sharedInbox';
 export type { SharedItem } from './sharedInbox';
 
+// Small browser helpers the apps kept copying
+export { downloadBlob } from './utils/download';
+export { localDayKey, todayKey, formatDay } from './utils/dates';
+export { initials } from './utils/initials';
+
 // React.lazy for route pages, recovering from a deploy
 export { lazyPage } from './lazyPage';
 

@@ -1,4 +1,4 @@
-import { logger } from '@tumbaland/frontend-core';
+import { downloadBlob, logger } from '@tumbaland/frontend-core';
 import { Photo } from '../types';
 
 /**
@@ -33,14 +33,7 @@ export async function downloadPhoto(
       }
     }
 
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    downloadBlob(blob, filename);
   } catch (error) {
     logger.error('Download failed', error);
     window.open(photo.signedUrl, '_blank');

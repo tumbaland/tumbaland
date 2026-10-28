@@ -17,7 +17,7 @@ import {
   alpha
 } from '@mui/material';
 import { TrendingUp, TrendingDown, TrendingFlat, FiberNew, DoNotDisturbOn } from '@mui/icons-material';
-import { useTenantFilter, useActivePalette } from '@tumbaland/frontend-core';
+import { formatDay as sharedFormatDay, useTenantFilter, useActivePalette } from '@tumbaland/frontend-core';
 import { useTrends } from '../hooks/useTrends';
 import { TrendDirection, TypeTrend } from '../services/statistics';
 
@@ -33,8 +33,7 @@ const windowLabel = (days: number): string =>
   days === 7 ? 'Last 7 days' : days === 90 ? 'Last 90 days' : `Last ${days} days`;
 
 /** YYYY-MM-DD read as a local day, so a UTC-midnight key never renders as the day before. */
-const formatDay = (day: string): string =>
-  new Date(`${day}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+const formatDay = (day: string): string => sharedFormatDay(day, { month: 'short', day: 'numeric' });
 
 /**
  * Hours are summed as integers by the API, so they never need decimals here;

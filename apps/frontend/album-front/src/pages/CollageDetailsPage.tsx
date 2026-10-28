@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
-import { logger } from '@tumbaland/frontend-core';
 import {
   Alert,
   Box,
@@ -21,6 +20,8 @@ import { useCollageDetails, useCollageMutations } from '../hooks/useCollage';
 import { useCollageEditor } from '../hooks/useCollageEditor';
 import { useCollageSync } from '../hooks/useCollageSync';
 import { useChatDockToggle } from '../hooks/useChatDockToggle';
+import { useCollagePhotos } from '../hooks/useCollagePhotos';
+import { useCollageExport } from '../hooks/useCollageExport';
 import { useCollageShortcuts } from '../hooks/useCollageShortcuts';
 import { othersIn } from '../components/collage/collagePresence';
 import { usePhotoPlacement } from '../components/collage/usePhotoPlacement';
@@ -38,9 +39,9 @@ import {
   serializeCollageDoc
 } from '@tumbaland/collage-core';
 import { CollageConfig } from '../types/collage';
-import CollageStage, { ResolvedPhoto } from '../components/collage/CollageStage';
+import CollageStage from '../components/collage/CollageStage';
 import CollageToolbar from '../components/collage/CollageToolbar';
-import CollagePhotoTray, { AlbumPhoto } from '../components/collage/CollagePhotoTray';
+import CollagePhotoTray from '../components/collage/CollagePhotoTray';
 import CollagePhotoDialog from '../components/collage/CollagePhotoDialog';
 import CollageSelectionBar from '../components/collage/CollageSelectionBar';
 import CollageEmptyHint from '../components/collage/CollageEmptyHint';
@@ -49,12 +50,7 @@ import CollageChatDock from '../components/collage/CollageChatDock';
 import { DEFAULT_SHAPE_COLOR } from '../components/collage/CollageAddMenu';
 import { ITEM_NAMES } from '../components/collage/CollageSelectionBar';
 import { ensureCollageFonts } from '../components/collage/collageElements';
-import {
-  collageMoves,
-  downloadBlob,
-  exportCollageToPng,
-  exportCollageToVideo
-} from '../components/collage/exportCollage';
+import { collageMoves } from '../components/collage/exportCollage';
 import { appPath } from '../appBase';
 
 /**
@@ -63,9 +59,6 @@ import { appPath } from '../appBase';
  */
 const needsIds = (config?: CollageConfig | null): boolean =>
   (config?.photos ?? []).some((photo) => !photo.id) || (config?.texts ?? []).some((text) => !text.id);
-
-/** How long the tray waits for more new photos before fetching them all at once. */
-const PHOTOS_REFETCH_DELAY_MS = 800;
 
 /** "25 September 2026", for the date element. */
 const todayLabel = (): string =>
@@ -102,7 +95,6 @@ const CollageDetailsPage: React.FC = () => {
   } | null>(null);
   /** Text just made by "Add text" and not yet written: cancelling its dialog takes it away again. */
   const freshText = useRef<string | null>(null);
-  const [exportingVideo, setExportingVideo] = useState(false);
 
   const { chatAvailable, chatOpen, toggleChat } = useChatDockToggle();
 
@@ -110,7 +102,6 @@ const CollageDetailsPage: React.FC = () => {
   useEffect(() => ensureCollageFonts(), []);
 
   const collage = collageQuery.data?.collage;
-  const albumPhotos = useMemo(() => (collageQuery.data?.albumPhotos ?? []) as AlbumPhoto[], [collageQuery.data]);
 
   // Initialize the editor once per collage; refetches only refresh photo URLs.
   const initializedFor = useRef<string | null>(null);
@@ -121,49 +112,11 @@ const CollageDetailsPage: React.FC = () => {
     }
   }, [collage, editor]);
 
-  const photoById = useMemo(() => {
-    const map = new Map<string, AlbumPhoto>();
-    for (const p of albumPhotos) map.set(p._id, p);
-    return map;
-  }, [albumPhotos]);
-
-  const resolvePhoto = useCallback(
-    (photoId: string): ResolvedPhoto | undefined => {
-      const p = photoById.get(photoId);
-      if (!p) return undefined;
-      const video = isVideoType(p.mimetype);
-      return {
-        src: p.signedUrl,
-        // A video's thumbnail link is the video itself; its still is the poster.
-        thumbSrc: video ? p.posterSignedUrl : p.thumbnailSignedUrl,
-        posterSrc: p.posterSignedUrl,
-        mimetype: p.mimetype,
-        width: p.width,
-        height: p.height,
-        title: p.title
-      };
-    },
-    [photoById]
+  const { albumPhotos, photoById, resolvePhoto, refetchPhotos, usedPhotoIds } = useCollagePhotos(
+    collageQuery.data,
+    collageQuery.refetch,
+    doc?.photos
   );
-
-  // Batched: a message with ten photos arrives as ten announcements in a second.
-  const { refetch } = collageQuery;
-  const photosTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const refetchPhotos = useCallback(() => {
-    if (photosTimer.current) clearTimeout(photosTimer.current);
-    photosTimer.current = setTimeout(() => {
-      photosTimer.current = null;
-      void refetch();
-    }, PHOTOS_REFETCH_DELAY_MS);
-  }, [refetch]);
-  useEffect(
-    () => () => {
-      if (photosTimer.current) clearTimeout(photosTimer.current);
-    },
-    []
-  );
-
-  const usedPhotoIds = useMemo(() => new Set((doc?.photos ?? []).map((p) => p.photoId)), [doc?.photos]);
 
   const placePhoto = usePhotoPlacement(doc, editor);
 
@@ -252,40 +205,14 @@ const CollageDetailsPage: React.FC = () => {
     collageService.setPresence(collageId, session, selectedId).catch(() => undefined);
   }, [collageId, live.connected, session, selectedId]);
 
-  const handleExport = useCallback(async () => {
-    if (!doc) return;
-    try {
-      const blob = await exportCollageToPng(doc, resolvePhoto);
-      downloadBlob(blob, `${collage?.title || 'collage'}.png`);
-    } catch (e) {
-      logger.error('Failed to export collage', e);
-      setToast({
-        message: e instanceof Error ? e.message : 'Failed to export collage',
-        severity: 'error'
-      });
-    }
-  }, [doc, collage, resolvePhoto]);
+  const { exportImage: handleExport, exportVideo: handleExportVideo, exportingVideo } = useCollageExport(
+    doc,
+    collage?.title,
+    resolvePhoto,
+    setToast
+  );
 
   const moves = useMemo(() => collageMoves(doc, resolvePhoto), [doc, resolvePhoto]);
-
-  const handleExportVideo = useCallback(async () => {
-    if (!doc || exportingVideo) return;
-    setExportingVideo(true);
-    setToast({ message: 'Making the video. This takes as long as the clip.', severity: 'success' });
-    try {
-      const { blob, extension } = await exportCollageToVideo(doc, resolvePhoto);
-      downloadBlob(blob, `${collage?.title || 'collage'}.${extension}`);
-      setToast({ message: 'Video downloaded', severity: 'success' });
-    } catch (e) {
-      logger.error('Failed to export collage video', e);
-      setToast({
-        message: e instanceof Error ? e.message : 'Failed to make the video',
-        severity: 'error'
-      });
-    } finally {
-      setExportingVideo(false);
-    }
-  }, [doc, collage, resolvePhoto, exportingVideo]);
 
   /** A photo dragged in from the chat: placed if it is in one of the collage's albums. */
   const placeChatFile = useCallback(

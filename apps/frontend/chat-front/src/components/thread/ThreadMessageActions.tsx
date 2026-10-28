@@ -11,7 +11,7 @@ import ReplyIcon from '@mui/icons-material/Reply';
 import UndoIcon from '@mui/icons-material/Undo';
 import { EmojiPicker, type MessageAction } from './EmojiPicker';
 import { FullEmojiPicker } from './FullEmojiPicker';
-import { canChange } from './MessageBubble';
+import { canChange } from './messageBubbleUtils';
 import { recordEmoji } from './recentEmoji';
 import { isVisualType } from '../../services/voice';
 import type { ThreadMessage } from '../../types';

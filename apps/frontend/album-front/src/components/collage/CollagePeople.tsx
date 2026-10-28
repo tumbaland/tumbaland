@@ -1,6 +1,7 @@
 import React from 'react';
 import { Avatar, AvatarGroup, Box, Tooltip } from '@mui/material';
 import { CollageDoc } from '@tumbaland/collage-core';
+import { initials } from '@tumbaland/frontend-core';
 
 /** Someone else with the collage open, as the editor shows them. */
 export interface CollagePerson {
@@ -36,14 +37,6 @@ export const personColour = (userId: string): string => {
   for (const char of userId) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
   return PERSON_COLOURS[hash % PERSON_COLOURS.length]!;
 };
-
-const initials = (name: string): string =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
-    .join('') || '?';
 
 /** Faces of the people editing alongside you, for the toolbar. */
 export const CollagePeopleFaces: React.FC<{ people: CollagePerson[] }> = ({ people }) => {

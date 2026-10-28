@@ -35,8 +35,7 @@ interface JournalCalendarProps {
 /** How many entries and plans a cell lists by name before it says "+n more". */
 const NAMED_ENTRIES = 2;
 
-const pad = (n: number) => String(n).padStart(2, '0');
-const dateKey = (year: number, month: number, day: number) => `${year}-${pad(month + 1)}-${pad(day)}`;
+const dateKey = (year: number, month: number, day: number) => localDayKey(new Date(year, month, day));
 
 /** The day after a YYYY-MM-DD day. */
 const nextDay = (day: string): string => {

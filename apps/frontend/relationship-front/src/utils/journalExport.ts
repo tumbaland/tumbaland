@@ -1,3 +1,4 @@
+import { downloadBlob } from '@tumbaland/frontend-core';
 import { Day } from '../services/types';
 
 /** The journal as CSV, one row per entry. */
@@ -20,11 +21,5 @@ export const journalCsv = (days: Day[]): string => {
 };
 
 /** Hands the browser a file to save. */
-export const downloadCsv = (filename: string, csv: string): void => {
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-};
+export const downloadCsv = (filename: string, csv: string): void =>
+  downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), filename);

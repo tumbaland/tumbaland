@@ -1,14 +1,6 @@
-const TINTS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#3b82f6', '#8b5cf6'];
+export { initials } from '@tumbaland/frontend-core';
 
-/** Up to two initials, so groups and people tell apart at a glance without an image. */
-export const initials = (name: string): string =>
-  name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join('')
-    .toUpperCase() || '?';
+const TINTS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#3b82f6', '#8b5cf6'];
 
 /**
  * The same key always gets the same colour, so a group looks the same in the

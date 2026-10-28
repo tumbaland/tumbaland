@@ -11,7 +11,8 @@ import type { ConversationMember, ReadReceipt, ThreadMessage } from '../../types
 import { CollageCard } from './CollageCard';
 import { ReminderCard } from './ReminderCard';
 import { DaySeparator } from './DaySeparator';
-import { MessageBubble, type QuoteView } from './MessageBubble';
+import { MessageBubble } from './MessageBubble';
+import type { QuoteView } from './QuoteBlock';
 import { messageSummary } from '../../services/summary';
 import { SeenMarker, placeSeenMarkers } from './SeenMarker';
 import { clockTime } from './clock';

@@ -21,7 +21,9 @@ import {
   Typography
 } from '@mui/material';
 import { TableChart, TrendingUp } from '@mui/icons-material';
+import { downloadBlob } from '@tumbaland/frontend-core';
 import StockGrowthChart from '../StockGrowthChart';
+import { formatCurrency } from '../../utils/numberUtils';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { FrontierSim, SimPoint } from '../../utils/frontierSim';
 import {
@@ -53,14 +55,6 @@ interface ProjectionSectionProps {
   targetPortfolio: SimPoint | null;
   portfolioValue: number;
 }
-
-const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat('et-EE', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount);
 
 const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfolio, portfolioValue }) => {
   // Text inputs stay strings so the user can clear a field while typing;
@@ -171,12 +165,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
       ])
     );
     const blob = new Blob([csv.map((r) => r.join(',')).join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'growth-results.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, 'growth-results.csv');
   };
 
   const summaryItems = finalRow
