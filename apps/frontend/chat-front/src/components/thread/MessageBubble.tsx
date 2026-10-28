@@ -1,4 +1,4 @@
-import { useRef, useState, type MouseEvent } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { keyframes } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
@@ -18,6 +18,7 @@ import type { ThreadMessage } from '../../types';
 import { DocumentCard } from './DocumentCard';
 import { QuoteBlock, type QuoteView } from './QuoteBlock';
 import { MessageText } from './MessageText';
+import { SWIPE_REPLY_PX, useBubbleGestures } from '../../hooks/useBubbleGestures';
 import { albumLabel, canChange, isJumbo } from './messageBubbleUtils';
 import { MediaGrid } from './MediaGrid';
 import { isDocumentType } from '../../services/documents';
@@ -74,11 +75,6 @@ const revealOnHover = (hovered: boolean) => ({
   '@media (hover: hover)': { opacity: hovered ? 1 : 0, '&:focus-visible': { opacity: 1 } }
 });
 
-/** Two taps closer together than this are a double tap. */
-const DOUBLE_TAP_MS = 300;
-/** A double click this soon after a touch is the browser repeating the double tap. */
-const TOUCH_CLICK_GAP_MS = 800;
-
 /** The heart a double tap leaves: it swells over the bubble and goes. */
 const heartBurst = keyframes`
   0% { transform: scale(0.3); opacity: 0; }
@@ -91,15 +87,6 @@ const heartFade = keyframes`
   0%, 60% { opacity: 1; }
   100% { opacity: 0; }
 `;
-
-/** How far a finger moves before a touch is judged a swipe or a scroll. */
-const SWIPE_DECIDE_PX = 10;
-/** How far a bubble must be swiped to reply, and how far it can go. */
-const SWIPE_REPLY_PX = 56;
-const SWIPE_MAX_PX = 72;
-
-/** How long a touch must be held before it counts as a long press. */
-const LONG_PRESS_MS = 450;
 
 export function MessageBubble({
   message,
@@ -126,88 +113,16 @@ export function MessageBubble({
   const [hovered, setHovered] = useState(false);
   const pending = message.delivery === 'pending';
   const failed = message.delivery === 'failed';
-  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  /**
-   * Touch has no hover, so the reaction button beside the bubble can never
-   * appear there. A long press is the gesture every other chat app uses for
-   * the same thing.
-   */
-  const startPress = (event: React.TouchEvent<HTMLElement>) => {
-    const touch = event.touches[0];
-    if (touch) swipe.current = { x: touch.clientX, y: touch.clientY, sideways: null, held: false };
-    if (message.deletedAt || pending) return;
-    const anchor = event.currentTarget;
-    pressTimer.current = setTimeout(() => {
-      if (swipe.current) swipe.current.held = true;
-      onPickEmoji(message.id, anchor);
-    }, LONG_PRESS_MS);
-  };
-
-  const cancelPress = () => {
-    if (pressTimer.current) clearTimeout(pressTimer.current);
-    pressTimer.current = null;
-  };
-
-  /**
-   * Swipe right to reply, as in other chat apps. Decided on the first few
-   * pixels: a mostly-vertical move is a scroll and is left alone, so reading
-   * up the thread never drags a bubble.
-   */
-  const swipe = useRef<{ x: number; y: number; sideways: boolean | null; held: boolean } | null>(null);
-  const [dragX, setDragX] = useState(0);
   const canReply = Boolean(onReply) && !message.deletedAt && !pending && !failed;
-
-  const moveTouch = (event: React.TouchEvent<HTMLElement>) => {
-    cancelPress();
-    const start = swipe.current;
-    const touch = event.touches[0];
-    if (!start || !touch) return;
-    const dx = touch.clientX - start.x;
-    const dy = touch.clientY - start.y;
-    if (start.sideways === null && Math.hypot(dx, dy) > SWIPE_DECIDE_PX) {
-      start.sideways = canReply && dx > 0 && Math.abs(dx) > Math.abs(dy) * 1.5;
-    }
-    if (start.sideways) setDragX(Math.max(0, Math.min(dx, SWIPE_MAX_PX)));
-  };
-
-  /** When the last tap landed, for telling a double tap from two separate ones. */
-  const lastTap = useRef(0);
-
-  /** When a finger last left the bubble. A browser may follow a double tap with a double click. */
-  const lastTouchEnd = useRef(0);
-
-  const cancelTouch = () => {
-    cancelPress();
-    swipe.current = null;
-    setDragX(0);
-  };
-
-  const endTouch = () => {
-    lastTouchEnd.current = Date.now();
-    cancelPress();
-    if (dragX >= SWIPE_REPLY_PX) onReply?.(message.id);
-    // A tap is a touch that neither moved nor was held for the menu.
-    const tapped = swipe.current !== null && swipe.current.sideways === null && !swipe.current.held;
-    swipe.current = null;
-    setDragX(0);
-    if (!tapped) return;
-    const now = Date.now();
-    if (now - lastTap.current < DOUBLE_TAP_MS) {
-      lastTap.current = 0;
-      love();
-    } else {
-      lastTap.current = now;
-    }
-  };
-
-  /** Bumped for each heart, so the burst plays again on a second double tap. */
-  const [hearts, setHearts] = useState(0);
-  const love = () => {
-    if (!onLove || message.deletedAt || pending || failed) return;
-    onLove(message.id);
-    setHearts((count) => count + 1);
-  };
+  const { dragX, hearts, handlers } = useBubbleGestures({
+    messageId: message.id,
+    canPick: !message.deletedAt && !pending,
+    canReply,
+    canLove: !message.deletedAt && !pending && !failed,
+    onPickEmoji,
+    onReply,
+    onLove
+  });
   const documents = message.deletedAt ? [] : message.attachments.filter((a) => isDocumentType(a.mimetype));
   const voices = message.deletedAt ? [] : message.attachments.filter((a) => isAudioType(a.mimetype));
   const media = message.deletedAt ? [] : message.attachments.filter((a) => isVisualType(a.mimetype));
@@ -279,18 +194,7 @@ export function MessageBubble({
           }}
         >
           <Box
-            onTouchStart={startPress}
-            onTouchEnd={endTouch}
-            // A scroll must not fire the picker, and neither should lifting a
-            // finger somewhere else.
-            onTouchMove={moveTouch}
-            onTouchCancel={cancelTouch}
-            onDoubleClick={() => {
-              if (Date.now() - lastTouchEnd.current < TOUCH_CLICK_GAP_MS) return;
-              // A double click also selects the word under it; the heart is what was meant.
-              window.getSelection()?.removeAllRanges();
-              love();
-            }}
+            {...handlers}
             sx={{
               // Sideways is this bubble's (a swipe to reply); scrolling and
               // pinching stay the page's.

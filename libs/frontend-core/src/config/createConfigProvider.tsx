@@ -101,7 +101,6 @@ export function createConfigProvider<TConfig extends { PUBLIC_API_URL?: string }
           return res.json();
         })
         .then((loadedConfig: TConfig) => {
-          console.log('Using production configuration from config.json:', loadedConfig);
           setConfig(loadedConfig);
           globalConfig = loadedConfig;
           initMonitoring('production', {

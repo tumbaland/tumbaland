@@ -15,6 +15,8 @@ import {
   InputLabel
 } from '@mui/material';
 import TickerHistoryTable from './TickerHistoryTable';
+import { TickerPriceChart } from './TickerPriceChart';
+import { TickerPriceSummary } from './TickerPriceSummary';
 import {
   getTickerPriceHistory,
   TickerPriceHistory,
@@ -23,6 +25,7 @@ import {
 } from '../services/tickerPriceHistoryService';
 import { localDayKey } from '../utils/dates';
 import { downsample } from '../utils/downsample';
+import { quickRangeStart } from '../utils/quickRange';
 import { ConfirmationModal } from '@tumbaland/frontend-core';
 
 interface TickerHistoryModalProps {
@@ -59,79 +62,24 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
     return () => window.removeEventListener('resize', handleResize);
   }, [open]);
 
-  // Set default date range to last 1 month on open
-  useEffect(() => {
-    if (open) {
-      setQuickRange('1m');
-      const now = new Date();
-      const end = localDayKey(now);
-      const prevMonth = new Date(now);
-      prevMonth.setMonth(prevMonth.getMonth() - 1);
-      const start = localDayKey(prevMonth);
-      setStartDate(start);
-      setEndDate(end);
-      setPendingStartDate(start);
-      setPendingEndDate(end);
-    }
-  }, [open]);
-
   // Handle quick range selection
-  const handleQuickRange = (value: string) => {
-    setQuickRange(value);
-    const now = new Date();
-    let start: string;
-    const end = localDayKey(now);
-    switch (value) {
-      case '1m': {
-        const d = new Date(now);
-        d.setMonth(d.getMonth() - 1);
-        start = localDayKey(d);
-        break;
-      }
-      case '3m': {
-        const d = new Date(now);
-        d.setMonth(d.getMonth() - 3);
-        start = localDayKey(d);
-        break;
-      }
-      case '1y': {
-        const d = new Date(now);
-        d.setFullYear(d.getFullYear() - 1);
-        start = localDayKey(d);
-        break;
-      }
-      case '3y': {
-        const d = new Date(now);
-        d.setFullYear(d.getFullYear() - 3);
-        start = localDayKey(d);
-        break;
-      }
-      case '5y': {
-        const d = new Date(now);
-        d.setFullYear(d.getFullYear() - 5);
-        start = localDayKey(d);
-        break;
-      }
-      case 'all':
-      default: {
-        // Set to earliest available date in history, or fallback to 10 years ago
-        let earliest: string;
-        if (history.length > 0) {
-          earliest = history.reduce((min, h) => (h.date < min ? h.date : min), history[0].date);
-        } else {
-          const d = new Date(now);
-          d.setFullYear(d.getFullYear() - 10);
-          earliest = localDayKey(d);
-        }
-        start = earliest;
-        break;
-      }
-    }
+  const handleQuickRange = (range: string) => {
+    const earliest =
+      history.length > 0 ? history.reduce((min, h) => (h.date < min ? h.date : min), history[0].date) : undefined;
+    const start = quickRangeStart(range, new Date(), earliest);
+    const end = localDayKey(new Date());
+    setQuickRange(range);
     setStartDate(start);
     setEndDate(end);
     setPendingStartDate(start);
     setPendingEndDate(end);
   };
+
+  // Default date range is the last month, every time the dialog opens
+  useEffect(() => {
+    if (open) handleQuickRange('1m');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on open; "1m" needs no history
+  }, [open]);
 
   useEffect(() => {
     if (open && ticker) {
@@ -278,141 +226,15 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
         ) : (
           <>
             <Box ref={containerRef} sx={{ width: '100%', minHeight: 320, mt: 2, overflowX: 'auto' }}>
-              {/* Chart Container (like PortfolioChart) */}
-              <Box sx={{ width: '100%', mb: 2, position: 'relative', height: 300 }}>
-                <svg
-                  width={containerWidth}
-                  height={300}
-                  viewBox={`0 0 ${containerWidth} 300`}
-                  style={{ display: 'block', width: '100%', height: 300, maxWidth: '100%' }}
-                >
-                  {/* Grid lines */}
-                  <defs>
-                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#f0f0f0" strokeWidth="1" />
-                    </pattern>
-                  </defs>
-                  <rect width="100%" height="100%" fill="url(#grid)" />
-                  {/* Y-axis labels and grid */}
-                  {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-                    const value = minPrice + (maxPrice - minPrice) * ratio;
-                    const y = 300 - 60 - ((value - minPrice) / (maxPrice - minPrice || 1)) * (300 - 2 * 60);
-                    return (
-                      <g key={ratio}>
-                        <line x1={60} y1={y} x2={containerWidth - 60} y2={y} stroke="#e0e0e0" strokeWidth="1" />
-                        <text
-                          x={60 - 10}
-                          y={y + 4}
-                          textAnchor="end"
-                          fontSize="12"
-                          fill="#666"
-                          style={{ fontSize: window.innerWidth < 600 ? 10 : 12 }}
-                        >
-                          {value.toFixed(2)}
-                        </text>
-                      </g>
-                    );
-                  })}
-                  {/* X-axis labels (dates evenly spaced) */}
-                  {filteredHistory.map((item, i) => {
-                    if (i % Math.ceil(filteredHistory.length / 7) !== 0 && i !== filteredHistory.length - 1)
-                      return null;
-                    const x = 60 + (i * (containerWidth - 2 * 60)) / (filteredHistory.length - 1 || 1);
-                    return (
-                      <text
-                        key={item.date}
-                        x={x}
-                        y={300 - 60 + 20}
-                        textAnchor="middle"
-                        fontSize={window.innerWidth < 600 ? 10 : 12}
-                        fill="#666"
-                      >
-                        {new Date(item.date).toLocaleDateString()}
-                      </text>
-                    );
-                  })}
-                  {/* Line for close price */}
-                  {chartHistory.length > 1 && (
-                    <path
-                      d={chartHistory
-                        .map((item, i) => {
-                          const x = 60 + (i * (containerWidth - 2 * 60)) / (chartHistory.length - 1 || 1);
-                          const y = 300 - 60 - ((item.price - minPrice) / (maxPrice - minPrice || 1)) * (300 - 2 * 60);
-                          return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                        })
-                        .join(' ')}
-                      fill="none"
-                      stroke="#1976d2"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  )}
-                  {/* Data points: only draw for < 1 year range */}
-                  {['1m', '3m'].includes(quickRange) &&
-                    filteredHistory.map((item, i) => {
-                      const x = 60 + (i * (containerWidth - 2 * 60)) / (filteredHistory.length - 1 || 1);
-                      const y = 300 - 60 - ((item.price - minPrice) / (maxPrice - minPrice || 1)) * (300 - 2 * 60);
-                      return (
-                        <g key={item.date}>
-                          <circle
-                            cx={x}
-                            cy={y}
-                            r={window.innerWidth < 600 ? 3 : 5}
-                            fill="#1976d2"
-                            stroke="#fff"
-                            strokeWidth="2"
-                          >
-                            <title>{`${new Date(item.date).toLocaleDateString()}: ${item.price.toFixed(2)}`}</title>
-                          </circle>
-                        </g>
-                      );
-                    })}
-                </svg>
-              </Box>
-              {/* Summary */}
-              <Box
-                sx={{
-                  mt: 2,
-                  display: 'flex',
-                  flexDirection: { xs: 'row', sm: 'row' },
-                  justifyContent: 'space-around',
-                  pt: 2,
-                  borderTop: '1px solid var(--mui-palette-divider)',
-                  gap: { xs: 2, sm: 0 }
-                }}
-              >
-                <Box sx={{ textAlign: 'center', mb: { xs: 1, sm: 0 } }}>
-                  <Typography variant="h6" color="primary" sx={{ fontSize: { xs: 16, sm: 20 } }}>
-                    {statsPrices.length}
-                  </Typography>
-                  <Typography variant="caption" sx={{
-                    color: "text.secondary"
-                  }}>
-                    Data Points
-                  </Typography>
-                </Box>
-                <Box sx={{ textAlign: 'center', mb: { xs: 1, sm: 0 } }}>
-                  <Typography variant="h6" color="primary" sx={{ fontSize: { xs: 16, sm: 20 } }}>
-                    {maxPrice.toFixed(2)}
-                  </Typography>
-                  <Typography variant="caption" sx={{
-                    color: "text.secondary"
-                  }}>
-                    Max Close
-                  </Typography>
-                </Box>
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h6" color="primary" sx={{ fontSize: { xs: 16, sm: 20 } }}>
-                    {minPrice.toFixed(2)}
-                  </Typography>
-                  <Typography variant="caption" sx={{
-                    color: "text.secondary"
-                  }}>
-                    Min Close
-                  </Typography>
-                </Box>
-              </Box>
+              <TickerPriceChart
+                width={containerWidth}
+                prices={filteredHistory}
+                linePoints={chartHistory}
+                minPrice={minPrice}
+                maxPrice={maxPrice}
+                showDots={['1m', '3m'].includes(quickRange)}
+              />
+              <TickerPriceSummary count={statsPrices.length} maxPrice={maxPrice} minPrice={minPrice} />
             </Box>
             {/* Compact price history table */}
             <TickerHistoryTable

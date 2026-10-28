@@ -3,6 +3,7 @@ import { sendSuccess } from '@tumbaland/backend-core';
 import { caller, requireConversation, requireGroupMembership } from '../services/accessService';
 import * as conversations from '../services/conversationService';
 import * as messages from '../services/messageService';
+import { publishRead, publishTyping } from '../services/messageEvents';
 import { searchMessages } from '../services/messageSearch';
 import { isPushConfigured, removeSubscription, saveSubscription } from '../services/pushService';
 import {
@@ -206,7 +207,7 @@ export const markRead = async (req: Request, res: Response): Promise<void> => {
   const { lastReadMessageId } = req.body as { lastReadMessageId?: string };
 
   await messages.markRead(person, conversation._id.toString(), lastReadMessageId);
-  messages.publishRead(conversation, person, lastReadMessageId);
+  publishRead(conversation, person, lastReadMessageId);
   res.status(204).send();
 };
 
@@ -214,7 +215,7 @@ export const typing = async (req: Request, res: Response): Promise<void> => {
   const person = caller(req);
   const conversation = await requireConversation(person, req.params.id as string);
 
-  messages.publishTyping(conversation, person);
+  publishTyping(conversation, person);
   res.status(204).send();
 };
 

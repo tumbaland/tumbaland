@@ -3,11 +3,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import InputBase from '@mui/material/InputBase';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import SendIcon from '@mui/icons-material/Send';
-import CheckIcon from '@mui/icons-material/Check';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import SentimentSatisfiedAltIcon from '@mui/icons-material/SentimentSatisfiedAlt';
@@ -19,7 +15,8 @@ import { VoiceRow } from './VoiceRow';
 import { EditingBanner, RecentEmojiRow, ReplyingBanner } from './ComposerBars';
 import { AlbumDestination } from './AlbumDestination';
 import { emojiIn, recordEmoji, useRecentEmoji } from './recentEmoji';
-import { EFFECTS } from './effects';
+import { useComposerText } from '../../hooks/useComposerText';
+import { SendButton } from './SendButton';
 import type { VoiceMessage } from '../../hooks/useVoiceMessage';
 import { isVisualType } from '../../services/voice';
 import type { MessageEffect, PendingUpload, PhotoAlbum, SendOptions } from '../../types';
@@ -80,8 +77,6 @@ const ACCEPTED = 'image/*,video/*';
  */
 const ACCEPTED_DOCUMENTS = DOCUMENT_ACCEPT;
 
-/** How long Send must be held before it offers effects instead of sending. */
-const HOLD_MS = 450;
 
 export function Composer({
   onSend,
@@ -103,21 +98,13 @@ export function Composer({
   accent = brand.pinkInk,
   prefill
 }: ComposerProps) {
-  /** "Not this one", for the photos on the tray now. Cleared after each send. */
   /** Photos on the tray kept out of the album, by upload id. Cleared after each send. */
   const [albumSkips, setAlbumSkips] = useState<ReadonlySet<string>>(() => new Set());
-  const [value, setValue] = useState('');
-  /** What was being typed before an edit took the box over, given back after. */
-  const draft = useRef('');
-  const wasEditing = useRef(false);
   const [emojiAnchor, setEmojiAnchor] = useState<HTMLElement | null>(null);
-  const [effectAnchor, setEffectAnchor] = useState<HTMLElement | null>(null);
-  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** Set once a hold has opened the menu, so letting go does not also send. */
-  const held = useRef(false);
   const [focused, setFocused] = useState(false);
   const recentEmoji = useRecentEmoji();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const { value, setValue } = useComposerText({ editing, prefill, inputRef });
   const fileRef = useRef<HTMLInputElement | null>(null);
   const documentRef = useRef<HTMLInputElement | null>(null);
 
@@ -126,34 +113,11 @@ export function Composer({
   // wrong way round on a phone means every message sends half-written.
   const isPhone = useMediaQuery('(hover: none)');
 
-  const editingId = editing?.id;
-  useEffect(() => {
-    if (editingId) {
-      if (!wasEditing.current) draft.current = value;
-      wasEditing.current = true;
-      setValue(editing?.body ?? '');
-      inputRef.current?.focus();
-    } else if (wasEditing.current) {
-      wasEditing.current = false;
-      setValue(draft.current);
-      draft.current = '';
-    }
-    // Keyed on the id alone: a live update to the message's text must not
-    // overwrite what is being typed over it.
-    // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingId]);
-
   // Choosing Reply puts the cursor in the box, ready for the answer.
   const replyingId = replying?.id;
   useEffect(() => {
     if (replyingId) inputRef.current?.focus();
   }, [replyingId]);
-
-  useEffect(() => {
-    if (!prefill?.text || wasEditing.current) return;
-    setValue(prefill.text);
-    inputRef.current?.focus();
-  }, [prefill]);
 
   const ready = uploads.filter((upload) => upload.status === 'done').length;
   const mediaUploads = uploads.filter((upload) => isVisualType(upload.mimetype));
@@ -238,26 +202,6 @@ export function Composer({
   const offerEffects = canSend && !editing;
 
   const voiceActive = Boolean(voice?.active);
-
-  const cancelHold = () => {
-    if (holdTimer.current) clearTimeout(holdTimer.current);
-    holdTimer.current = null;
-  };
-
-  /**
-   * Holding Send, or right-clicking it, offers to send with an effect. It is
-   * the gesture other chat apps use for the same thing, and it keeps a plain
-   * tap a plain send.
-   */
-  const startHold = (event: React.PointerEvent<HTMLElement>) => {
-    held.current = false;
-    if (!offerEffects || event.button !== 0) return;
-    const anchor = event.currentTarget;
-    holdTimer.current = setTimeout(() => {
-      held.current = true;
-      setEffectAnchor(anchor);
-    }, HOLD_MS);
-  };
 
   /**
    * At the cursor, not the end: an emoji added to the middle of a sentence
@@ -439,74 +383,19 @@ export function Composer({
             }}
           />
 
-          <IconButton
-            type="submit"
-            aria-label={editing ? 'Save edit' : 'Send'}
-            aria-haspopup={offerEffects ? 'menu' : undefined}
+          <SendButton
+            editing={Boolean(editing)}
             disabled={!canSend}
-            onPointerDown={startHold}
-            onPointerUp={cancelHold}
-            onPointerLeave={cancelHold}
-            onPointerCancel={cancelHold}
-            onContextMenu={(event) => {
-              if (!offerEffects) return;
-              event.preventDefault();
-              cancelHold();
-              setEffectAnchor(event.currentTarget);
-            }}
-            onClick={(event) => {
-              // The press that opened the menu ends in a click; it chose nothing yet.
-              if (held.current) {
-                event.preventDefault();
-                held.current = false;
-              }
-            }}
-            sx={{
-              width: TOUCH_TARGET,
-              height: TOUCH_TARGET,
-              // A long press on a phone would otherwise select or preview the button.
-              WebkitTouchCallout: 'none',
-              userSelect: 'none',
-              color: '#fff',
-              bgcolor: accent,
-              '&:hover': { bgcolor: accent, filter: 'brightness(0.94)' },
-              '&.Mui-disabled': { bgcolor: surface.sunken, color: ink.muted }
-            }}
-          >
-            {editing ? <CheckIcon fontSize="small" /> : <SendIcon fontSize="small" />}
-          </IconButton>
+            offerEffects={offerEffects}
+            accent={accent}
+            onSendWithEffect={submit}
+          />
         </Box>
       )}
 
       {/* The full picker here rather than the six quick reactions: writing a
           message is where someone reaches for a specific emoji, while
           reacting is where the common few are almost always enough. */}
-      <Menu
-        anchorEl={effectAnchor}
-        open={Boolean(effectAnchor)}
-        onClose={() => setEffectAnchor(null)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        // Sending puts the focus back in the message box; handing it to the
-        // Send button on close would take it away again.
-        disableRestoreFocus
-      >
-        {EFFECTS.map((effect) => (
-          <MenuItem
-            key={effect.id}
-            onClick={() => {
-              setEffectAnchor(null);
-              submit(effect.id);
-            }}
-          >
-            <Box component="span" aria-hidden sx={{ fontSize: 20, mr: 1.5, lineHeight: 1 }}>
-              {effect.emoji}
-            </Box>
-            {effect.label}
-          </MenuItem>
-        ))}
-      </Menu>
-
       <FullEmojiPicker anchorEl={emojiAnchor} onClose={() => setEmojiAnchor(null)} onPick={insertEmoji} />
 
       <input ref={fileRef} type="file" accept={ACCEPTED} multiple hidden onChange={pick} data-testid="file-input" />

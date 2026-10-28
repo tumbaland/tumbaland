@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -26,6 +26,7 @@ import { logger } from '@tumbaland/frontend-core';
 import { Day } from '../services/types';
 import { useJournalDays } from '../hooks/useJournalDays';
 import { getPlan } from '../services/plans';
+import { useConsumedParam } from '../hooks/useConsumedParam';
 import { useJournalExport } from '../hooks/useJournalExport';
 import { usePlanEditor } from '../hooks/usePlanEditor';
 import DayEditorDialog from '../components/DayEditorDialog';
@@ -104,37 +105,16 @@ const JournalPage: React.FC = () => {
   const openLogDay = () => openEditor(todayKey(), true);
 
   // ?date=YYYY-MM-DD opens that day straight away — how the map's pin popups
-  // link back into the journal. Consumed once so a later close doesn't reopen.
-  const linkedDate = searchParams.get('date');
-  useEffect(() => {
-    if (!linkedDate || !/^\d{4}-\d{2}-\d{2}$/.test(linkedDate)) return;
-    setEditorDate(linkedDate);
-    setEditorDateEditable(false);
-    setEditorOpen(true);
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete('date');
-        return next;
-      },
-      { replace: true }
-    );
-  }, [linkedDate, setSearchParams]);
+  // link back into the journal.
+  useConsumedParam('date', (value) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    openEditor(value, false);
+  });
 
   // ?plan=<id> opens that plan on the calendar: how a reminder in the chat
-  // links back here. Consumed once, like ?date=.
-  const linkedPlan = searchParams.get('plan');
-  useEffect(() => {
-    if (!linkedPlan) return;
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete('plan');
-        return next;
-      },
-      { replace: true }
-    );
-    getPlan(linkedPlan)
+  // links back here.
+  useConsumedParam('plan', (id) => {
+    getPlan(id)
       .then((plan) => {
         const [year, month] = plan.date.split('-').map(Number);
         setCalendarMonth({ year: year!, month: month! - 1 });
@@ -144,7 +124,7 @@ const JournalPage: React.FC = () => {
         logger.error('Failed to open the linked plan', e);
         setError('That plan is not in this journal any more');
       });
-  }, [linkedPlan, setSearchParams, openPlan]);
+  });
 
   // group loaded days by month for section headers
   const groupedByMonth = useMemo(() => {
