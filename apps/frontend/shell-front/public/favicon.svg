@@ -1,32 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="64" height="64">
+  <!-- The browser-tab icon: app-icon.svg in a rounded square, since a tab shows it
+       unmasked, with the hearts a little larger to read at 16px. Copied as-is into
+       every frontend's public/. -->
   <defs>
-    <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#ff6b9d;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#f06292;stop-opacity:1" />
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff1fae" />
+      <stop offset="1" stop-color="#8b5cf6" />
     </linearGradient>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#fce4ec;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#f8bbd9;stop-opacity:1" />
-    </linearGradient>
+    <path id="heart" fill="#ffffff" stroke="#ffffff" stroke-width="16" stroke-linejoin="round"
+      d="M256 400C220 370 128 304 128 212C128 160 164 126 208 126C232 126 248 138 256 156C264 138 280 126 304 126C348 126 384 160 384 212C384 304 292 370 256 400Z" />
   </defs>
-  
-  <!-- Background circle -->
-  <circle cx="32" cy="32" r="30" fill="url(#bgGradient)" stroke="#e91e63" stroke-width="2"/>
-  
-  <!-- Two overlapping hearts representing a couple -->
-  <!-- Left heart (slightly behind) -->
-  <path d="M20 26c0-4 3-7 7-7s7 3 7 7c0 7-7 14-7 14s-7-7-7-14z" fill="url(#heartGradient)" opacity="0.8"/>
-  
-  <!-- Right heart (slightly in front) -->
-  <path d="M30 22c0-4 3-7 7-7s7 3 7 7c0 7-7 14-7 14s-7-7-7-14z" fill="url(#heartGradient)"/>
-  
-  <!-- Small sparkles around the hearts -->
-  <circle cx="18" cy="20" r="1.5" fill="#ffffff" opacity="0.9"/>
-  <circle cx="46" cy="18" r="1" fill="#ffffff" opacity="0.8"/>
-  <circle cx="20" cy="42" r="1" fill="#ffffff" opacity="0.7"/>
-  <circle cx="44" cy="40" r="1.5" fill="#ffffff" opacity="0.9"/>
-  
-  <!-- Cute little plus signs for extra sparkle -->
-  <text x="16" y="16" font-family="Arial" font-size="8" fill="#ffffff" opacity="0.6">+</text>
-  <text x="48" y="48" font-family="Arial" font-size="6" fill="#ffffff" opacity="0.5">+</text>
+  <rect width="512" height="512" rx="116" fill="url(#bg)" />
+  <g transform="translate(256 256) scale(1.14) translate(-256 -256)">
+    <use href="#heart" opacity="0.6" transform="translate(214 268) rotate(-10) scale(0.8) translate(-256 -263)" />
+    <use href="#heart" transform="translate(302 246) rotate(8) scale(0.8) translate(-256 -263)" />
+  </g>
 </svg>

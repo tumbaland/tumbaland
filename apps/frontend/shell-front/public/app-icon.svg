@@ -1,23 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="512" height="512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <!-- Home-screen icon, the source for icon-192/512.png and apple-touch-icon.png.
        Full-bleed square because phones mask it to their own shape; the hearts stay
-       inside the central safe zone (radius 40%) so no mask clips them. -->
+       inside the central safe zone (radius 40%) so no mask clips them.
+       Colours are brand.pink and brand.violet from frontend-core's tokens. -->
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fce4ec" />
-      <stop offset="100%" stop-color="#f8bbd9" />
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff1fae" />
+      <stop offset="1" stop-color="#8b5cf6" />
     </linearGradient>
-    <linearGradient id="heart" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ff6b9d" />
-      <stop offset="100%" stop-color="#e91e63" />
-    </linearGradient>
-    <path id="h" d="M12 21s-7.5-4.6-10-9.5C0 7.5 2.5 3 6.5 3 9 3 11 4.5 12 6.5 13 4.5 15 3 17.5 3 21.5 3 24 7.5 22 11.5 19.5 16.4 12 21 12 21z" />
+    <radialGradient id="glow" cx="0.28" cy="0.18" r="0.85">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    <path id="heart" fill="#ffffff" stroke="#ffffff" stroke-width="16" stroke-linejoin="round"
+      d="M256 400C220 370 128 304 128 212C128 160 164 126 208 126C232 126 248 138 256 156C264 138 280 126 304 126C348 126 384 160 384 212C384 304 292 370 256 400Z" />
   </defs>
-  <rect width="64" height="64" fill="url(#bg)" />
-  <use href="#h" transform="translate(11 19) scale(1.15)" fill="url(#heart)" opacity="0.75" />
-  <use href="#h" transform="translate(25 15) scale(1.15)" fill="url(#heart)" />
-  <circle cx="15" cy="17" r="1.5" fill="#ffffff" opacity="0.9" />
-  <circle cx="50" cy="14" r="1" fill="#ffffff" opacity="0.8" />
-  <circle cx="16" cy="47" r="1" fill="#ffffff" opacity="0.7" />
-  <circle cx="49" cy="46" r="1.5" fill="#ffffff" opacity="0.9" />
+  <rect width="512" height="512" fill="url(#bg)" />
+  <rect width="512" height="512" fill="url(#glow)" />
+  <use href="#heart" opacity="0.6" transform="translate(214 268) rotate(-10) scale(0.8) translate(-256 -263)" />
+  <use href="#heart" transform="translate(302 246) rotate(8) scale(0.8) translate(-256 -263)" />
 </svg>
