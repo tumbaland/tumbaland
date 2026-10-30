@@ -9,6 +9,7 @@ const api = vi.hoisted(() => ({
   getConversation: vi.fn(),
   listMessages: vi.fn(),
   listLive: vi.fn(),
+  getAssistants: vi.fn(),
   markRead: vi.fn(),
   sendTyping: vi.fn(),
   listSavedPlaces: vi.fn(),
@@ -86,6 +87,7 @@ beforeEach(() => {
     nextCursor: null
   }));
   api.listLive.mockResolvedValue([]);
+  api.getAssistants.mockResolvedValue(null);
   api.markRead.mockResolvedValue(undefined);
   api.sendTyping.mockResolvedValue(undefined);
   api.listSavedPlaces.mockResolvedValue([]);

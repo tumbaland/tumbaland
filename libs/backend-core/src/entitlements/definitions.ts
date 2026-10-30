@@ -18,7 +18,7 @@
  *     so adding a meter needs no frontend change.
  */
 
-export type MeterKey = 'storageBytes' | 'aiJobs' | 'trackedTickers' | 'seats';
+export type MeterKey = 'storageBytes' | 'aiJobs' | 'trackedTickers' | 'seats' | 'assistantSpend';
 
 /**
  * Deliberately small. The portfolio planner is NOT a feature flag — it is gated
@@ -76,6 +76,14 @@ export const METER_DEFINITIONS: readonly MeterDefinition[] = [
     unit: 'count',
     period: 'ALL',
     description: 'Members that may join groups owned by the user, including the owner.'
+  },
+  {
+    key: 'assistantSpend',
+    label: 'Chat assistant allowance',
+    unit: 'count',
+    period: 'MONTH',
+    description:
+      'What the chat assistants may cost per calendar month, charged to whoever asks. One unit is a ten-thousandth of a dollar, so 10000 is $1.'
   }
 ] as const;
 
@@ -134,7 +142,7 @@ const GB = 1024 * 1024 * 1024;
  */
 export const DEFAULT_PLAN_LIMITS: Readonly<Record<string, PlanLimits>> = {
   free: {
-    meters: { storageBytes: 1 * GB, aiJobs: 25, trackedTickers: 3, seats: 1 },
+    meters: { storageBytes: 1 * GB, aiJobs: 25, trackedTickers: 3, seats: 1, assistantSpend: 5_000 },
     features: { cleanExport: false },
     retentionDays: 90
   },
@@ -151,7 +159,7 @@ export const DEFAULT_PLAN_LIMITS: Readonly<Record<string, PlanLimits>> = {
    * covering.
    */
   support: {
-    meters: { storageBytes: 50 * GB, aiJobs: 600, trackedTickers: 100, seats: 5 },
+    meters: { storageBytes: 50 * GB, aiJobs: 600, trackedTickers: 100, seats: 5, assistantSpend: 20_000 },
     features: { cleanExport: true },
     retentionDays: UNLIMITED
   },
@@ -166,7 +174,13 @@ export const DEFAULT_PLAN_LIMITS: Readonly<Record<string, PlanLimits>> = {
    * Kept off the public catalog through `Plan.isPublic = false`.
    */
   staff: {
-    meters: { storageBytes: UNLIMITED, aiJobs: UNLIMITED, trackedTickers: UNLIMITED, seats: UNLIMITED },
+    meters: {
+      storageBytes: UNLIMITED,
+      aiJobs: UNLIMITED,
+      trackedTickers: UNLIMITED,
+      seats: UNLIMITED,
+      assistantSpend: UNLIMITED
+    },
     features: { cleanExport: true },
     retentionDays: UNLIMITED
   }

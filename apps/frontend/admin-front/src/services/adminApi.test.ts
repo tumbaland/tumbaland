@@ -21,7 +21,9 @@ beforeEach(() => {
   getConfig.mockReturnValue({
     ADMIN_API_URL: 'https://admin-api.example',
     AUTH_SERVICE_URL: 'https://auth.example',
-    AUTH_FRONT_URL: 'https://auth-front.example'
+    AUTH_FRONT_URL: 'https://auth-front.example',
+    CHAT_API_URL: 'https://chat.example',
+    PAYMENT_API_URL: 'https://payment.example'
   });
 });
 
@@ -127,5 +129,76 @@ describe('a session that has ended', () => {
     await adminApi.overview();
 
     expect(lastUrl()).toBe('/api/overview?days=30');
+  });
+});
+
+describe('Claude in the chats', () => {
+  const calls = () => vi.mocked(global.fetch).mock.calls.map(([url, init]) => ({ url: url as string, ...(init as RequestInit) }));
+
+  it('reads and changes the key through chat-service, and removes it', async () => {
+    respondWith({ success: true, data: { configured: true } });
+
+    await expect(adminApi.claudeKey()).resolves.toEqual({ configured: true });
+    await adminApi.saveClaudeKey({ expiresOn: '2027-03-01' });
+    await adminApi.checkClaudeKey();
+    await adminApi.removeClaudeKey();
+
+    const [read, save, check, remove] = calls();
+    expect(check).toMatchObject({ url: 'https://chat.example/api/chat/admin/assistant-key/check', method: 'POST' });
+    expect(read).toMatchObject({ url: 'https://chat.example/api/chat/admin/assistant-key', method: 'GET' });
+    expect(save).toMatchObject({ url: 'https://chat.example/api/chat/admin/assistant-key', method: 'PUT', body: JSON.stringify({ expiresOn: '2027-03-01' }) });
+    expect(remove).toMatchObject({ url: 'https://chat.example/api/chat/admin/assistant-key', method: 'DELETE' });
+  });
+
+  it('asks for a month of use', async () => {
+    respondWith({ success: true, data: { month: '2026-10' } });
+    await adminApi.claudeUsage('2026-10');
+    expect(lastUrl()).toBe('https://chat.example/api/chat/admin/assistant-usage?month=2026-10');
+  });
+
+  it('gives a person an allowance with no override yet, in units', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({ message: 'No override for that user' }), text: async () => '{"message":"No override for that user"}' })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ success: true }), text: async () => '{"success":true}' });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await adminApi.setAllowance('Tom@Example.com', 25_000, 'Trip', '2026-12-01');
+
+    expect(fetchMock.mock.calls[0]![0]).toBe('https://payment.example/api/overrides/Tom%40Example.com');
+    const [url, init] = fetchMock.mock.calls[1]! as [string, RequestInit];
+    expect(url).toBe('https://payment.example/api/overrides/Tom%40Example.com');
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body as string)).toEqual({ meters: { assistantSpend: 25_000 }, reason: 'Trip', expiresAt: '2026-12-01' });
+  });
+
+  it('keeps what an override already grants, and changes only the allowance', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ override: { meters: { storageBytes: 100, assistantSpend: 1 }, features: { cleanExport: true }, retentionDays: 400 } }),
+        text: async () => ''
+      })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}), text: async () => '{}' });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await adminApi.setAllowance('tom@example.com', -1, 'Family');
+
+    expect(JSON.parse((fetchMock.mock.calls[1]![1] as RequestInit).body as string)).toEqual({
+      meters: { storageBytes: 100, assistantSpend: -1 },
+      features: { cleanExport: true },
+      retentionDays: 400,
+      reason: 'Family'
+    });
+  });
+
+  it('does not overwrite an override it could not read', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ message: 'boom' }), text: async () => '{"message":"boom"}' });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(adminApi.setAllowance('tom@example.com', 100, 'x')).rejects.toMatchObject({ status: 500 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

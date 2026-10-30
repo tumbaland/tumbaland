@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { MESSAGE_EFFECTS } from '../models/Message';
+import { BOT_COLORS } from '../models/ChatBot';
+import { MODEL_IDS } from '../services/assistantModels';
 
 /** Matches `Message.body`'s maxlength. Both exist: one rejects, one truncates. */
 export const MAX_BODY_LENGTH = 8000;
@@ -306,3 +308,69 @@ export const liveWatchSchema = z.object({
   lng: longitude,
   radiusM: z.number().int().min(100).max(20_000)
 });
+
+// ─── Assistants ──────────────────────────────────────────────────────────────
+
+/** What people type after the @, so no characters that would make a mention ambiguous. */
+const BOT_NAME = /^[\p{L}\p{N}]+( [\p{L}\p{N}]+)*$/u;
+
+const botName = z
+  .string()
+  .trim()
+  .min(1, 'Give it a name')
+  .max(24, 'A name can be up to 24 characters')
+  .regex(BOT_NAME, 'Use letters, numbers and single spaces');
+
+const botText = z.string().trim().max(1500, 'That is too long, keep it under 1500 characters');
+
+export const createBotSchema = z.object({
+  name: botName,
+  personality: botText.default(''),
+  aboutOwner: botText.default(''),
+  color: z.enum(BOT_COLORS).optional(),
+  model: z.enum(MODEL_IDS).optional()
+});
+
+export const updateBotSchema = z
+  .object({
+    name: botName.optional(),
+    personality: botText.optional(),
+    aboutOwner: botText.optional(),
+    color: z.enum(BOT_COLORS).optional(),
+    model: z.enum(MODEL_IDS).optional(),
+    paused: z.boolean().optional()
+  })
+  .refine((value) => Object.values(value).some((field) => field !== undefined), { message: 'Nothing to change' });
+
+/** The conversation's assistant settings: your own switch, the shared text, and the admins' two. */
+export const assistantSettingsSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    aboutUs: botText.optional(),
+    lockedOff: z.boolean().optional(),
+    whoCanAdd: z.enum(['everyone', 'admins']).optional()
+  })
+  .refine((value) => Object.values(value).some((field) => field !== undefined), { message: 'Nothing to change' });
+
+/** A person's own cap on their allowance, or null for none. */
+export const assistantPreferenceSchema = z.object({
+  capPercent: z.number().int().min(10).max(100).nullable()
+});
+
+/** The Anthropic key, the models on offer and the expiry date. Any part may be sent alone. */
+export const assistantKeySchema = z
+  .object({
+    apiKey: z.string().trim().min(1).max(300).optional(),
+    models: z
+      .object({
+        enabled: z.array(z.enum(MODEL_IDS)).min(1, 'Keep at least one model turned on'),
+        default: z.enum(MODEL_IDS)
+      })
+      .optional(),
+    expiresOn: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a date like 2027-03-01')
+      .nullable()
+      .optional()
+  })
+  .refine((value) => Object.values(value).some((field) => field !== undefined), { message: 'Nothing to change' });

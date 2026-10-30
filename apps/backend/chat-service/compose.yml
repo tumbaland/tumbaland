@@ -47,6 +47,15 @@ services:
       # means STUN only: calls still connect on friendly networks.
       - CLOUDFLARE_TURN_KEY_ID=${CLOUDFLARE_TURN_KEY_ID}
       - CLOUDFLARE_TURN_API_TOKEN=${CLOUDFLARE_TURN_API_TOKEN}
+      # Chat assistants. The same secret auth-service seals API keys with: it
+      # seals the Anthropic key admin saves, and lets this service issue the
+      # five-minute Tumbaland key an assistant acts with. Absent means admin
+      # cannot save a key and assistants stay unavailable; chat itself is not
+      # affected.
+      - API_KEY_ENCRYPTION_SECRET=${API_KEY_ENCRYPTION_SECRET}
+      # Where Anthropic's side reaches the Tumbaland tools: the MCP server's
+      # public address, which the connector calls from outside.
+      - MCP_PUBLIC_URL=${MCP_PUBLIC_URL}
     init: true
     networks:
       - tumbanet

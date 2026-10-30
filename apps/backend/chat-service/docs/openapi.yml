@@ -714,6 +714,208 @@ paths:
         '200': { description: '`{ theme, backgroundFileId, backgroundUrl }`' }
         '400': { description: 'No such theme, or the background is not a photo from this conversation' }
 
+  /api/chat/conversations/{id}/assistants:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      summary: The assistants in this conversation, as the caller sees them
+      description: |
+        Everything the Assistants dialog shows: whether assistants are on (everyone
+        in the conversation has agreed and nobody has locked them off), the caller's
+        own agreement, who has not agreed yet, the shared "About us" text, every
+        bot with what it was told (readable by everyone), the models an admin has
+        turned on, the starting personalities, and the caller's monthly allowance.
+        `canManage` on a bot and `isManager` are for the caller: a bot's owner and
+        the group's owner and admins may change it.
+      responses:
+        '200': { description: '`{ enabled, mine, waitingFor, lockedOff, whoCanAdd, aboutUs, isManager, canAdd, bots, presets, colors, models, allowance }`' }
+        '404': { description: 'No such conversation, or not the caller''s' }
+    patch:
+      summary: Your own switch, the shared text, and the admins' two settings
+      description: |
+        `enabled` is the caller's own agreement and nobody can give it for them.
+        `aboutUs` is the text every assistant here keeps in mind; anyone may edit it.
+        `lockedOff` (turn assistants off for the whole conversation, whatever
+        anyone agreed) and `whoCanAdd` (`everyone` or `admins`) are for the group's
+        owner and admins. Each change is announced in the thread as a `system`
+        message and to the group as `conversation.updated` with `{ assistants: true }`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled: { type: boolean }
+                aboutUs: { type: string, maxLength: 1500 }
+                lockedOff: { type: boolean }
+                whoCanAdd: { type: string, enum: [everyone, admins] }
+      responses:
+        '200': { description: 'The same view as GET' }
+        '400': { description: 'Nothing to change' }
+        '403': { description: 'Only the group owner or an admin can change that' }
+
+  /api/chat/conversations/{id}/assistants/bots:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Add your assistant to the conversation
+      description: |
+        One per person per conversation. The name is what people type after the @:
+        up to 24 letters, numbers and single spaces, unique in the conversation
+        (case-insensitively), not the name of someone in it, and not `Claude`, which
+        is an alias for the asker's own assistant. `model` has to be one an admin
+        has turned on and defaults to the admin's default. When an admin has made
+        adding admins only, only the group's owner and admins may.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 24 }
+                personality: { type: string, maxLength: 1500 }
+                aboutOwner: { type: string, maxLength: 1500 }
+                color: { type: string, description: 'One of the palette in `colors`' }
+                model: { type: string, enum: [claude-haiku-5-5, claude-sonnet-5-5, claude-opus-5-5] }
+      responses:
+        '201': { description: 'The same view as GET' }
+        '400': { description: 'The name is taken or not allowed, the caller already has an assistant here, or the model is not available' }
+        '403': { description: 'Only the group owner or an admin can add an assistant here' }
+
+  /api/chat/conversations/{id}/assistants/bots/{botId}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: botId, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Change, pause or resume an assistant
+      description: |
+        Its owner, or the group's owner or an admin. An admin's change never makes
+        the bot theirs; the owner is notified. A rename, a new personality, a new
+        model, a pause and a resume are each announced in the thread.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 24 }
+                personality: { type: string, maxLength: 1500 }
+                aboutOwner: { type: string, maxLength: 1500 }
+                color: { type: string }
+                model: { type: string, enum: [claude-haiku-5-5, claude-sonnet-5-5, claude-opus-5-5] }
+                paused: { type: boolean }
+      responses:
+        '200': { description: 'The same view as GET' }
+        '400': { description: 'Nothing to change, the name is taken, or the model is not available' }
+        '403': { description: 'Not its owner, and not an admin of the group' }
+        '404': { description: 'No such assistant here' }
+    delete:
+      summary: Remove an assistant
+      description: Its owner, or the group's owner or an admin. What it wrote stays in the thread under its name.
+      responses:
+        '200': { description: 'The same view as GET' }
+        '403': { description: 'Not its owner, and not an admin of the group' }
+        '404': { description: 'No such assistant here' }
+
+  /api/chat/assistants/me:
+    get:
+      summary: The caller's assistant allowance this month
+      description: |
+        `{ limit, used, percent, capPercent, exhausted, resetsOn }`. `limit` is null on
+        a plan with no ceiling; amounts are in ten-thousandths of a dollar, which the
+        app shows as a share, never as money.
+      responses:
+        '200': { description: The allowance }
+    put:
+      summary: Set a lower cap of your own
+      description: '`capPercent` is the share of the plan''s allowance the caller is willing to spend, 10 to 100, or null for none. It can never raise the plan''s limit.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [capPercent]
+              properties:
+                capPercent: { type: integer, minimum: 10, maximum: 100, nullable: true }
+      responses:
+        '200': { description: 'The allowance, with the cap applied' }
+        '400': { description: capPercent out of range }
+
+  /api/chat/admin/assistant-key:
+    get:
+      summary: The Anthropic key's status, and the models on offer
+      description: |
+        Administrators only. Never returns the key: only its last four characters, its
+        status (`ok`, or `rejected` once Anthropic refused it), the expiry date and the
+        days left, who set it, which models are turned on and how many bots use each.
+      responses:
+        '200': { description: The status }
+        '403': { description: Not an administrator }
+    put:
+      summary: Save or replace the key, the models and the expiry date
+      description: |
+        Any part may be sent alone. A new `apiKey` is checked against Anthropic before
+        it is kept, sealed with the server's API key secret, and replaces the old one
+        at once. `expiresOn` is a reminder to rotate, not a cut-off: a notice goes to
+        whoever set the key from 14 days before. Turning a model off moves the bots
+        using it to the default when they reply. Audited, without the key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                apiKey: { type: string, writeOnly: true }
+                models:
+                  type: object
+                  properties:
+                    enabled: { type: array, items: { type: string, enum: [claude-haiku-5-5, claude-sonnet-5-5, claude-opus-5-5] } }
+                    default: { type: string, enum: [claude-haiku-5-5, claude-sonnet-5-5, claude-opus-5-5] }
+                expiresOn: { type: string, format: date, nullable: true }
+      responses:
+        '200': { description: The new status }
+        '400': { description: 'Anthropic did not accept the key, nothing to change, a bad date, or no model left on' }
+        '403': { description: Not an administrator }
+    delete:
+      summary: Remove the key
+      description: Assistants answer "isn't available right now" until a new key is saved.
+      responses:
+        '200': { description: The new status }
+        '403': { description: Not an administrator }
+
+  /api/chat/admin/assistant-key/check:
+    post:
+      summary: Ask Anthropic about the saved key again
+      description: |
+        Administrators only. Puts a key marked `rejected` back to work if Anthropic now
+        accepts it: one 401 marks a key rejected, and a 401 can be a passing problem on
+        Anthropic's side. If it is refused again, it stays rejected with the reason.
+      responses:
+        '200': { description: The new status }
+        '400': { description: 'No key saved, it cannot be opened here, or Anthropic still refuses it' }
+        '403': { description: Not an administrator }
+
+  /api/chat/admin/assistant-usage:
+    get:
+      summary: What assistants cost in a month, by person, chat and model
+      description: |
+        Administrators only. `month` is `YYYY-MM` and defaults to this one. People and
+        chats are the twenty biggest; the totals cover everyone. Amounts are estimates
+        from list prices, in ten-thousandths of a dollar: compare with the Anthropic
+        bill once a month.
+      parameters:
+        - { name: month, in: query, required: false, schema: { type: string, example: '2026-10' } }
+      responses:
+        '200': { description: '`{ month, totals, byModel, byPerson, byChat }`' }
+        '400': { description: month is not YYYY-MM }
+        '403': { description: Not an administrator }
+
   /api/chat/conversations/{id}/messages/{messageId}/album:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }

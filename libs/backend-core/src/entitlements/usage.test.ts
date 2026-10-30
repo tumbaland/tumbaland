@@ -300,7 +300,8 @@ describe('getUsageSnapshot', () => {
       storageBytes: 42,
       aiJobs: 7,
       trackedTickers: 0,
-      seats: 0
+      seats: 0,
+      assistantSpend: 0
     });
   });
 });

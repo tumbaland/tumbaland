@@ -4,14 +4,17 @@ import { ink } from '@tumbaland/frontend-core';
 
 export interface TypingIndicatorProps {
   names: string[];
+  /** Assistants answering, and what each is doing: "making a collage". */
+  assistants?: Array<{ name: string; activity?: string }>;
 }
 
-/** Three dots and a name. Renders nothing when nobody is typing. */
-export function TypingIndicator({ names }: TypingIndicatorProps) {
-  if (names.length === 0) return null;
+/** Three dots and a name. Renders nothing when nobody is typing or answering. */
+export function TypingIndicator({ names, assistants = [] }: TypingIndicatorProps) {
+  if (names.length === 0 && assistants.length === 0) return null;
 
-  const label =
-    names.length === 1 ? `${names[0]} is typing` : `${names.slice(0, 2).join(' and ')} are typing`;
+  const people =
+    names.length === 0 ? [] : [names.length === 1 ? `${names[0]} is typing` : `${names.slice(0, 2).join(' and ')} are typing`];
+  const label = [...people, ...assistants.map((assistant) => `${assistant.name} is ${assistant.activity || 'writing'}`)].join(' · ');
 
   return (
     <Box

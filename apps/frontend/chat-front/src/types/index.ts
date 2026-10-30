@@ -177,6 +177,8 @@ export interface Message {
   collage?: CollageCard | null;
   /** On a `reminder` message: the plan in the journal that "Open" shows. */
   plan?: PlanCard | null;
+  /** The assistant that wrote it, when one did. Its look comes from `AssistantsView.bots`. */
+  botId?: string | null;
   reactions: Reaction[];
   clientId: string;
   editedAt: string | null;
@@ -294,6 +296,10 @@ export interface ChatEvent {
 export interface TypingPayload {
   userId: string;
   name: string;
+  /** An assistant at work rather than a person typing. */
+  bot?: boolean;
+  /** What it is doing: "making a collage". Only on an assistant. */
+  activity?: string;
 }
 
 export interface ReadPayload {
@@ -376,4 +382,94 @@ export interface CallSignalPayload {
   fromDeviceId: string;
   toDeviceId: string;
   data: CallSignalData;
+}
+
+// ─── Assistants ──────────────────────────────────────────────────────────────
+
+export type ModelId = 'claude-haiku-5-5' | 'claude-sonnet-5-5' | 'claude-opus-5-5';
+
+/** An assistant someone added to the chat. What it was told is readable by everyone. */
+export interface Bot {
+  id: string;
+  name: string;
+  personality: string;
+  aboutOwner: string;
+  color: string;
+  model: ModelId;
+  /** "Fast", "Balanced" or "Best": people never see a model's name. */
+  modelLabel: string;
+  paused: boolean;
+  ownerId: string;
+  ownerName: string;
+  /** The viewer made it. */
+  mine: boolean;
+  /** The viewer may edit, pause or delete it: its owner, and the group's owner and admins. */
+  canManage: boolean;
+}
+
+/** A person's monthly allowance, as a share. Never money or tokens. */
+export interface Allowance {
+  /** The plan's limit, or null when it has none. */
+  limit: number | null;
+  used: number;
+  /** Share used, or null with no limit. Can pass 100. */
+  percent: number | null;
+  /** The person's own lower cap, as a share of the limit. */
+  capPercent: number | null;
+  /** The next reply would not fit. */
+  exhausted: boolean;
+  /** YYYY-MM-DD: the first of next month. */
+  resetsOn: string;
+}
+
+export interface ModelOption {
+  id: ModelId;
+  label: string;
+  name: string;
+  hint: string;
+}
+
+export interface AssistantPreset {
+  id: string;
+  name: string;
+  personality: string;
+}
+
+/** Everything the Assistants dialog shows, for the viewer. */
+export interface AssistantsView {
+  /** On right now: everyone has agreed and nobody has locked it. */
+  enabled: boolean;
+  /** The viewer has agreed. */
+  mine: boolean;
+  /** Names of who has not agreed yet. */
+  waitingFor: string[];
+  lockedOff: boolean;
+  whoCanAdd: 'everyone' | 'admins';
+  aboutUs: string;
+  /** The viewer is an owner or admin of the group. */
+  isManager: boolean;
+  /** The viewer may add a bot. */
+  canAdd: boolean;
+  bots: Bot[];
+  presets: AssistantPreset[];
+  colors: string[];
+  models: { options: ModelOption[]; default: ModelId };
+  allowance: Allowance;
+}
+
+export interface BotInput {
+  name: string;
+  personality?: string;
+  aboutOwner?: string;
+  color?: string;
+  model?: ModelId;
+}
+
+export type BotChange = Partial<BotInput> & { paused?: boolean };
+
+export interface AssistantSettingsChange {
+  enabled?: boolean;
+  aboutUs?: string;
+  lockedOff?: boolean;
+  whoCanAdd?: 'everyone' | 'admins';
 }

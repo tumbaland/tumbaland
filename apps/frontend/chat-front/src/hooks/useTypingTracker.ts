@@ -6,14 +6,39 @@ export const TYPING_TIMEOUT_MS = 4000;
 interface Typist {
   name: string;
   at: number;
+  /** An assistant at work, not a person typing. */
+  bot?: boolean;
+  /** What the assistant is doing, as a short phrase: "making a collage". */
+  activity?: string;
 }
 
 /** conversationId -> userId -> who is typing there. */
 export type TypingMap = Record<string, Record<string, Typist>>;
 
-/** The names typing in one conversation, oldest notice first. */
+/**
+ * The people typing in one conversation, oldest notice first. Assistants are
+ * not in it: the header and the list say "typing" about a person, and an
+ * assistant working is shown on its own line (see `assistantsWorking`).
+ */
 export const namesTyping = (map: TypingMap, conversationId: string | undefined): string[] =>
-  conversationId ? Object.values(map[conversationId] ?? {}).map((typist) => typist.name) : [];
+  conversationId
+    ? Object.values(map[conversationId] ?? {})
+        .filter((typist) => !typist.bot)
+        .map((typist) => typist.name)
+    : [];
+
+export interface AssistantAtWork {
+  name: string;
+  activity?: string;
+}
+
+/** The assistants working in one conversation, and on what. */
+export const assistantsWorking = (map: TypingMap, conversationId: string | undefined): AssistantAtWork[] =>
+  conversationId
+    ? Object.values(map[conversationId] ?? {})
+        .filter((typist) => typist.bot)
+        .map((typist) => ({ name: typist.name, activity: typist.activity }))
+    : [];
 
 /**
  * Who is typing where, for the thread and the conversation list alike.
@@ -26,12 +51,15 @@ export const namesTyping = (map: TypingMap, conversationId: string | undefined):
 export function useTypingTracker() {
   const [typing, setTyping] = useState<TypingMap>({});
 
-  const note = useCallback((conversationId: string, userId: string, name: string) => {
-    setTyping((previous) => ({
-      ...previous,
-      [conversationId]: { ...previous[conversationId], [userId]: { name, at: Date.now() } }
-    }));
-  }, []);
+  const note = useCallback(
+    (conversationId: string, userId: string, name: string, extra?: { bot?: boolean; activity?: string }) => {
+      setTyping((previous) => ({
+        ...previous,
+        [conversationId]: { ...previous[conversationId], [userId]: { name, at: Date.now(), ...extra } }
+      }));
+    },
+    []
+  );
 
   const clear = useCallback((conversationId: string, userId: string) => {
     setTyping((previous) => {

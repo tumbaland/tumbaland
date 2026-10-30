@@ -17,6 +17,7 @@ import { Composer } from './Composer';
 import { resetRecentEmojiCache } from './recentEmoji';
 import { useVoiceMessage, type SendVoice } from '../../hooks/useVoiceMessage';
 import type { PendingUpload } from '../../types';
+import { bot } from './assistantsFixtures';
 
 /** Drives the `(hover: none)` query the composer uses to tell phone from desktop. */
 function setPointer(isPhone: boolean) {
@@ -877,5 +878,41 @@ describe('replying', () => {
     await userEvent.type(screen.getByLabelText('Message'), '{Escape}');
 
     expect(onCancelReply).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('mentioning an assistant', () => {
+  const bots = [bot(), bot({ id: 'b2', name: 'Bubu', color: '#0369a1', mine: false, canManage: false })];
+
+  it('offers the assistants while an @ is being typed, and fills in the one tapped', async () => {
+    const onSend = vi.fn();
+    render(<Composer onSend={onSend} onTyping={() => {}} bots={bots} />);
+
+    await userEvent.type(screen.getByLabelText('Message'), 'hey @tu');
+    expect(screen.getByRole('option', { name: '@Tumbi' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: '@Bubu' })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('option', { name: '@Tumbi' }));
+    expect(screen.getByLabelText('Message')).toHaveValue('hey @Tumbi ');
+    expect(screen.queryByRole('option')).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('Message'), 'dinner?');
+    await userEvent.click(screen.getByLabelText('Send'));
+    expect(onSend).toHaveBeenCalledWith('hey @Tumbi dinner?');
+  });
+
+  it('offers nothing when no @ is being typed, and nothing at all without assistants', async () => {
+    const { rerender } = render(<Composer onSend={() => {}} onTyping={() => {}} bots={bots} />);
+    await userEvent.type(screen.getByLabelText('Message'), 'hello');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    rerender(<Composer onSend={() => {}} onTyping={() => {}} />);
+    await userEvent.type(screen.getByLabelText('Message'), ' @Tu');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('is not offered while editing a sent message', () => {
+    render(<Composer onSend={() => {}} onTyping={() => {}} bots={bots} editing={{ id: 'm1', body: '@T', hasMedia: false }} onSaveEdit={() => {}} onCancelEdit={() => {}} />);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 });

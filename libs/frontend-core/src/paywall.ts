@@ -27,7 +27,8 @@ interface PaymentRequiredBody {
 const METER_LABELS: Record<string, string> = {
   storageBytes: 'storage',
   trackedTickers: 'tracked tickers',
-  seats: 'group seats'
+  seats: 'group seats',
+  assistantSpend: 'assistant allowance'
 };
 
 export function isPaymentRequired(err: unknown): boolean {

@@ -14,7 +14,7 @@ import DocumentPage from '../components/DocumentPage';
 export const PRIVACY_DOC = {
   title: 'Privacy',
   intro: 'What Tumbaland stores, where it lives, and who else can see it.',
-  updated: '27 October 2026'
+  updated: '30 October 2026'
 };
 
 /** The policy itself: the /privacy page and the front page's reader both show it. */
@@ -158,6 +158,14 @@ export function PrivacyContent() {
             </td>
           </tr>
           <tr>
+            <td>Anthropic</td>
+            <td>
+              Only when someone mentions an assistant in a chat, and only once everyone in that chat has
+              turned assistants on: what is needed to write the reply. See the section on assistants in
+              a chat below.
+            </td>
+          </tr>
+          <tr>
             <td>An AI assistant, if you connect one</td>
             <td>See the section below. This one is worth reading.</td>
           </tr>
@@ -182,6 +190,29 @@ export function PrivacyContent() {
         from{' '}
         <strong>Account → API keys → Connected apps</strong>. Disconnecting stops it renewing its
         access; anything it already holds expires within an hour.
+      </p>
+
+      <h2>Assistants in a chat</h2>
+      <p>
+        People in a chat can add an assistant to it, give it a name and tell it how to talk. This is
+        off in a chat until everyone in it has turned it on, and any of them can turn it off again.
+      </p>
+      <p>
+        <strong>
+          When someone mentions an assistant, that message and the recent ones around it are sent to
+          Anthropic, who make Claude, to write the reply.
+        </strong>{' '}
+        So are the assistant&apos;s name, what it was told, and what the people in the chat asked every
+        assistant to know. If the reply involves the journal or photos, what it reads or writes there
+        goes too, including any photos it looks at. Messages that do not mention an assistant are not
+        sent. Anthropic&apos;s terms say it does not train its models on what is sent this way, and its
+        own policy governs what it does with it.
+      </p>
+      <p>
+        An assistant acts as the person who asked it, for a few minutes, and can reach the journal and
+        photos of the group but never money. The reply is kept in the chat like any other message.
+        Tumbaland also keeps a count of how much each person&apos;s assistants have used, for the
+        monthly allowance.
       </p>
 
       <h2>Getting your data out, and deleting it</h2>

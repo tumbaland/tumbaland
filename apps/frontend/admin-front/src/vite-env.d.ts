@@ -2,6 +2,8 @@
 
 interface ImportMetaEnv {
   readonly VITE_ADMIN_API_URL: string;
+  readonly VITE_CHAT_API_URL: string;
+  readonly VITE_PAYMENT_API_URL: string;
   readonly VITE_AUTH_SERVICE_URL: string;
   readonly VITE_AUTH_FRONT_URL: string;
   readonly VITE_SHELL_FRONT_URL: string;

@@ -26,16 +26,18 @@ import { isAudioType, isVisualType } from '../../services/voice';
 import { VoiceNote } from './VoiceNote';
 import { BubbleEffect } from './BubbleEffect';
 import { ReactionRow } from './ReactionRow';
+import { BotAvatar } from './BotAvatar';
 import { MemberAvatar } from './MemberAvatar';
 import { clockTime } from './clock';
 
 export interface MessageBubbleProps {
   message: ThreadMessage;
   mine: boolean;
-  /** Hidden when the message above is from the same person in the same minute. */
+  /**
+   * The name and picture above someone else's message. Hidden when the message
+   * above is from the same person in the same minute.
+   */
   showSender: boolean;
-  /** False between two people, where the side says who sent it. Defaults to true. */
-  showName?: boolean;
   /**
    * False for a message with another from the same person right after it,
    * which shows the time for both. Defaults to true. Sending, failed and
@@ -46,6 +48,12 @@ export interface MessageBubbleProps {
   senderPicture?: string | null;
   /** The sender's current name. Falls back to the one saved on the message. */
   senderName?: string;
+  /**
+   * Set when an assistant wrote it: its name and colour, from the chat's bots,
+   * or neutral ones when it has since been removed. Drawn as an assistant, with
+   * an "AI" label, so nobody mistakes it for a person.
+   */
+  bot?: { name: string; color: string } | null;
   onReact: (messageId: string, emoji: string) => void;
   onRetry: (clientId: string) => void;
   onPickEmoji: (messageId: string, anchor: HTMLElement) => void;
@@ -92,10 +100,10 @@ export function MessageBubble({
   message,
   mine,
   showSender,
-  showName = true,
   showTime = true,
   senderPicture,
   senderName,
+  bot,
   onReact,
   onRetry,
   onPickEmoji,
@@ -150,7 +158,22 @@ export function MessageBubble({
         px: 0.5
       }}
     >
-      {showSender && showName && !mine && (
+      {showSender && !mine && bot && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, ml: 0.5, mb: 0.5 }}>
+          <BotAvatar color={bot.color} size={22} />
+          <Typography variant="caption" sx={{ color: ink.muted }}>
+            {bot.name}
+          </Typography>
+          <Box
+            component="span"
+            aria-label="Assistant"
+            sx={{ bgcolor: bot.color, color: '#fff', borderRadius: 0.75, px: 0.5, fontSize: 10, fontWeight: 700, lineHeight: '15px', letterSpacing: '0.04em' }}
+          >
+            AI
+          </Box>
+        </Box>
+      )}
+      {showSender && !mine && !bot && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, ml: 0.5, mb: 0.5 }}>
           <MemberAvatar name={senderName || message.senderName || message.senderEmail} picture={senderPicture} size={22} />
           <Typography variant="caption" sx={{ color: ink.muted }}>
@@ -206,7 +229,9 @@ export function MessageBubble({
               overflow: 'hidden',
               bgcolor: jumbo ? 'transparent' : mine ? accent : chatColors.other,
               color: jumbo ? 'inherit' : mine ? '#fff' : ink.body,
-              border: jumbo || mine ? 'none' : `1px solid ${surface.sunken}`,
+              // An assistant's bubble has an edge in its own colour, so a thread with two of
+              // them and two people reads at a glance.
+              border: jumbo || mine ? 'none' : `1px solid ${bot ? `${bot.color}66` : surface.sunken}`,
               // A pending message is drawn faintly rather than with a spinner:
               // on a good connection it is confirmed before a spinner would
               // finish one rotation, and a flicker is worse than a shade.

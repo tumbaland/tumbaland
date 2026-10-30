@@ -250,6 +250,29 @@ export async function getGroupOwner(groupId: string): Promise<GroupOwner> {
   };
 }
 
+export interface GroupManagers {
+  groupId: string;
+  /** The owner's and the admins' emails, lowercase and sorted. Never an ordinary member. */
+  managers: string[];
+}
+
+/**
+ * Who may manage things that belong to the whole group, such as the assistants
+ * in its chats. Read by chat-service over the internal channel, which has no
+ * other way to learn roles: the session token carries group ids, not roles.
+ *
+ * Only active groups answer. A deleted group's chat is not somewhere anyone is
+ * managing anything.
+ */
+export async function getGroupManagers(groupId: string): Promise<GroupManagers> {
+  const group = await findActiveGroup(groupId);
+  const managers = group.members
+    .filter((m) => m.role === 'owner' || m.role === 'admin')
+    .map((m) => m.email.toLowerCase())
+    .sort();
+  return { groupId: String(group._id), managers };
+}
+
 export async function updateMemberRole(
   groupId: string,
   actingEmail: string,

@@ -16,6 +16,7 @@ import {
 import { ink } from '@tumbaland/frontend-core';
 import { appPath } from '../appBase';
 import { vizVars } from '../components/charts/colors';
+import { KeyWarning } from '../components/claude/KeyWarning';
 import { ColumnChart } from '../components/charts/ColumnChart';
 import { Empty, LoadState, PageHeader, Panel, StatTile } from '../components/ui';
 import { formatCount, formatPercent, formatShortDay, moduleLabel } from '../format';
@@ -154,6 +155,8 @@ export default function OverviewPage() {
           </ToggleButtonGroup>
         }
       />
+
+      <KeyWarning />
 
       <LoadState state={state}>
         {(overview) => (

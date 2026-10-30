@@ -6,6 +6,7 @@ import { connectDB, logger, registerShutdown, requireEnv } from '@tumbaland/back
 import app from './app';
 import { startPresenceSweep } from './services/presenceService';
 import { startCallSweep } from './services/callService';
+import { startKeyExpirySweep } from './services/assistantKeyService';
 
 // Fail fast if the JWT secret is missing — auth must never run with a default
 requireEnv('JWT_SECRET');
@@ -33,12 +34,14 @@ const start = async (): Promise<void> => {
   // on its own.
   const stopPresence = startPresenceSweep();
   const stopCalls = startCallSweep();
+  const stopKeyExpiry = startKeyExpirySweep();
   registerShutdown({
     serviceName: 'chat-service',
     server,
     onShutdown: () => {
       stopPresence();
       stopCalls();
+      stopKeyExpiry();
     }
   });
 };

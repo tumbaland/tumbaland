@@ -7,7 +7,7 @@ describe('PrivacyPage', () => {
 
     // A policy that omits one of these is inaccurate, and these are exactly the
     // services the code talks to.
-    for (const party of ['Google', 'OpenStreetMap', 'Alpha Vantage']) {
+    for (const party of ['Google', 'OpenStreetMap', 'Alpha Vantage', 'Anthropic']) {
       expect(screen.getAllByText(new RegExp(party)).length).toBeGreaterThan(0);
     }
   });
@@ -53,5 +53,24 @@ describe('PrivacyPage', () => {
     expect(screen.getByText(/Which days you opened Tumbaland/)).toBeInTheDocument();
     expect(screen.getByText(/never what you looked at/)).toBeInTheDocument();
     expect(screen.getByText(/Nothing is sent to an external analytics/)).toBeInTheDocument();
+  });
+});
+
+describe('assistants in a chat', () => {
+  it('says that a mention sends the message and its surroundings to Anthropic, and that nothing else is sent', () => {
+    render(<PrivacyPage />);
+    expect(screen.getByText(/the recent ones around it are sent to Anthropic/)).toBeInTheDocument();
+    expect(screen.getByText(/Messages that do not mention an assistant are not sent/)).toBeInTheDocument();
+  });
+
+  it('says it is off until everyone has agreed, and that it never reaches money', () => {
+    render(<PrivacyPage />);
+    expect(screen.getByText(/until everyone in it has turned it on/)).toBeInTheDocument();
+    expect(screen.getByText(/but never money/)).toBeInTheDocument();
+  });
+
+  it('writes in plain words, with no em dashes', () => {
+    const { container } = render(<PrivacyPage />);
+    expect(container.textContent).not.toContain('\u2014');
   });
 });

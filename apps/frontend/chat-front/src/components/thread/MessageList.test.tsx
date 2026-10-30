@@ -261,9 +261,19 @@ describe('grouping', () => {
       />
     );
 
-  it('names no one between two people, where the side says who wrote it', () => {
+  it('names the other person between two people too, so assistants can be told apart', () => {
     renderMessages([from(0, 'u-irja', 0)]);
-    expect(screen.queryByText('Irja')).not.toBeInTheDocument();
+    expect(screen.getByText('Irja')).toBeInTheDocument();
+  });
+
+  it('names a run of messages once, above its first', () => {
+    renderMessages([from(0, 'u-irja', 0), from(1, 'u-irja', 1)]);
+    expect(screen.getAllByText('Irja')).toHaveLength(1);
+  });
+
+  it('does not name your own messages', () => {
+    renderMessages([from(0, 'u-tom', 0)]);
+    expect(screen.queryByText('Tom')).not.toBeInTheDocument();
   });
 
   it('names the sender in a group', () => {
@@ -378,5 +388,54 @@ describe('double tap for a heart', () => {
     fireEvent.doubleClick(screen.getByText('love you').parentElement!);
 
     expect(onReact).not.toHaveBeenCalled();
+  });
+});
+
+describe('what assistants wrote', () => {
+  const botMessage = (index: number, botId: string, savedName: string): ThreadMessage => ({
+    ...message(index),
+    senderId: `bot:${botId}`,
+    senderName: savedName,
+    botId
+  });
+  const render1 = (messages: ThreadMessage[], bots?: Array<{ id: string; name: string; color: string }>) =>
+    render(
+      <MessageList
+        messages={messages}
+        currentUserId="u-tom"
+        hasOlder={false}
+        loadingOlder={false}
+        onLoadOlder={() => {}}
+        onReact={() => {}}
+        onRetry={() => {}}
+        onPickEmoji={() => {}}
+        onOpenMedia={() => {}}
+        bots={bots as never}
+        members={[{ userId: 'u-tom', email: '', name: 'Tom', joinedAt: '' }, { userId: 'u-irja', email: '', name: 'Irja', joinedAt: '' }]}
+      />
+    );
+
+  it('are labelled, and called what the assistant is called now, not what it was when it wrote', () => {
+    render1([botMessage(2, 'b1', 'Tumbi')], [{ id: 'b1', name: 'Mochi', color: '#7c3aed' }]);
+    expect(screen.getByLabelText('Assistant')).toHaveTextContent('AI');
+    expect(screen.getByText('Mochi')).toBeInTheDocument();
+    expect(screen.queryByText('Tumbi')).not.toBeInTheDocument();
+  });
+
+  it('stay in the thread, under the name they were written with, when the assistant is gone', () => {
+    render1([botMessage(2, 'b1', 'Tumbi')], []);
+    expect(screen.getByText('Tumbi')).toBeInTheDocument();
+    expect(screen.getByLabelText('Assistant')).toBeInTheDocument();
+  });
+
+  it('are still labelled before the assistants have loaded', () => {
+    render1([botMessage(2, 'b1', 'Tumbi')]);
+    expect(screen.getByLabelText('Assistant')).toBeInTheDocument();
+  });
+
+  it('are named once per run, and a person’s messages never get the label', () => {
+    render1([message(1), botMessage(2, 'b1', 'Tumbi'), botMessage(3, 'b1', 'Tumbi')], [{ id: 'b1', name: 'Tumbi', color: '#7c3aed' }]);
+    expect(screen.getAllByLabelText('Assistant')).toHaveLength(1);
+    expect(screen.getAllByText('Tumbi')).toHaveLength(1);
   });
 });

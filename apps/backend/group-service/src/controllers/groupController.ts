@@ -125,3 +125,14 @@ export const membership = async (req: Request, res: Response): Promise<void> => 
   const result = await svc.checkMembership(req.params.id as string, email);
   res.json({ success: true, ...result });
 };
+
+/**
+ * `GET /internal/groups/:id/managers`: the owner's and admins' emails.
+ *
+ * Service-to-service only, like `getOwner`, and for the same reason it is not
+ * part of `getOne`: the caller is a service asking about someone else, and the
+ * answer is two emails' worth of roles rather than a group document.
+ */
+export const getManagers = async (req: Request, res: Response): Promise<void> => {
+  res.json({ success: true, ...(await svc.getGroupManagers(req.params.id as string)) });
+};

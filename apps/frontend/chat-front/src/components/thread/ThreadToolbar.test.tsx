@@ -10,7 +10,8 @@ vi.mock('../../services/live', async (original) => ({
   isGeolocationSupported: () => true
 }));
 
-import { ThreadToolbar } from './ThreadToolbar';
+import { ThreadToolbar, assistantsSummary } from './ThreadToolbar';
+import type { AssistantsView } from '../../types';
 
 const member = (userId: string, name: string) => ({ userId, name, email: `${userId}@x`, joinedAt: '' });
 
@@ -26,6 +27,15 @@ const thread = (overrides = {}) => ({
   setAppearance: vi.fn(async () => {}),
   setPhotoAlbum: vi.fn(async () => {}),
   startCollage: vi.fn(async () => ({ collage: { id: 'k1', title: 'Trip' } }) as never),
+  assistants: null as AssistantsView | null,
+  refreshAssistants: vi.fn(),
+  assistantActions: {
+    change: vi.fn(),
+    createBot: vi.fn(),
+    updateBot: vi.fn(),
+    deleteBot: vi.fn(),
+    setCap: vi.fn()
+  } as never,
   ...overrides
 });
 
@@ -100,5 +110,83 @@ describe('ThreadToolbar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Conversation options' }));
     await userEvent.click(screen.getByRole('menuitem', { name: /Album and collage/ }));
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+});
+
+const bot = (name: string, paused = false) => ({
+  id: name,
+  name,
+  personality: '',
+  aboutOwner: '',
+  color: '#7c3aed',
+  model: 'claude-sonnet-5-5' as const,
+  modelLabel: 'Balanced',
+  paused,
+  ownerId: 'u-tom',
+  ownerName: 'Tom',
+  mine: true,
+  canManage: true
+});
+
+const view = (overrides: Partial<AssistantsView> = {}): AssistantsView => ({
+  enabled: true,
+  mine: true,
+  waitingFor: [],
+  lockedOff: false,
+  whoCanAdd: 'everyone',
+  aboutUs: '',
+  isManager: false,
+  canAdd: true,
+  bots: [],
+  presets: [],
+  colors: ['#7c3aed'],
+  models: { options: [], default: 'claude-sonnet-5-5' },
+  allowance: { limit: 5000, used: 0, percent: 0, capPercent: null, exhausted: false, resetsOn: '2026-11-01' },
+  ...overrides
+});
+
+describe('Assistants in the menu', () => {
+  it('opens the dialog, and asks for the latest as it opens', async () => {
+    const given = thread({ assistants: view() });
+    toolbar({ thread: given });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Conversation options' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /Assistants/ }));
+
+    expect(await screen.findByRole('dialog', { name: 'Assistants' })).toBeInTheDocument();
+    expect(given.refreshAssistants).toHaveBeenCalled();
+  });
+
+  it('says where things stand under its name', async () => {
+    toolbar({ thread: thread({ assistants: view({ bots: [bot('Tumbi'), bot('Bubu')] }) }) });
+    await userEvent.click(screen.getByRole('button', { name: 'Conversation options' }));
+    expect(screen.getByRole('menuitem', { name: /Assistants/ })).toHaveTextContent('Tumbi and Bubu');
+  });
+
+  it('is in the menu before it has loaded, with nothing under it', async () => {
+    toolbar();
+    await userEvent.click(screen.getByRole('button', { name: 'Conversation options' }));
+    expect(screen.getByRole('menuitem', { name: 'Assistants' })).toBeInTheDocument();
+  });
+});
+
+describe('assistantsSummary', () => {
+  it('has nothing to say before it loads', () => {
+    expect(assistantsSummary(null)).toBeUndefined();
+  });
+
+  it('says off, waiting for someone, or locked by an admin', () => {
+    expect(assistantsSummary(view({ enabled: false, mine: false }))).toBe('Off');
+    expect(assistantsSummary(view({ enabled: false, mine: true, waitingFor: ['Irja'] }))).toBe('Waiting for Irja');
+    expect(assistantsSummary(view({ enabled: false, mine: true, waitingFor: [] }))).toBe('Off');
+    expect(assistantsSummary(view({ lockedOff: true, enabled: false }))).toBe('Turned off by an admin');
+  });
+
+  it('names the assistants that are working, and counts past two', () => {
+    expect(assistantsSummary(view())).toBe('On, none added yet');
+    expect(assistantsSummary(view({ bots: [bot('Tumbi', true)] }))).toBe('On, all paused');
+    expect(assistantsSummary(view({ bots: [bot('Tumbi')] }))).toBe('Tumbi');
+    expect(assistantsSummary(view({ bots: [bot('Tumbi'), bot('Bubu', true), bot('Mochi')] }))).toBe('Tumbi and Mochi');
+    expect(assistantsSummary(view({ bots: [bot('A'), bot('B'), bot('C'), bot('D')] }))).toBe('A, B and 2 more');
   });
 });

@@ -1,7 +1,12 @@
 import { createApiClient } from '@tumbaland/frontend-core';
 import { getGlobalConfig } from '../config/ConfigProvider';
 import type {
+  Allowance,
   AlbumOption,
+  AssistantSettingsChange,
+  AssistantsView,
+  BotChange,
+  BotInput,
   Appearance,
   AlbumPlacement,
   Attachment,
@@ -74,6 +79,9 @@ function attachmentRequest(attachment: Attachment) {
     ...(durationMs != null ? { durationMs } : {})
   };
 }
+
+const assistantsPath = (conversationId: string): string =>
+  `/api/chat/conversations/${encodeURIComponent(conversationId)}/assistants`;
 
 export const chatApi = {
   async listConversations(): Promise<Conversation[]> {
@@ -174,6 +182,50 @@ export const chatApi = {
       `/api/chat/conversations/${encodeURIComponent(conversationId)}/appearance`,
       change
     );
+    return json.data;
+  },
+
+  /** The assistants in this conversation, as the caller sees them. */
+  async getAssistants(conversationId: string): Promise<AssistantsView> {
+    const json = await client.get<{ data: AssistantsView }>(assistantsPath(conversationId));
+    return json.data;
+  },
+
+  /** The caller's own switch, the shared text, and, for admins, locking and who may add. */
+  async changeAssistants(conversationId: string, change: AssistantSettingsChange): Promise<AssistantsView> {
+    const json = await client.patch<{ data: AssistantsView }>(assistantsPath(conversationId), change);
+    return json.data;
+  },
+
+  async createBot(conversationId: string, input: BotInput): Promise<AssistantsView> {
+    const json = await client.post<{ data: AssistantsView }>(`${assistantsPath(conversationId)}/bots`, input);
+    return json.data;
+  },
+
+  async updateBot(conversationId: string, botId: string, change: BotChange): Promise<AssistantsView> {
+    const json = await client.patch<{ data: AssistantsView }>(
+      `${assistantsPath(conversationId)}/bots/${encodeURIComponent(botId)}`,
+      change
+    );
+    return json.data;
+  },
+
+  async deleteBot(conversationId: string, botId: string): Promise<AssistantsView> {
+    const json = await client.delete<{ data: AssistantsView }>(
+      `${assistantsPath(conversationId)}/bots/${encodeURIComponent(botId)}`
+    );
+    return json.data;
+  },
+
+  /** The caller's monthly assistant allowance. */
+  async getAllowance(): Promise<Allowance> {
+    const json = await client.get<{ data: Allowance }>('/api/chat/assistants/me');
+    return json.data;
+  },
+
+  /** A lower cap of the caller's own, as a share of the allowance; null for none. */
+  async setAllowanceCap(capPercent: number | null): Promise<Allowance> {
+    const json = await client.put<{ data: Allowance }>('/api/chat/assistants/me', { capPercent });
     return json.data;
   },
 

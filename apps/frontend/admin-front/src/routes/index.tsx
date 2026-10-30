@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router';
 import { gutter, ProtectedRoute } from '@tumbaland/frontend-core';
 import { appPath } from '../appBase';
 import AssistantsPage from '../pages/AssistantsPage';
+import ClaudePage from '../pages/ClaudePage';
 import DeletionsPage from '../pages/DeletionsPage';
 import OverviewPage from '../pages/OverviewPage';
 import UserDetailPage from '../pages/UserDetailPage';
@@ -26,6 +27,7 @@ const AppRoutes = () => (
         <Route path="users" element={<UsersPage />} />
         <Route path="users/:id" element={<UserDetailPage />} />
         <Route path="assistants" element={<AssistantsPage />} />
+        <Route path="claude" element={<ClaudePage />} />
         <Route path="deletions" element={<DeletionsPage />} />
         {/* Absolute: a relative target in a splat route resolves under the address that did not match. */}
         <Route path="*" element={<Navigate to={appPath('/overview')} replace />} />

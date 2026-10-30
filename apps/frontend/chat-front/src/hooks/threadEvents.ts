@@ -25,7 +25,9 @@ export interface ThreadEventContext {
   setPhotoAlbum: (album: PhotoAlbum) => void;
   setAppearance: (appearance: Appearance) => void;
   setLiveShare: (userId: string, share: LiveShare | null) => void;
-  noteTyping: (conversationId: string, userId: string, name: string) => void;
+  noteTyping: (conversationId: string, userId: string, name: string, extra?: { bot?: boolean; activity?: string }) => void;
+  /** The assistants' settings or bots changed: reload what the dialog and the `@` list show. */
+  refreshAssistants: () => void;
   clearTyping: (conversationId: string, userId: string) => void;
 }
 
@@ -82,7 +84,9 @@ export function handleThreadEvent(event: ChatEvent, ctx: ThreadEventContext): vo
         photoAlbum?: PhotoAlbum;
         appearance?: Appearance;
         member?: Pick<ConversationMember, 'userId' | 'name' | 'picture'>;
+        assistants?: boolean;
       } | null;
+      if (payload?.assistants) ctx.refreshAssistants();
       if (payload?.photoAlbum) ctx.setPhotoAlbum(payload.photoAlbum);
       if (payload?.appearance) ctx.setAppearance(payload.appearance);
       const changed = payload?.member;
@@ -108,7 +112,8 @@ export function handleThreadEvent(event: ChatEvent, ctx: ThreadEventContext): vo
     case 'typing': {
       const payload = event.payload as TypingPayload;
       if (payload.userId === currentUserId) return;
-      ctx.noteTyping(current, payload.userId, payload.name);
+      if (payload.bot) ctx.noteTyping(current, payload.userId, payload.name, { bot: true, activity: payload.activity });
+      else ctx.noteTyping(current, payload.userId, payload.name);
       break;
     }
     case 'read': {

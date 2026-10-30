@@ -31,5 +31,8 @@ export {
   looksLikeApiKey,
   displayPrefix,
   isEncryptionConfigured,
-  resetEncryptionKeyCache
+  resetEncryptionKeyCache,
+  encryptSecret,
+  decryptSecret
 } from './crypto';
+export type { SealedSecret } from './crypto';

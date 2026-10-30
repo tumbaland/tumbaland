@@ -4,6 +4,7 @@ import * as ctrl from '../controllers/chatController';
 import * as calls from '../controllers/callController';
 import * as live from '../controllers/liveController';
 import * as places from '../controllers/placeController';
+import * as assistants from '../controllers/assistantController';
 import { caller } from '../services/accessService';
 import { touch as touchPresence } from '../services/presenceService';
 import {
@@ -25,7 +26,11 @@ import {
   liveStartSchema,
   livePositionSchema,
   liveWatchSchema,
-  savedPlaceSchema
+  savedPlaceSchema,
+  assistantSettingsSchema,
+  assistantPreferenceSchema,
+  createBotSchema,
+  updateBotSchema
 } from '../validation/schemas';
 
 const router = Router();
@@ -153,6 +158,15 @@ router.delete('/conversations/:id/messages/:messageId/album', ctrl.removeFromAlb
 // the permission check, the quota gate and the thumbnail pass through here.
 router.post('/conversations/:id/attachments/upload-url', validate(uploadUrlSchema), ctrl.attachmentUploadUrl);
 router.post('/conversations/:id/attachments/thumbnail', validate(thumbnailSchema), ctrl.attachmentThumbnail);
+
+// Assistants: the bots people add to a chat, and everyone's say over them.
+router.get('/conversations/:id/assistants', assistants.getAssistants);
+router.patch('/conversations/:id/assistants', validate(assistantSettingsSchema), assistants.patchAssistants);
+router.post('/conversations/:id/assistants/bots', validate(createBotSchema), assistants.addBot);
+router.patch('/conversations/:id/assistants/bots/:botId', validate(updateBotSchema), assistants.patchBot);
+router.delete('/conversations/:id/assistants/bots/:botId', assistants.removeBot);
+router.get('/assistants/me', assistants.myAllowance);
+router.put('/assistants/me', validate(assistantPreferenceSchema), assistants.setMyCap);
 
 router.post('/conversations/:id/read', validate(markReadSchema), ctrl.markRead);
 router.post('/conversations/:id/typing', typingLimiter, ctrl.typing);

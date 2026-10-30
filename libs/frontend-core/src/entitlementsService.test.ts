@@ -8,7 +8,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 const limits = {
-  meters: { storageBytes: 1024, aiJobs: 25, trackedTickers: 3, seats: 1 },
+  meters: { storageBytes: 1024, aiJobs: 25, trackedTickers: 3, seats: 1, assistantSpend: 5000 },
   features: { cleanExport: false },
   retentionDays: 90
 };

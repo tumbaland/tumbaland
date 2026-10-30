@@ -26,6 +26,8 @@ export interface MessageView {
   effect: MessageEffect | null;
   collage: ICollageCard | null;
   plan: IPlanCard | null;
+  /** The assistant that wrote it, if one did. */
+  botId: string | null;
   reactions: Array<{ userId: string; name: string; emoji: string; at: Date }>;
   clientId: string;
   editedAt: Date | null;
@@ -54,6 +56,7 @@ export function toView(document: IMessage): MessageView {
     effect: message.deletedAt ? null : (message.effect ?? null),
     collage: message.deletedAt ? null : (message.collage ?? null),
     plan: message.deletedAt ? null : (message.plan ?? null),
+    botId: message.botId ?? null,
     reactions: message.deletedAt ? [] : message.reactions,
     clientId: message.clientId,
     editedAt: message.editedAt ?? null,

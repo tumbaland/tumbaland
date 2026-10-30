@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { act, renderHook } from '@testing-library/react';
-import { TYPING_TIMEOUT_MS, namesTyping, useTypingTracker } from './useTypingTracker';
+import { TYPING_TIMEOUT_MS, assistantsWorking, namesTyping, useTypingTracker } from './useTypingTracker';
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -20,6 +20,39 @@ describe('namesTyping', () => {
   it('lists nobody for a conversation nobody is typing in, or none at all', () => {
     expect(namesTyping(map, 'c2')).toEqual([]);
     expect(namesTyping(map, undefined)).toEqual([]);
+  });
+});
+
+describe('assistants at work', () => {
+  const map = {
+    c1: {
+      u1: { name: 'Irja', at: 1 },
+      'bot:b1': { name: 'Tumbi', at: 2, bot: true, activity: 'making a collage' },
+      'bot:b2': { name: 'Bubu', at: 3, bot: true }
+    }
+  };
+
+  it('are listed apart from the people, who are all the header and the list ever name', () => {
+    expect(namesTyping(map, 'c1')).toEqual(['Irja']);
+    expect(assistantsWorking(map, 'c1')).toEqual([
+      { name: 'Tumbi', activity: 'making a collage' },
+      { name: 'Bubu', activity: undefined }
+    ]);
+  });
+
+  it('are nobody in a conversation with none, or with none open', () => {
+    expect(assistantsWorking(map, 'c2')).toEqual([]);
+    expect(assistantsWorking(map, undefined)).toEqual([]);
+  });
+
+  it('are noted with what they are doing, and expire like anyone else', () => {
+    const { result } = renderHook(() => useTypingTracker());
+    act(() => result.current.note('c1', 'bot:b1', 'Tumbi', { bot: true, activity: 'planning' }));
+    expect(assistantsWorking(result.current.typing, 'c1')).toEqual([{ name: 'Tumbi', activity: 'planning' }]);
+    act(() => {
+      vi.advanceTimersByTime(TYPING_TIMEOUT_MS + 1500);
+    });
+    expect(assistantsWorking(result.current.typing, 'c1')).toEqual([]);
   });
 });
 

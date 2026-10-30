@@ -1,4 +1,5 @@
 import {
+  ENTITLEMENT_CATALOG,
   DEFAULT_PLAN_LIMITS,
   FALLBACK_PLAN,
   FEATURE_KEYS,
@@ -157,5 +158,23 @@ describe('key registry', () => {
       expect(typeof limits.retentionDays).toBe(`number`);
       expect(code).toBeTruthy();
     }
+  });
+});
+
+describe('assistantSpend', () => {
+  it('resets each month, because an allowance that never refilled would just be a cap on a lifetime', () => {
+    expect(meterPeriod('assistantSpend')).toBe('MONTH');
+  });
+
+  it('is described in the catalog, so the admin plan form shows it without a frontend change', () => {
+    const entry = ENTITLEMENT_CATALOG.meters.find((meter) => meter.key === 'assistantSpend');
+    expect(entry?.unit).toBe('count');
+    expect(entry?.description).toMatch(/ten-thousandth of a dollar/);
+  });
+
+  it('gives each paid-for plan more than free, and the staff plan none of the limit', () => {
+    const { free, support, staff } = DEFAULT_PLAN_LIMITS;
+    expect(support!.meters.assistantSpend).toBeGreaterThan(free!.meters.assistantSpend);
+    expect(staff!.meters.assistantSpend).toBe(UNLIMITED);
   });
 });

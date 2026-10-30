@@ -507,3 +507,43 @@ describe('places', () => {
     expect(sent(fetchMock, 2)).toMatchObject({ path: '/api/chat/conversations/c1/places/p-home', method: 'DELETE' });
   });
 });
+
+describe('assistants', () => {
+  const view = { enabled: true };
+
+  it('reads the conversation\u2019s assistants', async () => {
+    const fetchMock = reply({ data: view });
+    expect(await chatApi.getAssistants('c 1')).toEqual(view);
+    expect(sent(fetchMock)).toMatchObject({ path: '/api/chat/conversations/c%201/assistants', method: 'GET' });
+  });
+
+  it('changes the settings, and answers with the new view', async () => {
+    const fetchMock = reply({ data: view });
+    await chatApi.changeAssistants('c1', { enabled: true, aboutUs: 'We live in Tallinn.' });
+    expect(sent(fetchMock)).toMatchObject({
+      path: '/api/chat/conversations/c1/assistants',
+      method: 'PATCH',
+      body: { enabled: true, aboutUs: 'We live in Tallinn.' }
+    });
+  });
+
+  it('adds, changes and removes a bot', async () => {
+    const fetchMock = reply({ data: view });
+    await chatApi.createBot('c1', { name: 'Tumbi' });
+    await chatApi.updateBot('c1', 'b/1', { paused: true });
+    await chatApi.deleteBot('c1', 'b/1');
+    expect(sent(fetchMock, 0)).toMatchObject({ path: '/api/chat/conversations/c1/assistants/bots', method: 'POST', body: { name: 'Tumbi' } });
+    expect(sent(fetchMock, 1)).toMatchObject({ path: '/api/chat/conversations/c1/assistants/bots/b%2F1', method: 'PATCH', body: { paused: true } });
+    expect(sent(fetchMock, 2)).toMatchObject({ path: '/api/chat/conversations/c1/assistants/bots/b%2F1', method: 'DELETE' });
+  });
+
+  it('reads the allowance, and sets or clears a cap', async () => {
+    const fetchMock = reply({ data: { used: 1 } });
+    expect(await chatApi.getAllowance()).toEqual({ used: 1 });
+    await chatApi.setAllowanceCap(50);
+    await chatApi.setAllowanceCap(null);
+    expect(sent(fetchMock, 0)).toMatchObject({ path: '/api/chat/assistants/me', method: 'GET' });
+    expect(sent(fetchMock, 1)).toMatchObject({ path: '/api/chat/assistants/me', method: 'PUT', body: { capPercent: 50 } });
+    expect(sent(fetchMock, 2).body).toEqual({ capPercent: null });
+  });
+});

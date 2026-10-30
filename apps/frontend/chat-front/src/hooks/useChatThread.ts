@@ -3,10 +3,11 @@ import { logger } from '@tumbaland/frontend-core';
 import { chatApi } from '../services/chatApi';
 import { initialThreadState, lastStoredMessage, threadReducer } from './threadReducer';
 import { useChatStream, type ConnectionState } from './useChatStream';
-import { namesTyping, useTypingTracker } from './useTypingTracker';
+import { assistantsWorking, namesTyping, useTypingTracker, type AssistantAtWork } from './useTypingTracker';
 import { handleThreadEvent } from './threadEvents';
 import { useMarkRead } from './useMarkRead';
 import { useThreadActions } from './useThreadActions';
+import { useThreadAssistants } from './useThreadAssistants';
 import { useThreadLive } from './useThreadLive';
 import { useThreadPaging } from './useThreadPaging';
 import { useThreadSend } from './useThreadSend';
@@ -15,6 +16,7 @@ import type {
   ChatEvent,
   ConversationMember,
   AlbumPlacement,
+  AssistantsView,
   Appearance,
   LiveShare,
   Message,
@@ -40,6 +42,12 @@ export interface UseChatThreadResult {
   error: string | null;
   connection: ConnectionState;
   typingNames: string[];
+  /** Assistants answering right now, and what each is doing. */
+  assistantsWorking: AssistantAtWork[];
+  /** The assistants and bots here, as the viewer sees them; null until loaded. */
+  assistants: AssistantsView | null;
+  refreshAssistants: () => void;
+  assistantActions: ReturnType<typeof useThreadAssistants>['assistantActions'];
   /** Everyone who has opened the conversation, with their pictures. */
   members: ConversationMember[];
   /** How far each of the others has read, by user id. Never includes the caller. */
@@ -99,6 +107,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     conversationRef.current = conversationId;
   });
   const { live, setLiveShare, refreshLive } = useThreadLive(conversationId, conversationRef);
+  const { assistants, refreshAssistants, assistantActions } = useThreadAssistants(conversationId, conversationRef);
   const lastTypingSent = useRef(0);
 
   const load = useCallback(async () => {
@@ -127,6 +136,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
       .catch((error: Error) => logger.warn('Could not load conversation details', { error: error.message }));
 
     refreshLive();
+    refreshAssistants();
 
     try {
       const page = await chatApi.listMessages(conversationId, { limit: 50 });
@@ -134,7 +144,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     } catch (error) {
       dispatch({ type: 'failed', error: (error as Error).message });
     }
-  }, [conversationId, currentUserId, refreshLive]);
+  }, [conversationId, currentUserId, refreshLive, refreshAssistants]);
 
   // Another thread's markers and pictures must not show while this one loads.
   useEffect(() => {
@@ -171,9 +181,10 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
         setAppearance: setAppearanceState,
         setLiveShare,
         noteTyping,
-        clearTyping
+        clearTyping,
+        refreshAssistants
       }),
-    [currentUserId, noteTyping, clearTyping, setLiveShare]
+    [currentUserId, noteTyping, clearTyping, setLiveShare, refreshAssistants]
   );
 
   useChatStream({ onEvent, onResync: load, onStateChange: setConnection });
@@ -194,6 +205,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   }, [conversationId]);
 
   const typingNames = useMemo(() => namesTyping(typing, conversationId), [typing, conversationId]);
+  const working = useMemo(() => assistantsWorking(typing, conversationId), [typing, conversationId]);
 
   return {
     messages: state.messages,
@@ -203,6 +215,10 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     error: state.error,
     connection,
     typingNames,
+    assistantsWorking: working,
+    assistants,
+    refreshAssistants,
+    assistantActions,
     members,
     reads,
     presence,

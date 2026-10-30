@@ -19,6 +19,7 @@ import { listAlbums as listGroupAlbums } from '../services/albumClient';
 import * as photoAlbums from '../services/photoAlbumService';
 import * as collages from '../services/collageService';
 import { setAppearance as changeAppearance, type AppearanceChange } from '../services/appearanceService';
+import { triggerAssistants } from '../services/assistantReplyService';
 
 /** The list with who is online, for the dots on its avatars. Never the caller. */
 async function withPresence<T extends { members: Array<{ userId: string }> }>(
@@ -118,6 +119,9 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
   const conversation = await requireConversation(person, req.params.id as string);
 
   const { message, created } = await messages.sendMessage(person, conversation, req.body);
+
+  // A retry of a message that is already stored must not wake a bot a second time.
+  if (created) triggerAssistants(person, conversation, message);
 
   // A retry answers 200 with the message that was already stored. 201 would
   // claim a second message exists; an error would tell the user a delivered

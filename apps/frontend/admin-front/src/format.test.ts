@@ -9,6 +9,7 @@ import {
   formatDateTime,
   formatDay,
   formatLimit,
+  formatMoney,
   formatPercent,
   formatShortDay,
   moduleLabel,
@@ -108,5 +109,19 @@ describe('names', () => {
     expect(countryName(null)).toBeNull();
     expect(countryName('EE')).toMatch(/Estonia/);
     expect(countryName('not a code!')).toBe('not a code!');
+  });
+});
+
+describe('formatMoney', () => {
+  it('writes the meter\u2019s units as dollars', () => {
+    expect(formatMoney(10_000)).toBe('$1.00');
+    expect(formatMoney(5_400)).toBe('$0.54');
+    expect(formatMoney(0)).toBe('$0.00');
+  });
+
+  it('shows a cost under a cent in four places, so one cheap reply is not zero', () => {
+    expect(formatMoney(20)).toBe('$0.0020');
+    expect(formatMoney(99)).toBe('$0.0099');
+    expect(formatMoney(100)).toBe('$0.01');
   });
 });

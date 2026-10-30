@@ -16,7 +16,8 @@ const api = {
   removeFromAlbum: vi.fn(),
   placeInAlbum: vi.fn(),
   sendTyping: vi.fn(),
-  listLive: vi.fn()
+  listLive: vi.fn(),
+  getAssistants: vi.fn()
 };
 let streamHandlers: { onEvent: (event: ChatEvent) => void; onResync: () => void; onStateChange: (s: string) => void };
 const warn = vi.fn();
@@ -96,6 +97,7 @@ beforeEach(() => {
   api.markRead.mockResolvedValue(undefined);
   api.sendTyping.mockResolvedValue(undefined);
   api.listLive.mockResolvedValue([]);
+  api.getAssistants.mockResolvedValue(null);
 });
 
 describe('opening a conversation', () => {

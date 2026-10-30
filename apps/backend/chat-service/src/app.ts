@@ -9,6 +9,7 @@ import {
   metricsHandler
 } from '@tumbaland/backend-core';
 import chatRoutes from './routes/chatRoutes';
+import assistantAdminRoutes from './routes/assistantAdminRoutes';
 import internalRoutes from './routes/internalRoutes';
 import { stream } from './controllers/streamController';
 import { healthCheck } from './controllers/healthController';
@@ -70,6 +71,8 @@ app.use(
     keyGenerator: (req) => `${req.user?.id ?? ''}@${ipKeyGenerator(req.ip ?? '')}`
   })
 );
+// Before the chat routes, which would otherwise read `admin` as a conversation id.
+app.use('/api/chat/admin', assistantAdminRoutes);
 app.use('/api/chat', chatRoutes);
 
 // Error handler

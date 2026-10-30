@@ -81,3 +81,21 @@ describe('GET /internal/groups/:id/owner', () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe('GET /internal/groups/:id/managers', () => {
+  beforeAll(() => {
+    process.env.INTERNAL_SERVICE_TOKEN = 'test-internal-token';
+  });
+
+  it('rejects a request with no internal token', async () => {
+    const res = await request(app).get('/internal/groups/group-1/managers');
+
+    expect(res.status).toBe(401);
+  });
+
+  it('does not accept a user JWT in place of the service token', async () => {
+    const res = await request(app).get('/internal/groups/group-1/managers').set('Authorization', 'Bearer whatever');
+
+    expect(res.status).toBe(401);
+  });
+});

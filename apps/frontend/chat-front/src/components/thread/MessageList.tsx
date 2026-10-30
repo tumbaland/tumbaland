@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { keyframes } from '@mui/material/styles';
 import { brand, ink } from '@tumbaland/frontend-core';
-import type { ConversationMember, ReadReceipt, ThreadMessage } from '../../types';
+import type { Bot, ConversationMember, ReadReceipt, ThreadMessage } from '../../types';
 import { CollageCard } from './CollageCard';
 import { ReminderCard } from './ReminderCard';
 import { DaySeparator } from './DaySeparator';
@@ -43,6 +43,8 @@ export interface MessageListProps {
   accent?: string;
   /** For senders' pictures and the "seen" markers. */
   members?: ConversationMember[];
+  /** The chat's assistants, so what they wrote is drawn in their colour and labelled. */
+  bots?: Bot[];
   /** How far each of the others has read. */
   reads?: Record<string, ReadReceipt>;
   /**
@@ -53,6 +55,9 @@ export interface MessageListProps {
 }
 
 const NO_MEMBERS: ConversationMember[] = [];
+const NO_BOTS: Bot[] = [];
+/** An assistant that has been removed: its messages stay, in a neutral grey that reads on any theme. */
+const GONE_BOT_COLOR = '#6b7280';
 const NO_READS: Record<string, ReadReceipt> = {};
 
 /** How close to the bottom still counts as "following the conversation". */
@@ -121,6 +126,7 @@ export function MessageList({
   onOpenPlan,
   accent,
   members = NO_MEMBERS,
+  bots = NO_BOTS,
   onReply,
   onOpenQuote,
   reads = NO_READS,
@@ -163,9 +169,13 @@ export function MessageList({
   // name changed on the account page shows on old messages too.
   const names = useMemo(() => new Map(members.map((member) => [member.userId, member.name])), [members]);
   const seen = useMemo(() => placeSeenMarkers(messages, reads, members), [messages, reads, members]);
-  // Between two people, the side a bubble is on already says whose it is, and
-  // the header names the other one.
-  const direct = members.length <= 2;
+  // What an assistant is called and coloured now, not when it wrote: a rename shows on its old messages too.
+  const botsById = useMemo(() => new Map(bots.map((bot) => [bot.id, bot])), [bots]);
+  const botOf = (message: ThreadMessage): { name: string; color: string } | null => {
+    if (!message.botId) return null;
+    const bot = botsById.get(message.botId);
+    return bot ? { name: bot.name, color: bot.color } : { name: message.senderName, color: GONE_BOT_COLOR };
+  };
 
   /**
    * A double-tapped message gets a heart. Only ever adds one: a reaction
@@ -425,7 +435,6 @@ export function MessageList({
                   message={message}
                   mine={message.senderId === currentUserId}
                   showSender={showSender}
-                  showName={!direct}
                   showTime={showTime}
                   onReact={onReact}
                   onRetry={onRetry}
@@ -440,6 +449,7 @@ export function MessageList({
                   onLove={love}
                   senderPicture={pictures.get(message.senderId)}
                   senderName={names.get(message.senderId)}
+                  bot={botOf(message)}
                 />
                 {seen.has(message.id) && <SeenMarker seers={seen.get(message.id)!} />}
               </Box>

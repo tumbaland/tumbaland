@@ -10,6 +10,11 @@ import { Message } from '../models/Message';
 import { ReadState } from '../models/ReadState';
 import { Presence } from '../models/Presence';
 import { Call } from '../models/Call';
+import { ChatBot } from '../models/ChatBot';
+import { AssistantUsage } from '../models/AssistantUsage';
+import { AssistantPreference } from '../models/AssistantPreference';
+import { AssistantProviderKey } from '../models/AssistantProviderKey';
+import { ApiKey, AuditEvent, UsageMeter } from '@tumbaland/backend-core';
 import { resetCallTimers } from '../services/callService';
 import { clearPresence } from '../services/presenceService';
 import { clearSubscribers } from '../services/streamHub';
@@ -87,6 +92,8 @@ export function setupChatIntegration(): void {
     await ReadState.syncIndexes();
     await Presence.syncIndexes();
     await Call.syncIndexes();
+    await ChatBot.syncIndexes();
+    await AssistantProviderKey.syncIndexes();
   }, 60_000);
 
   afterAll(async () => {
@@ -104,7 +111,14 @@ export function setupChatIntegration(): void {
       Conversation.deleteMany({}),
       Message.deleteMany({}),
       ReadState.deleteMany({}),
-      Presence.deleteMany({})
+      Presence.deleteMany({}),
+      ChatBot.deleteMany({}),
+      AssistantUsage.deleteMany({}),
+      AssistantPreference.deleteMany({}),
+      AssistantProviderKey.deleteMany({}),
+      ApiKey.deleteMany({}),
+      AuditEvent.deleteMany({}),
+      UsageMeter.deleteMany({})
     ]);
   });
 }

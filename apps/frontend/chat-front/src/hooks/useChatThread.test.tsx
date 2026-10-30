@@ -5,6 +5,7 @@ import type { ChatEvent, LiveShare, Message } from '../types';
 const listMessages = vi.fn();
 const getConversation = vi.fn();
 const listLive = vi.fn();
+const getAssistants = vi.fn();
 let streamEvent: ((event: ChatEvent) => void) | undefined;
 
 vi.mock('../services/chatApi', () => ({
@@ -12,6 +13,7 @@ vi.mock('../services/chatApi', () => ({
     listMessages: (...args: unknown[]) => listMessages(...args),
     getConversation: (...args: unknown[]) => getConversation(...args),
     listLive: (...args: unknown[]) => listLive(...args),
+    getAssistants: (...args: unknown[]) => getAssistants(...args),
     markRead: () => Promise.resolve()
   },
   newClientId: () => 'client-x'
@@ -58,6 +60,7 @@ beforeEach(() => {
   listMessages.mockReset();
   getConversation.mockReset().mockReturnValue(new Promise(() => {}));
   listLive.mockReset().mockResolvedValue([]);
+  getAssistants.mockReset().mockResolvedValue(null);
 });
 
 describe('member renames', () => {
@@ -243,5 +246,40 @@ describe('sharing where one is, live', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('assistants', () => {
+  it('loads the assistants with the thread, and again whenever the stream says they changed', async () => {
+    listMessages.mockResolvedValueOnce(page(2, 1, null));
+    getAssistants.mockResolvedValue({ enabled: true, bots: [] });
+    const { result } = await openThread();
+
+    await waitFor(() => expect(result.current.assistants).toEqual({ enabled: true, bots: [] }));
+    expect(getAssistants).toHaveBeenCalledTimes(1);
+
+    getAssistants.mockResolvedValue({ enabled: false, bots: [] });
+    act(() => streamEvent?.({ type: 'conversation.updated', conversationId: 'c1', at: 1, payload: { assistants: true } }));
+    await waitFor(() => expect(result.current.assistants).toEqual({ enabled: false, bots: [] }));
+    expect(getAssistants).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows an assistant at work apart from people typing, and stops when its message arrives', async () => {
+    listMessages.mockResolvedValueOnce(page(2, 1, null));
+    const { result } = await openThread();
+
+    act(() =>
+      streamEvent?.({
+        type: 'typing',
+        conversationId: 'c1',
+        at: 1,
+        payload: { userId: 'bot:b1', name: 'Tumbi', bot: true, activity: 'making a collage' }
+      })
+    );
+    expect(result.current.assistantsWorking).toEqual([{ name: 'Tumbi', activity: 'making a collage' }]);
+    expect(result.current.typingNames).toEqual([]);
+
+    act(() => streamEvent?.({ type: 'message.created', conversationId: 'c1', at: 2, payload: { ...message(9), senderId: 'bot:b1', botId: 'b1' } }));
+    expect(result.current.assistantsWorking).toEqual([]);
   });
 });

@@ -507,3 +507,28 @@ describe('getGroupOwner', () => {
     await expect(groupService.getGroupOwner('group-1')).rejects.toMatchObject({ name: 'NotFoundError' });
   });
 });
+
+describe('getGroupManagers', () => {
+  it('lists the owner and the admins, and never an ordinary member', async () => {
+    mockedFindOne.mockResolvedValue(
+      makeGroup({
+        members: [
+          { email: 'Zed@example.com', role: 'admin' },
+          { email: 'member@example.com', role: 'member' },
+          { email: 'owner@example.com', role: 'owner' }
+        ]
+      })
+    );
+
+    expect(await groupService.getGroupManagers('group-1')).toEqual({
+      groupId: 'group-1',
+      managers: ['owner@example.com', 'zed@example.com']
+    });
+  });
+
+  it('rejects a group that is gone, so a deleted group has no one managing it', async () => {
+    mockedFindOne.mockResolvedValue(null);
+
+    await expect(groupService.getGroupManagers('nope')).rejects.toMatchObject({ name: 'NotFoundError' });
+  });
+});

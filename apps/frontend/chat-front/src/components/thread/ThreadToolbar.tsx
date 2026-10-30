@@ -1,16 +1,28 @@
 import { useCallback, useState } from 'react';
 import PhotoAlbumOutlinedIcon from '@mui/icons-material/PhotoAlbumOutlined';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import { ThreadHeader } from './ThreadHeader';
 import { ThemePicker } from './ThemePicker';
 import { AlbumPicker } from './AlbumPicker';
 import { AlbumCollageDialog } from './AlbumCollageDialog';
+import { AssistantsDialog } from './AssistantsDialog';
 import { chatColors, themeById } from './themes';
 import { chatApi } from '../../services/chatApi';
 import { requestCall } from '../../services/callBus';
 import { isGeolocationSupported } from '../../services/live';
 import type { UseChatThreadResult } from '../../hooks/useChatThread';
+
+/** Under "Assistants" in the menu: where things stand, in a few words. */
+export function assistantsSummary(view: UseChatThreadResult['assistants']): string | undefined {
+  if (!view) return undefined;
+  if (view.lockedOff) return 'Turned off by an admin';
+  if (!view.enabled) return view.mine && view.waitingFor.length > 0 ? `Waiting for ${view.waitingFor.join(' and ')}` : 'Off';
+  const active = view.bots.filter((bot) => !bot.paused).map((bot) => bot.name);
+  if (active.length === 0) return view.bots.length === 0 ? 'On, none added yet' : 'On, all paused';
+  return active.length <= 2 ? active.join(' and ') : `${active.slice(0, 2).join(', ')} and ${active.length - 2} more`;
+}
 
 interface Props {
   conversationId: string | undefined;
@@ -28,6 +40,9 @@ interface Props {
     | 'setAppearance'
     | 'setPhotoAlbum'
     | 'startCollage'
+    | 'assistants'
+    | 'refreshAssistants'
+    | 'assistantActions'
   >;
   onBack?: () => void;
   onSearch: () => void;
@@ -57,6 +72,7 @@ export function ThreadToolbar({
 }: Props) {
   const [choosingTheme, setChoosingTheme] = useState(false);
   const [albumAndCollage, setAlbumAndCollage] = useState(false);
+  const [assistantsOpen, setAssistantsOpen] = useState(false);
   const loadAlbums = useCallback(
     () => (conversationId ? chatApi.listAlbums(conversationId) : Promise.resolve([])),
     [conversationId]
@@ -123,8 +139,21 @@ export function ThreadToolbar({
             secondary: thread.appearance.backgroundFileId ? `${theme.name}, with a photo` : theme.name,
             icon: <PaletteOutlinedIcon fontSize="small" />,
             onClick: () => setChoosingTheme(true)
+          },
+          {
+            label: 'Assistants',
+            secondary: assistantsSummary(thread.assistants),
+            icon: <AutoAwesomeOutlinedIcon fontSize="small" />,
+            onClick: () => setAssistantsOpen(true)
           }
         ]}
+      />
+      <AssistantsDialog
+        open={assistantsOpen}
+        onClose={() => setAssistantsOpen(false)}
+        view={thread.assistants}
+        onRefresh={thread.refreshAssistants}
+        actions={thread.assistantActions}
       />
       <ThemePicker
         open={choosingTheme}

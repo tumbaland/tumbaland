@@ -965,3 +965,65 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
         - internalAuth: []
+
+  /internal/groups/{id}/managers:
+    get:
+      tags: [Internal]
+      summary: List who may manage a group's shared things
+      description: |
+        Returns the emails of the members holding the `owner` or `admin` role.
+        chat-service asks this to decide who may manage the assistants in a
+        group's chats; the session token carries group ids but not roles.
+
+        Only active groups answer: a soft-deleted group is a 404.
+
+        Service-to-service only: the internal token is verified here rather
+        than merely being present, and no user JWT is accepted.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Group ID
+      responses:
+        '200':
+          description: Managers listed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  groupId:
+                    type: string
+                    example: "689a8219e15515e8f6539ad2"
+                  managers:
+                    type: array
+                    description: Lowercase emails, sorted. Never an ordinary member.
+                    items:
+                      type: string
+                      format: email
+                    example: ["admin@example.com", "owner@example.com"]
+        '401':
+          description: Missing or invalid internal service token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Group not found or deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - internalAuth: []

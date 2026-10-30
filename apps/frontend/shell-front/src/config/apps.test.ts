@@ -67,7 +67,7 @@ describe('the administration entry', () => {
 
   it('has the sections the admin app draws', () => {
     const admin = USER_APPS.find((app) => app.name === 'Admin')!;
-    expect(admin.menu?.map((item) => item.label)).toEqual(['Overview', 'Users', 'Assistants', 'Deletions']);
+    expect(admin.menu?.map((item) => item.label)).toEqual(['Overview', 'Users', 'Assistants', 'Claude', 'Deletions']);
   });
 });
 

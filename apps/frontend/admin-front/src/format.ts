@@ -101,3 +101,13 @@ export function countryName(code: string | null): string | null {
     return code;
   }
 }
+
+/**
+ * An assistant cost, from the meter's units (ten-thousandths of a dollar) to
+ * dollars. Four decimals under a cent, because one cheap reply is a fraction of
+ * one and "$0.00" would hide it; two otherwise.
+ */
+export function formatMoney(units: number): string {
+  const dollars = units / 10_000;
+  return `$${dollars.toFixed(units > 0 && units < 100 ? 4 : 2)}`;
+}

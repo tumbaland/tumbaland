@@ -35,11 +35,11 @@ const entitlements = {
   planCode: 'free',
   status: null,
   limits: {
-    meters: { storageBytes: 1024 * 1024 * 1024, aiJobs: 25, trackedTickers: 3, seats: 1 },
+    meters: { storageBytes: 1024 * 1024 * 1024, aiJobs: 25, trackedTickers: 3, seats: 1, assistantSpend: 5000 },
     features: { cleanExport: false },
     retentionDays: 90
   },
-  usage: { storageBytes: 1024, aiJobs: 0, trackedTickers: 0, seats: 1 }
+  usage: { storageBytes: 1024, aiJobs: 0, trackedTickers: 0, seats: 1, assistantSpend: 0 }
 };
 
 const statistics = {

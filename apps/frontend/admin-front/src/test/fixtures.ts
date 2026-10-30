@@ -1,4 +1,4 @@
-import type { Assistants, DeletionEntry, Deletions, Overview, UserDetail, UserList, UserRow } from '../types';
+import type { Assistants, ClaudeKey, ClaudeUsage, DeletionEntry, Deletions, Overview, UserDetail, UserList, UserRow } from '../types';
 
 export const overview = (overrides: Partial<Overview> = {}): Overview => ({
   generatedAt: '2026-10-27T12:00:00.000Z',
@@ -210,5 +210,42 @@ export const deletions = (overrides: Partial<Deletions> = {}): Deletions => ({
       confirmedBy: 'admin@example.com'
     })
   ],
+  ...overrides
+});
+
+export const claudeKey = (overrides: Partial<ClaudeKey> = {}): ClaudeKey => ({
+  configured: true,
+  encryptionReady: true,
+  last4: 'WXYZ',
+  expiresOn: '2027-03-01',
+  daysLeft: 120,
+  expiringSoon: false,
+  status: 'ok',
+  rejectedReason: null,
+  checkedAt: '2026-10-30T10:00:00.000Z',
+  models: { enabled: ['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5-5'], default: 'claude-sonnet-5-5' },
+  catalog: [
+    { id: 'claude-haiku-5-5', label: 'Fast', name: 'Haiku', hint: '', inputPerMTok: 0.1, outputPerMTok: 0.5 },
+    { id: 'claude-sonnet-5-5', label: 'Balanced', name: 'Sonnet', hint: '', inputPerMTok: 2, outputPerMTok: 10 },
+    { id: 'claude-opus-5-5', label: 'Best', name: 'Opus', hint: '', inputPerMTok: 4, outputPerMTok: 20 }
+  ],
+  botCounts: { 'claude-haiku-5-5': 0, 'claude-sonnet-5-5': 2, 'claude-opus-5-5': 1 },
+  setBy: 'Ada',
+  setAt: '2026-10-30T09:00:00.000Z',
+  ...overrides
+});
+
+export const claudeUsage = (overrides: Partial<ClaudeUsage> = {}): ClaudeUsage => ({
+  month: '2026-10',
+  totals: { replies: 12, failed: 1, units: 5400 },
+  byModel: [
+    { model: 'claude-opus-5-5', replies: 2, units: 4000 },
+    { model: 'claude-sonnet-5-5', replies: 10, units: 1400 }
+  ],
+  byPerson: [
+    { email: 'tom@example.com', replies: 9, units: 4800, limit: 5000, percent: 96, exhausted: false },
+    { email: 'irja@example.com', replies: 3, units: 600, limit: null, percent: null, exhausted: false }
+  ],
+  byChat: [{ conversationId: 'c1', replies: 12, units: 5400 }],
   ...overrides
 });

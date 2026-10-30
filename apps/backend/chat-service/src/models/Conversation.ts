@@ -46,6 +46,25 @@ export interface IAppearanceSetting {
   backgroundFileId?: string | null;
 }
 
+/**
+ * The conversation's assistants, as a whole: who has agreed to them, what they
+ * all know, and what the group's admins have decided.
+ *
+ * Assistants are on only when every person in the conversation has agreed and
+ * an admin has not locked them off. Each person's agreement is their own and
+ * nobody can give it for them; an admin can only take assistants away.
+ */
+export interface IAssistantsSetting {
+  /** `User._id` of everyone who has switched assistants on for themselves. */
+  enabledBy: string[];
+  /** Shared facts every assistant here should keep in mind: "we live in Tallinn". */
+  aboutUs: string;
+  /** An owner or admin of the group has turned assistants off for this conversation. */
+  lockedOff: boolean;
+  /** Who may add a bot: anyone in the conversation, or only the group's owner and admins. */
+  whoCanAdd: 'everyone' | 'admins';
+}
+
 export interface IConversation extends Document {
   _id: Types.ObjectId;
   /**
@@ -69,6 +88,7 @@ export interface IConversation extends Document {
   lastMessageSender?: string;
   photoAlbum?: IPhotoAlbumSetting;
   appearance?: IAppearanceSetting;
+  assistants?: IAssistantsSetting;
   deletedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -118,6 +138,18 @@ const ConversationSchema = new Schema<IConversation>(
         { _id: false }
       ),
       default: () => ({ theme: 'classic' })
+    },
+    assistants: {
+      type: new Schema<IAssistantsSetting>(
+        {
+          enabledBy: { type: [String], default: [] },
+          aboutUs: { type: String, default: '', maxlength: 1500 },
+          lockedOff: { type: Boolean, default: false },
+          whoCanAdd: { type: String, enum: ['everyone', 'admins'], default: 'everyone' }
+        },
+        { _id: false }
+      ),
+      default: () => ({ enabledBy: [], aboutUs: '', lockedOff: false, whoCanAdd: 'everyone' })
     },
     deletedAt: { type: Date, default: null }
   },

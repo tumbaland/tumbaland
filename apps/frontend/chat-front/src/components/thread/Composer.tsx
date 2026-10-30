@@ -19,7 +19,9 @@ import { useComposerText } from '../../hooks/useComposerText';
 import { SendButton } from './SendButton';
 import type { VoiceMessage } from '../../hooks/useVoiceMessage';
 import { isVisualType } from '../../services/voice';
-import type { MessageEffect, PendingUpload, PhotoAlbum, SendOptions } from '../../types';
+import { MentionSuggestions } from './MentionSuggestions';
+import { insertMention, mentionSuggestions } from './mentionSuggest';
+import type { Bot, MessageEffect, PendingUpload, PhotoAlbum, SendOptions } from '../../types';
 
 export interface ComposerProps {
   /**
@@ -51,6 +53,8 @@ export interface ComposerProps {
   photoAlbum?: PhotoAlbum;
   onChooseAlbum?: () => void;
   onAlbumOff?: () => void;
+  /** The assistants in this chat, offered as `@` suggestions while someone types a mention. */
+  bots?: Bot[];
   /** The send button's colour, from the conversation's theme. */
   accent?: string;
   /**
@@ -95,6 +99,7 @@ export function Composer({
   photoAlbum,
   onChooseAlbum,
   onAlbumOff,
+  bots,
   accent = brand.pinkInk,
   prefill
 }: ComposerProps) {
@@ -283,6 +288,16 @@ export function Composer({
           the message list and made the whole thread jump each time. */}
       {(!isPhone || focused || value.length > 0) && !disabled && !voiceActive && (
         <RecentEmojiRow emoji={recentEmoji} onPick={insertEmoji} />
+      )}
+
+      {!editing && !disabled && !voiceActive && bots && (
+        <MentionSuggestions
+          bots={mentionSuggestions(value, bots)}
+          onPick={(bot) => {
+            setValue(insertMention(value, bot.name));
+            inputRef.current?.focus();
+          }}
+        />
       )}
 
       {voice?.error && !voiceActive && (

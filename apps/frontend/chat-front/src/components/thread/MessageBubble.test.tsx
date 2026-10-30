@@ -41,6 +41,28 @@ const renderBubble = (
     />
   );
 
+describe('an assistant\u2019s message', () => {
+  const bot = { name: 'Tumbi', color: '#7c3aed' };
+
+  it('is named by the assistant, labelled AI, and not shown as a person', () => {
+    renderBubble({ senderId: 'bot:b1', senderName: 'Tumbi', botId: 'b1' }, { bot, senderName: 'Someone Else' });
+    expect(screen.getByText('Tumbi')).toBeInTheDocument();
+    expect(screen.getByLabelText('Assistant')).toHaveTextContent('AI');
+    expect(screen.queryByText('Someone Else')).not.toBeInTheDocument();
+  });
+
+  it('keeps a person\u2019s message free of the label', () => {
+    renderBubble();
+    expect(screen.queryByLabelText('Assistant')).not.toBeInTheDocument();
+  });
+
+  it('shows no header inside a run of its own messages, like a person', () => {
+    renderBubble({ botId: 'b1' }, { bot, showSender: false });
+    expect(screen.queryByLabelText('Assistant')).not.toBeInTheDocument();
+    expect(screen.getByText('hello')).toBeInTheDocument();
+  });
+});
+
 describe('MessageBubble', () => {
   it('shows the body', () => {
     renderBubble();

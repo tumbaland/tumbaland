@@ -11,7 +11,7 @@ import { createApiClient } from './apiClient';
  * ceilings that no service enforced. Every number below arrives from the API at
  * runtime, resolved by the same `normalizeLimits` the middleware enforces from.
  */
-export type MeterKey = 'storageBytes' | 'aiJobs' | 'trackedTickers' | 'seats';
+export type MeterKey = 'storageBytes' | 'aiJobs' | 'trackedTickers' | 'seats' | 'assistantSpend';
 
 export type FeatureKey = 'cleanExport';
 
@@ -54,7 +54,8 @@ const ZERO_USAGE: Record<MeterKey, number> = {
   storageBytes: 0,
   aiJobs: 0,
   trackedTickers: 0,
-  seats: 0
+  seats: 0,
+  assistantSpend: 0
 };
 
 /**

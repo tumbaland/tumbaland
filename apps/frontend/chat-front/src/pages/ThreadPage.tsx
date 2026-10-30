@@ -163,10 +163,11 @@ function ThreadContent({ conversationId, onBack, acceptShared }: ThreadPageProps
         onOpenPlan={(id) => navigate(`/relationship/journal?view=calendar&plan=${encodeURIComponent(id)}`)}
         accent={chatColors.bubble}
         members={thread.members}
+        bots={thread.assistants?.bots}
         reads={thread.reads}
         focus={search.focus}
       />
-      <TypingIndicator names={thread.typingNames} />
+      <TypingIndicator names={thread.typingNames} assistants={thread.assistantsWorking} />
 
       {screenEffect.playing && (
         <ScreenEffect key={screenEffect.playing.key} effect={screenEffect.playing.effect} onDone={screenEffect.done} />
@@ -177,6 +178,7 @@ function ThreadContent({ conversationId, onBack, acceptShared }: ThreadPageProps
         key={conversationId}
         {...composer.props}
         photoAlbum={thread.photoAlbum}
+        bots={thread.assistants?.bots}
         onChooseAlbum={() => setChoosingAlbum(true)}
         accent={chatColors.bubble}
       />

@@ -25,6 +25,7 @@ import ToggleOnOutlinedIcon from '@mui/icons-material/ToggleOnOutlined';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import PeopleIcon from '@mui/icons-material/People';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 import { AppConfig } from './ConfigProvider';
@@ -210,6 +211,7 @@ export const USER_APPS: AppConfigItem[] = [
       { label: 'Overview', route: '/admin/overview', icon: DashboardIcon },
       { label: 'Users', route: '/admin/users', icon: PeopleIcon },
       { label: 'Assistants', route: '/admin/assistants', icon: SmartToyIcon },
+      { label: 'Claude', route: '/admin/claude', icon: AutoAwesomeIcon },
       { label: 'Deletions', route: '/admin/deletions', icon: DeleteOutlinedIcon }
     ]
   }

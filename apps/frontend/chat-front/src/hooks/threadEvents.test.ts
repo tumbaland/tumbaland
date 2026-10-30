@@ -13,7 +13,8 @@ const ctx = (): ThreadEventContext => ({
   setAppearance: vi.fn(),
   setLiveShare: vi.fn(),
   noteTyping: vi.fn(),
-  clearTyping: vi.fn()
+  clearTyping: vi.fn(),
+  refreshAssistants: vi.fn()
 });
 
 const event = (type: string, payload: unknown, conversationId: string | undefined = 'c1'): ChatEvent =>
@@ -115,6 +116,19 @@ describe('live sharing, typing and reading', () => {
 
     handleThreadEvent(event('live.ended', { userId: 'her' }), c);
     expect(c.setLiveShare).toHaveBeenLastCalledWith('her', null);
+  });
+
+  it('notes an assistant at work, with what it is doing, apart from a person typing', () => {
+    handleThreadEvent(event('typing', { userId: 'bot:b1', name: 'Tumbi', bot: true, activity: 'making a collage' }), c);
+    expect(c.noteTyping).toHaveBeenCalledWith('c1', 'bot:b1', 'Tumbi', { bot: true, activity: 'making a collage' });
+  });
+
+  it('reloads the assistants when something about them changed, and not for other updates', () => {
+    handleThreadEvent(event('conversation.updated', { assistants: true }), c);
+    expect(c.refreshAssistants).toHaveBeenCalledTimes(1);
+    handleThreadEvent(event('conversation.updated', { appearance: { theme: 'ocean' } }), c);
+    handleThreadEvent(event('conversation.updated', null), c);
+    expect(c.refreshAssistants).toHaveBeenCalledTimes(1);
   });
 
   it('notes someone else typing, never yourself', () => {

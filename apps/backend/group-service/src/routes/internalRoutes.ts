@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireInternalServiceToken } from '@tumbaland/backend-core';
-import { getOwner } from '../controllers/groupController';
+import { getManagers, getOwner } from '../controllers/groupController';
 
 /**
  * Service-to-service surface. No user JWT is involved and no browser ever
@@ -12,5 +12,6 @@ const router = Router();
 
 router.use(requireInternalServiceToken);
 router.get('/groups/:id/owner', getOwner);
+router.get('/groups/:id/managers', getManagers);
 
 export default router;

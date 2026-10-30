@@ -31,7 +31,7 @@ const resolved = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockedResolve.mockResolvedValue(resolved);
-  mockedSnapshot.mockResolvedValue({ storageBytes: 10, aiJobs: 2, trackedTickers: 1, seats: 1 });
+  mockedSnapshot.mockResolvedValue({ storageBytes: 10, aiJobs: 2, trackedTickers: 1, seats: 1, assistantSpend: 0 });
 });
 
 describe('getEntitlementsByEmail', () => {
@@ -65,7 +65,7 @@ describe('getMyEntitlements', () => {
     expect(res.json).toHaveBeenCalledWith({
       success: true,
       ...resolved,
-      usage: { storageBytes: 10, aiJobs: 2, trackedTickers: 1, seats: 1 }
+      usage: { storageBytes: 10, aiJobs: 2, trackedTickers: 1, seats: 1, assistantSpend: 0 }
     });
   });
 });

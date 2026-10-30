@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { ApiError } from '@tumbaland/frontend-core';
-import { overview } from '../test/fixtures';
+import { claudeKey, overview } from '../test/fixtures';
 
-const api = vi.hoisted(() => ({ overview: vi.fn() }));
+const api = vi.hoisted(() => ({ overview: vi.fn(), claudeKey: vi.fn() }));
 vi.mock('../services/adminApi', () => ({ adminApi: api }));
 
 import OverviewPage from './OverviewPage';
@@ -20,6 +20,7 @@ const renderPage = () =>
 beforeEach(() => {
   vi.clearAllMocks();
   api.overview.mockResolvedValue(overview());
+  api.claudeKey.mockResolvedValue(claudeKey());
 });
 
 describe('OverviewPage', () => {
@@ -145,5 +146,45 @@ describe('OverviewPage', () => {
     await user.click(screen.getByRole('button', { name: 'Try again' }));
 
     expect(await screen.findByText('Here today')).toBeInTheDocument();
+  });
+});
+
+describe('the assistants\u2019 key on the Overview', () => {
+  it('says nothing when it is fine', async () => {
+    renderPage();
+    await screen.findByText('Here today');
+    expect(screen.queryByText(/the chat assistants use/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no longer accepting/)).not.toBeInTheDocument();
+  });
+
+  it('says so when Anthropic has stopped accepting it, with a way to the page', async () => {
+    api.claudeKey.mockResolvedValue(claudeKey({ status: 'rejected' }));
+    renderPage();
+    expect(await screen.findByText(/no longer accepting the key the chat assistants use/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open' })).toHaveAttribute('href', expect.stringMatching(/\/claude$/));
+  });
+
+  it.each([
+    [12, 'The key the chat assistants use expires in 12 days.'],
+    [1, 'The key the chat assistants use expires in 1 day.'],
+    [0, 'The key the chat assistants use expires today.'],
+    [-3, 'The key the chat assistants use is past its expiry date.']
+  ])('warns when it is close to its date (%i days)', async (daysLeft, words) => {
+    api.claudeKey.mockResolvedValue(claudeKey({ expiringSoon: true, daysLeft }));
+    renderPage();
+    expect(await screen.findByText(words)).toBeInTheDocument();
+  });
+
+  it('says nothing when there is no key, or when chat could not be asked', async () => {
+    api.claudeKey.mockResolvedValue(claudeKey({ configured: false }));
+    const { unmount } = renderPage();
+    await screen.findByText('Here today');
+    expect(screen.queryByRole('link', { name: 'Open' })).not.toBeInTheDocument();
+    unmount();
+
+    api.claudeKey.mockRejectedValue(new ApiError(500, 'down'));
+    renderPage();
+    await screen.findByText('Here today');
+    expect(screen.queryByRole('link', { name: 'Open' })).not.toBeInTheDocument();
   });
 });
