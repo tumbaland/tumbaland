@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.552](https://github.com/tumbaland/tumbaland/compare/app-v0.0.551...app-v0.0.552) (2026-10-30)
+
+### Features
+
+* add copy text message option ([436bb4e](https://github.com/tumbaland/tumbaland/commit/436bb4ef8805107b70e73aa3b9952c12270585e3))
+
 ## [0.0.551](https://github.com/tumbaland/tumbaland/compare/app-v0.0.550...app-v0.0.551) (2026-10-30)
 
 ### Features
