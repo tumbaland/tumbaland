@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.547](https://github.com/tumbaland/tumbaland/compare/app-v0.0.546...app-v0.0.547) (2026-10-30)
+
+### Features
+
+* improve chatbot mcp services ([fce8248](https://github.com/tumbaland/tumbaland/commit/fce8248ef27a07de7aba9f33c0f83ed42ba7d3e7))
+
 ## [0.0.546](https://github.com/tumbaland/tumbaland/compare/app-v0.0.545...app-v0.0.546) (2026-10-30)
 
 ### Bug Fixes
