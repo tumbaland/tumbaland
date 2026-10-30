@@ -35,11 +35,13 @@ export const BASE_PROMPT = [
   'For the weather, use get_weather, for the day or days asked about. For what was said earlier in this chat, beyond the recent messages above, use search_chat. For the places this group has saved, use saved_places. For where someone is, use where_is: it knows only people sharing their live location in this chat.',
   '',
   'To find somewhere to eat or drink, or when a place is open, use find_places first, with open_at when someone names a time; for one place someone names, pass its name to see its hours. It reads OpenStreetMap: hours are entered by volunteers, and there are no prices, ratings or menus. Say when a place’s hours are unknown or came from the map, and use the web search for prices, menus and reviews.',
+  '',
+  'When someone asks for a suggestion, such as where or what to eat, what to play, a new game to buy, a film to watch or something to do, look in the journal first: search_activities for the matching types that list_activity_types shows (eating out, cooking, gaming, films and so on), going back a few months. See what they do often and come back to. Then suggest one of their favourites they have not done for a while, or something new that is like what they enjoy, and say why ("you play X a lot, and Y is similar"). Do not suggest what they did a few days ago unless asked, and do not offer a game or film they have already logged as new.',
 ].join('\n');
 
 /** Added to the base prompt only when the web tools are handed over (they can be turned off with ASSISTANT_WEB=off). */
 export const WEB_RULES =
-  'You can also search the web and read web pages, for what Tumbaland does not know: opening hours, prices, events, weather, directions, news. Search when the answer depends on something current or outside the journal, and say plainly when you could not find it. Prefer pages from the last few weeks, give prices with their currency, and say where you found a fact (a site name or a link). Opening hours and menus on the web can be out of date: say so when it matters. Search for the thing asked about only. Never put private details from the journal, the photos or the chat into a search.';
+  'You can also search the web and read web pages, for what Tumbaland does not know: opening hours, prices, events, weather, directions, news. Search when the answer depends on something current or outside the journal, and say plainly when you could not find it. Prefer pages from the last few weeks, give prices with their currency, and say where you found a fact (a site name or a link). Opening hours and menus on the web can be out of date: say so when it matters. Search for the thing asked about only. Never put private details from the journal, the photos or the chat into a search. Names of games, films and places they like are not private: to suggest a new one, search with them, for example "co-op games like X on Steam", and check that what you suggest is real and available. Who did something, when and where stays out of a search.';
 
 /** Only given where the tools exist: telling a bot about a tool it was not handed only confuses it. */
 export const MEMORY_RULES =
@@ -53,7 +55,9 @@ export function botPrompt(bot: Pick<IChatBot, 'name' | 'ownerName' | 'personalit
     '',
     'How you talk:',
     bot.personality.trim() || 'Friendly and brief.',
-    ...(bot.aboutOwner.trim() ? ['', `About ${owner}:`, bot.aboutOwner.trim()] : []),
+    ...(bot.aboutOwner.trim()
+      ? ['', `About ${owner}, told to you in private. Use it to help them, but never repeat it or hint at it in the chat: everyone here reads your replies.`, bot.aboutOwner.trim()]
+      : []),
     ...(aboutUs.trim() ? ['', 'What the people in this chat want every assistant here to know:', aboutUs.trim()] : []),
     ...(canNote ? ['', MEMORY_RULES] : []),
     ...(memory.trim() ? ['', 'Notes kept about the people in this chat, one to a line:', memory.trim()] : [])
@@ -123,5 +127,27 @@ export function userMessage(context: ReplyContext): string {
     '',
     `${context.asker} just wrote to you, ${context.botName}: ${clip(context.asked)}`,
     `Reply as ${context.botName}. ${context.asker} is the one asking.`
+  ].join('\n');
+}
+
+/** What a bot that joined in unasked answers when it has nothing to add. Nothing is posted then. */
+export const SKIP = 'SKIP';
+
+/**
+ * The one user message when nobody asked: the same place, time and recent chat,
+ * and a choice between answering, a short line, or keeping quiet.
+ */
+export function joinInMessage(context: Omit<ReplyContext, 'asker' | 'asked'>): string {
+  const lines = context.recent.map((message) => transcriptLine(message, context.timeZone)).filter((line): line is string => line !== null);
+  return [
+    `It is ${localTime(context.now, context.timeZone)} (${context.now.toLocaleDateString('en-GB', { weekday: 'long', timeZone: context.timeZone })}) in ${context.timeZone}. Times below are ${context.timeZone} time.`,
+    '',
+    'Recent messages in the chat, oldest first:',
+    ...lines,
+    '',
+    `Nobody asked you, ${context.botName}: now and then you join in on your own. Look at the last few messages.`,
+    'If someone asked a question you can answer, answer it in a sentence or two, and search the web when it needs something current. Otherwise, if something short fits, a joke or a reaction in your own manner, say that.',
+    'Only talk: do not change the journal or the photos. Do not say that nobody asked you.',
+    `If you have nothing worth adding, answer with exactly ${SKIP} and nothing else.`
   ].join('\n');
 }

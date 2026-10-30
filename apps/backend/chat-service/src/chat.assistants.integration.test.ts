@@ -133,6 +133,29 @@ describe('what the assistants know about you both', () => {
     expect(await lines(id)).toEqual(['Irja updated what the assistants know about you']);
   });
 
+  it('is one box with the notes, and saving it moves the old about-you text into the notes', async () => {
+    const id = await chatWithBoth();
+    await as(IRJA).patch(url(id)).send({ memory: 'Irja is vegetarian' });
+    // As a copy of the app from before the boxes were one still sends it.
+    await as(IRJA).patch(url(id)).send({ aboutUs: 'We live in Tallinn.' });
+    const shown = (await as(TOM).get(url(id))).body.data;
+    expect(shown.memory).toBe('We live in Tallinn.\nIrja is vegetarian');
+
+    const saved = (await as(TOM).patch(url(id)).send({ memory: 'We live in Tallinn.\nIrja is vegetarian\nTom likes tea' })).body.data;
+    expect(saved.memory).toBe('We live in Tallinn.\nIrja is vegetarian\nTom likes tea');
+    expect(saved.aboutUs).toBe('');
+    expect((await lines(id)).at(-1)).toBe('Tom updated what the assistants know about you');
+  });
+
+  it('changes nothing when the box is saved as it was', async () => {
+    const id = await chatWithBoth();
+    await as(IRJA).patch(url(id)).send({ aboutUs: 'We live in Tallinn.' });
+    const before = (await lines(id)).length;
+    const saved = (await as(TOM).patch(url(id)).send({ memory: 'We live in Tallinn.' })).body.data;
+    expect(saved.aboutUs).toBe('We live in Tallinn.');
+    expect(await lines(id)).toHaveLength(before);
+  });
+
   it('is limited in length, and an empty change is refused', async () => {
     const id = await chatWithBoth();
     expect((await as(TOM).patch(url(id)).send({ aboutUs: 'x'.repeat(1501) })).status).toBe(400);
@@ -294,6 +317,13 @@ describe('adding a bot', () => {
     expect((await view(id)).bots[0]).toMatchObject({ model: 'claude-sonnet-5-5', modelLabel: 'Balanced' });
   });
 
+  it('keeps what its owner said about themselves to its owner, even from an admin', async () => {
+    const id = await chatWithBoth();
+    await makeBot(id, TOM, { name: 'Tumbi', aboutOwner: 'Working on a PhD.' });
+    expect((await view(id, TOM)).bots[0].aboutOwner).toBe('Working on a PhD.');
+    expect((await view(id, IRJA)).bots[0].aboutOwner).toBe('');
+  });
+
   it('shows everyone what it was told, and the starting personalities', async () => {
     const id = await chatWithBoth();
     await makeBot(id, TOM, { name: 'Tumbi', personality: 'Cheeky.' });
@@ -365,6 +395,13 @@ describe('changing a bot', () => {
     expect(await lines(id)).toContain('Irja paused Tumbi');
     expect(sendToUsers).toHaveBeenCalledWith(['u-tom'], expect.objectContaining({ title: 'Your assistant was changed', body: 'Irja paused Tumbi' }));
     expect((await ChatBot.findById(botId))!.updatedById).toBe('u-irja');
+  });
+
+  it('does not let an admin write over what the owner said about themselves', async () => {
+    await patch({ aboutOwner: 'Working on a PhD.' });
+    asManager('irja@example.com');
+    expect((await patch({ aboutOwner: '', personality: 'Quiet.' }, IRJA)).status).toBe(200);
+    expect((await ChatBot.findById(botId))!.aboutOwner).toBe('Working on a PhD.');
   });
 
   it('does not notify the owner of their own change', async () => {

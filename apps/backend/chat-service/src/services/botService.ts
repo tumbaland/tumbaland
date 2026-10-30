@@ -55,6 +55,14 @@ const settingOf = (conversation: IConversation): IAssistantsSetting => {
 };
 
 /**
+ * What the assistants know about the people here, as the one box the dialog
+ * shows: what people wrote in "About you both", from when that was a box of its
+ * own, on top of the notes. Saving the box writes it all to the notes and
+ * empties the old field, so nothing is lost or shown twice.
+ */
+const knownText = (setting: IAssistantsSetting): string => [setting.aboutUs.trim(), setting.memory.trim()].filter(Boolean).join('\n');
+
+/**
  * Whether assistants are on here: nobody has locked them off, and the switch is
  * on. A conversation from before the switch is read the way it was then:
  * everyone who has opened it has agreed, and so has the whole group
@@ -83,6 +91,8 @@ export interface BotView {
   model: ModelId;
   modelLabel: string;
   paused: boolean;
+  /** Now and then speaks up without being asked. */
+  joinsIn: boolean;
   ownerId: string;
   ownerName: string;
   /** The viewer made it. */
@@ -122,11 +132,13 @@ const toView = (bot: IChatBot, person: Caller, isManager: boolean, models: Model
     id: bot._id.toString(),
     name: bot.name,
     personality: bot.personality,
-    aboutOwner: bot.aboutOwner,
+    // Private to its owner: nobody else, admins included, is shown it.
+    aboutOwner: bot.ownerId === person.id ? bot.aboutOwner : '',
     color: bot.color,
     model,
     modelLabel: MODELS[model].label,
     paused: bot.paused,
+    joinsIn: bot.joinsIn ?? false,
     ownerId: bot.ownerId,
     ownerName: bot.ownerName,
     mine: bot.ownerId === person.id,
@@ -151,7 +163,7 @@ export async function assistantsView(person: Caller, conversation: IConversation
     lockedOff: setting.lockedOff,
     whoCanAdd: setting.whoCanAdd,
     aboutUs: setting.aboutUs,
-    memory: setting.memory,
+    memory: knownText(setting),
     memoryOn: setting.memoryOn,
     isManager,
     canAdd: !hasBot && (setting.whoCanAdd === 'everyone' || isManager),
@@ -220,9 +232,10 @@ export async function changeSettings(person: Caller, conversation: IConversation
     next.aboutUs = change.aboutUs;
     lines.push(`${who(person)} updated what the assistants know about you`);
   }
-  if (change.memory !== undefined && change.memory !== current.memory) {
+  if (change.memory !== undefined && change.memory !== knownText(current)) {
     next.memory = change.memory;
-    lines.push(`${who(person)} edited what the assistants have noted about you`);
+    next.aboutUs = '';
+    lines.push(`${who(person)} updated what the assistants know about you`);
   }
   if (change.memoryOn !== undefined && change.memoryOn !== current.memoryOn) {
     next.memoryOn = change.memoryOn;
@@ -312,6 +325,7 @@ export async function createBot(person: Caller, conversation: IConversation, inp
 
 export interface BotChange extends Partial<BotInput> {
   paused?: boolean;
+  joinsIn?: boolean;
 }
 
 async function requireBot(conversation: IConversation, botId: string): Promise<IChatBot> {
@@ -343,7 +357,8 @@ export async function updateBot(person: Caller, conversation: IConversation, bot
     bot.personality = change.personality;
     lines.push(`${who(person)} changed how ${bot.name} talks`);
   }
-  if (change.aboutOwner !== undefined) bot.aboutOwner = change.aboutOwner;
+  // Only its owner writes it; an admin's edit, which never saw it, leaves it alone.
+  if (change.aboutOwner !== undefined && bot.ownerId === person.id) bot.aboutOwner = change.aboutOwner;
   if (change.color !== undefined) bot.color = change.color;
   if (change.model !== undefined && change.model !== bot.modelId) {
     await assertModelAllowed(change.model);
@@ -353,6 +368,11 @@ export async function updateBot(person: Caller, conversation: IConversation, bot
   if (change.paused !== undefined && change.paused !== bot.paused) {
     bot.paused = change.paused;
     lines.push(`${who(person)} ${change.paused ? 'paused' : 'resumed'} ${bot.name}`);
+  }
+  // Said in the thread: it changes what is sent to Anthropic, for everyone here.
+  if (change.joinsIn !== undefined && change.joinsIn !== (bot.joinsIn ?? false)) {
+    bot.joinsIn = change.joinsIn;
+    lines.push(change.joinsIn ? `${who(person)} let ${bot.name} join in now and then without being asked` : `${who(person)} stopped ${bot.name} joining in unasked`);
   }
 
   bot.updatedById = person.id;

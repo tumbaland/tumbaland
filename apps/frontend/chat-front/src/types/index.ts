@@ -399,6 +399,8 @@ export interface Bot {
   /** "Fast", "Balanced" or "Best": people never see a model's name. */
   modelLabel: string;
   paused: boolean;
+  /** Now and then speaks up without being asked, on its owner's allowance. */
+  joinsIn: boolean;
   ownerId: string;
   ownerName: string;
   /** The viewer made it. */
@@ -465,7 +467,7 @@ export interface BotInput {
   model?: ModelId;
 }
 
-export type BotChange = Partial<BotInput> & { paused?: boolean };
+export type BotChange = Partial<BotInput> & { paused?: boolean; joinsIn?: boolean };
 
 export interface AssistantSettingsChange {
   enabled?: boolean;

@@ -338,7 +338,8 @@ export const updateBotSchema = z
     aboutOwner: botText.optional(),
     color: z.enum(BOT_COLORS).optional(),
     model: z.enum(MODEL_IDS).optional(),
-    paused: z.boolean().optional()
+    paused: z.boolean().optional(),
+    joinsIn: z.boolean().optional()
   })
   .refine((value) => Object.values(value).some((field) => field !== undefined), { message: 'Nothing to change' });
 

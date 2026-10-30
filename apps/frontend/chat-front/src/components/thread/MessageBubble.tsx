@@ -1,6 +1,7 @@
 import { useState, type MouseEvent } from 'react';
 import { keyframes } from '@mui/material/styles';
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
@@ -51,9 +52,12 @@ export interface MessageBubbleProps {
   /**
    * Set when an assistant wrote it: its name and colour, from the chat's bots,
    * or neutral ones when it has since been removed. Drawn as an assistant, with
-   * an "AI" label, so nobody mistakes it for a person.
+   * an "AI" label, so nobody mistakes it for a person. `id` is left out once it
+   * has been removed: there is nothing left to open.
    */
-  bot?: { name: string; color: string } | null;
+  bot?: { id?: string; name: string; color: string } | null;
+  /** A tap on an assistant's name: its settings. Without it the name is plain text. */
+  onOpenBot?: (botId: string) => void;
   onReact: (messageId: string, emoji: string) => void;
   onRetry: (clientId: string) => void;
   onPickEmoji: (messageId: string, anchor: HTMLElement) => void;
@@ -104,6 +108,7 @@ export function MessageBubble({
   senderPicture,
   senderName,
   bot,
+  onOpenBot,
   onReact,
   onRetry,
   onPickEmoji,
@@ -159,9 +164,22 @@ export function MessageBubble({
       }}
     >
       {showSender && !mine && bot && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, ml: 0.5, mb: 0.5 }}>
+        <Box
+          {...(bot.id && onOpenBot
+            ? { component: ButtonBase, onClick: () => onOpenBot(bot.id!), 'aria-label': `${bot.name} settings` }
+            : {})}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.75,
+            ml: 0.5,
+            mb: 0.5,
+            borderRadius: 1,
+            ...(bot.id && onOpenBot ? { pr: 0.5, '&:hover .bot-name, &:focus-visible .bot-name': { textDecoration: 'underline' } } : {})
+          }}
+        >
           <BotAvatar color={bot.color} size={22} />
-          <Typography variant="caption" sx={{ color: ink.muted }}>
+          <Typography className="bot-name" variant="caption" sx={{ color: ink.muted }}>
             {bot.name}
           </Typography>
           <Box

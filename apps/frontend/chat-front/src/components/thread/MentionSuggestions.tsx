@@ -8,18 +8,21 @@ export interface MentionSuggestionsProps {
   onPick: (bot: Bot) => void;
 }
 
-/** The assistants that match what is being typed after an `@`, to tap instead of typing the rest. */
+/**
+ * The assistants that match what is being typed after an `@`, to tap instead of
+ * typing the rest. The first is marked: Tab in the message box fills it in.
+ */
 export function MentionSuggestions({ bots, onPick }: MentionSuggestionsProps) {
   if (bots.length === 0) return null;
   return (
     <Box role="listbox" aria-label="Assistants" sx={{ display: 'flex', gap: 0.75, px: 1.5, pt: 1, flexWrap: 'wrap' }}>
-      {bots.map((bot) => (
+      {bots.map((bot, index) => (
         <Box
           key={bot.id}
           component="button"
           type="button"
           role="option"
-          aria-selected={false}
+          aria-selected={index === 0}
           // Keeps the focus, and on a phone the keyboard, in the message box.
           onMouseDown={(event: React.MouseEvent) => event.preventDefault()}
           onClick={() => onPick(bot)}
@@ -27,7 +30,7 @@ export function MentionSuggestions({ bots, onPick }: MentionSuggestionsProps) {
             display: 'inline-flex',
             alignItems: 'center',
             gap: 0.75,
-            border: `1px solid ${surface.sunken}`,
+            border: `1px solid ${index === 0 ? bot.color : surface.sunken}`,
             bgcolor: 'transparent',
             color: ink.body,
             borderRadius: 4,

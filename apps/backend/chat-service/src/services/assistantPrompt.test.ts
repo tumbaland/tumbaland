@@ -22,7 +22,7 @@ describe('botPrompt', () => {
     const text = botPrompt({ name: 'Tumbi', ownerName: 'Tom', personality: 'Cheeky.', aboutOwner: 'Likes tea.' }, 'We live in Tallinn.');
     expect(text).toContain('Your name is Tumbi. Tom made you.');
     expect(text).toContain('Cheeky.');
-    expect(text).toContain('About Tom:\nLikes tea.');
+    expect(text).toMatch(/About Tom, told to you in private\..*never repeat it.*\nLikes tea\./);
     expect(text).toContain('We live in Tallinn.');
   });
 

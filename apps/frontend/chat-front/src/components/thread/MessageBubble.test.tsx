@@ -56,6 +56,19 @@ describe('an assistant\u2019s message', () => {
     expect(screen.queryByLabelText('Assistant')).not.toBeInTheDocument();
   });
 
+  it('opens its settings from its name', async () => {
+    const onOpenBot = vi.fn();
+    renderBubble({ senderId: 'bot:b1', senderName: 'Tumbi', botId: 'b1' }, { bot: { ...bot, id: 'b1' }, onOpenBot });
+    await userEvent.click(screen.getByRole('button', { name: 'Tumbi settings' }));
+    expect(onOpenBot).toHaveBeenCalledWith('b1');
+  });
+
+  it('keeps the name plain once the assistant has been removed', () => {
+    renderBubble({ senderId: 'bot:b1', senderName: 'Tumbi', botId: 'b1' }, { bot, onOpenBot: vi.fn() });
+    expect(screen.queryByRole('button', { name: 'Tumbi settings' })).not.toBeInTheDocument();
+    expect(screen.getByText('Tumbi')).toBeInTheDocument();
+  });
+
   it('shows no header inside a run of its own messages, like a person', () => {
     renderBubble({ botId: 'b1' }, { bot, showSender: false });
     expect(screen.queryByLabelText('Assistant')).not.toBeInTheDocument();

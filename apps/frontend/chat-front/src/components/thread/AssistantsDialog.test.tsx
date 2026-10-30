@@ -54,6 +54,12 @@ describe('the switch', () => {
     expect(screen.getByRole('switch', { name: 'Allow assistants in this chat' })).toBeDisabled();
   });
 
+  it('lets an admin turn a locked chat back on, lifting the lock with it', async () => {
+    const { actions } = setup(assistantsView({ enabled: false, lockedOff: true, isManager: true }));
+    await userEvent.click(screen.getByRole('switch', { name: 'Allow assistants in this chat' }));
+    expect(actions.change).toHaveBeenCalledWith({ enabled: true, lockedOff: false });
+  });
+
   it('shows what the server refused, and can be dismissed', async () => {
     const refused = Object.assign(new Error('Only the group owner or an admin can change that'), { status: 403 });
     const { actions } = setup(assistantsView(), {});
@@ -87,8 +93,25 @@ describe('the assistants', () => {
     expect(screen.getByText("Irja's · Fast")).toBeInTheDocument();
     expect(screen.getByText('Paused')).toBeInTheDocument();
     expect(screen.getByText('Ask one with @ and its name, or reply to something it said.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'View' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit Tumbi' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove Tumbi' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View Bubu' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Remove Bubu' })).not.toBeInTheDocument();
+  });
+
+  it('asks before removing one, and removes it', async () => {
+    const { actions } = setup(assistantsView({ bots: [bot()] }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Tumbi' }));
+    expect(screen.getByText('Remove Tumbi? What it wrote stays in the chat.')).toBeInTheDocument();
+    expect(actions.deleteBot).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Keep it' }));
+    expect(screen.queryByText(/What it wrote stays/)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Tumbi' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Yes, remove it' }));
+    expect(actions.deleteBot).toHaveBeenCalledWith('b1');
+    await waitFor(() => expect(screen.queryByText(/What it wrote stays/)).not.toBeInTheDocument());
   });
 
   it('says when there are none', () => {
@@ -109,7 +132,7 @@ describe('the assistants', () => {
 
   it('opens one to edit, and an empty editor to add', async () => {
     setup(assistantsView({ bots: [bot()] , canAdd: true }));
-    await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Tumbi' }));
     expect(await screen.findByRole('dialog', { name: 'Edit Tumbi' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     // The editor is still closing, and holds the dialog behind it out of reach until it has.
@@ -128,50 +151,24 @@ describe('the assistants', () => {
   });
 });
 
-describe('what you both want them to know', () => {
-  it('is saved only once it has changed', async () => {
-    const { actions } = setup(assistantsView({ aboutUs: 'We live in Tallinn.' }));
-    const save = screen.getAllByRole('button', { name: 'Save' })[0]!;
-    expect(save).toBeDisabled();
-    await userEvent.type(screen.getByLabelText('About you both'), ' Anniversary 21 October.');
-    expect(save).toBeEnabled();
-    await userEvent.click(save);
-    expect(actions.change).toHaveBeenCalledWith({ aboutUs: 'We live in Tallinn. Anniversary 21 October.' });
+describe('joining in unasked', () => {
+  it('says which ones may, since then the recent messages go to Anthropic too', () => {
+    setup(assistantsView({ bots: [bot({ joinsIn: true }), bot({ id: 'b2', name: 'Bubu', joinsIn: true, paused: true })] }));
+    expect(screen.getByText(/Tumbi also joins in now and then without being asked/)).toBeInTheDocument();
+    expect(screen.queryByText(/Bubu also/)).not.toBeInTheDocument();
+  });
+
+  it('says nothing of it when none does', () => {
+    setup(assistantsView({ bots: [bot()] }));
+    expect(screen.queryByText(/joins? in now and then/)).not.toBeInTheDocument();
   });
 });
 
-describe('what the assistants have noted', () => {
-  it('shows the notes and saves an edit, so anyone can correct or delete one', async () => {
-    const { actions } = setup(assistantsView({ memory: 'Mia is vegetarian\nTom likes tea' }));
-    const notes = screen.getByLabelText('What the assistants have noted');
-    expect(notes).toHaveValue('Mia is vegetarian\nTom likes tea');
-    const save = screen.getAllByRole('button', { name: 'Save' })[1]!;
-    expect(save).toBeDisabled();
-    await userEvent.clear(notes);
-    await userEvent.type(notes, 'Mia is vegetarian');
-    await userEvent.click(save);
-    expect(actions.change).toHaveBeenCalledWith({ memory: 'Mia is vegetarian' });
-  });
-
-  it('keeps what someone is typing when an assistant adds a note meanwhile, and follows the server otherwise', async () => {
-    const props = { open: true, onClose: vi.fn(), onRefresh: vi.fn(), actions: { change: vi.fn(), createBot: vi.fn(), updateBot: vi.fn(), deleteBot: vi.fn(), setCap: vi.fn() } };
-    const { rerender } = render(<AssistantsDialog {...props} view={assistantsView({ memory: 'Mia is vegetarian', aboutUs: 'We live in Tallinn.' })} />);
-    const notes = screen.getByLabelText('What the assistants have noted');
-    expect(notes).toHaveValue('Mia is vegetarian');
-    await userEvent.type(notes, '\nTom hates olives');
-    expect(notes).toHaveValue('Mia is vegetarian\nTom hates olives');
-
-    rerender(<AssistantsDialog {...props} view={assistantsView({ memory: 'Mia is vegetarian\nTom likes tea', aboutUs: 'We live in Oslo.' })} />);
-
-    expect(notes).toHaveValue('Mia is vegetarian\nTom hates olives');
-    // Not being edited, so it follows.
-    expect(screen.getByLabelText('About you both')).toHaveValue('We live in Oslo.');
-  });
-
-  it('lets people stop the assistants adding notes', async () => {
-    const { actions } = setup(assistantsView({ memoryOn: true }));
-    await userEvent.click(screen.getByRole('switch', { name: 'Let assistants add notes' }));
-    expect(actions.change).toHaveBeenCalledWith({ memoryOn: false });
+describe('what the assistants know', () => {
+  it('is not here: it is in each assistant\u2019s settings', () => {
+    setup(assistantsView({ memory: 'We live in Tallinn.' }));
+    expect(screen.queryByLabelText('What the assistants know')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('About you both')).not.toBeInTheDocument();
   });
 });
 
@@ -181,10 +178,9 @@ describe('for admins', () => {
     expect(screen.queryByText('For admins')).not.toBeInTheDocument();
   });
 
-  it('lets them turn assistants off for the chat and decide who may add one', async () => {
+  it('lets them decide who may add one, with one on and off switch for the chat, not two', async () => {
     const { actions } = setup(assistantsView({ isManager: true }));
-    await userEvent.click(screen.getByRole('switch', { name: 'Turn assistants off in this chat' }));
-    expect(actions.change).toHaveBeenCalledWith({ lockedOff: true });
+    expect(screen.queryByText('Turn assistants off in this chat')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('combobox', { name: 'Who can add assistants' }));
     await userEvent.click(await screen.findByRole('option', { name: 'Admins only' }));

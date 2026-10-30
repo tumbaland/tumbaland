@@ -901,6 +901,26 @@ describe('mentioning an assistant', () => {
     expect(onSend).toHaveBeenCalledWith('hey @Tumbi dinner?');
   });
 
+  it('offers every assistant on a bare @, and Tab fills in the first', async () => {
+    render(<Composer onSend={() => {}} onTyping={() => {}} bots={bots} />);
+    await userEvent.type(screen.getByLabelText('Message'), '@');
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['@Tumbi', '@Bubu']);
+    expect(screen.getByRole('option', { name: '@Tumbi' })).toHaveAttribute('aria-selected', 'true');
+
+    await userEvent.tab();
+    expect(screen.getByLabelText('Message')).toHaveValue('@Tumbi ');
+    expect(screen.getByLabelText('Message')).toHaveFocus();
+    expect(screen.queryByRole('option')).not.toBeInTheDocument();
+  });
+
+  it('leaves Tab alone when no @ is being typed', async () => {
+    render(<Composer onSend={() => {}} onTyping={() => {}} bots={bots} />);
+    await userEvent.type(screen.getByLabelText('Message'), 'hi');
+    await userEvent.tab();
+    expect(screen.getByLabelText('Message')).toHaveValue('hi');
+    expect(screen.getByLabelText('Message')).not.toHaveFocus();
+  });
+
   it('offers nothing when no @ is being typed, and nothing at all without assistants', async () => {
     const { rerender } = render(<Composer onSend={() => {}} onTyping={() => {}} bots={bots} />);
     await userEvent.type(screen.getByLabelText('Message'), 'hello');

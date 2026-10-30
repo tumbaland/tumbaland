@@ -47,6 +47,7 @@ function ThreadContent({ conversationId, onBack, acceptShared }: ThreadPageProps
   const [actionError, setActionError] = useState<string | null>(null);
   const [picked, setPicked] = useState<PickedMessage | null>(null);
   const [choosingAlbum, setChoosingAlbum] = useState(false);
+  const [openBotId, setOpenBotId] = useState<string | null>(null);
 
   const thread = useChatThread(conversationId, currentUserId);
   const composer = useThreadComposer({
@@ -118,6 +119,8 @@ function ThreadContent({ conversationId, onBack, acceptShared }: ThreadPageProps
         choosingAlbum={choosingAlbum}
         onCloseAlbum={() => setChoosingAlbum(false)}
         onOpenCollage={openCollage}
+        openBotId={openBotId}
+        onCloseBot={() => setOpenBotId(null)}
       />
 
       {thread.connection === 'offline' && (
@@ -164,6 +167,7 @@ function ThreadContent({ conversationId, onBack, acceptShared }: ThreadPageProps
         accent={chatColors.bubble}
         members={thread.members}
         bots={thread.assistants?.bots}
+        onOpenBot={setOpenBotId}
         reads={thread.reads}
         focus={search.focus}
       />

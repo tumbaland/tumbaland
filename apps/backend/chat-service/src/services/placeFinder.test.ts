@@ -16,8 +16,25 @@ const fetchMock = jest.fn();
 const overpass = (elements: unknown[], ok = true) =>
   fetchMock.mockResolvedValueOnce({ ok, status: ok ? 200 : 429, json: async () => ({ elements }) });
 
+/** A Nominatim search's answer, in its jsonv2 shape. */
+const nominatim = (places: unknown[]) => fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => places });
+const listed = (id: number, name: string, extra: Record<string, unknown> = {}) => ({
+  osm_type: 'node',
+  osm_id: id,
+  lat: '59.4372',
+  lon: '24.7540',
+  category: 'amenity',
+  type: 'restaurant',
+  name,
+  address: { road: 'Vana-Viru', house_number: '7', city: 'Tallinn' },
+  extratags: {},
+  ...extra
+});
+
 beforeEach(() => {
   fetchMock.mockReset();
+  // Anything a test did not answer is a server that is down.
+  fetchMock.mockRejectedValue(new Error('offline'));
   global.fetch = fetchMock as never;
   (searchPlaces as jest.Mock).mockReset();
   resetPlaceFinder();
@@ -96,9 +113,9 @@ describe('find_places', () => {
     expect(fetchMock.mock.calls[0]![1].body.get('data')).toContain('around:10000');
   });
 
-  it('points to the web search when the map server does not answer', async () => {
+  it('points to the web search when neither map server answers', async () => {
     overpass([], false);
-    expect(await find({})).toMatch(/web search/);
+    expect(await find({ kind: 'restaurant' })).toMatch(/not answering right now\. Use the web search/);
   });
 
   it('answers the same search from memory, and stops one chat at 20 an hour', async () => {
@@ -120,5 +137,65 @@ describe('find_places', () => {
   it('drops places with no name or no position', async () => {
     overpass([{ type: 'node', id: 9, lat: 1, lon: 1, tags: { amenity: 'cafe' } }, { type: 'node', id: 8, tags: { name: 'Lost', amenity: 'cafe' } }]);
     expect(await findPlaces('c1', { center: { lat: 1, lng: 1 }, radius: 500 })).toEqual([]);
+  });
+});
+
+describe('when Overpass is down', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('asks Nominatim for the kind of place in a square around the area, and shows it the same way', async () => {
+    overpass([], false);
+    nominatim([
+      listed(1, 'Olde Hansa', { extratags: { opening_hours: 'Mo-Su 11:00-24:00', cuisine: 'regional', website: 'https://olde.example' } }),
+      listed(2, 'A Shop', { category: 'shop', type: 'bakery' })
+    ]);
+    const text = await find({ kind: 'restaurant', open_at: '2026-10-30T21:30' });
+
+    const url = new URL(fetchMock.mock.calls[1]![0] as string);
+    expect(url.origin + url.pathname).toBe('https://nominatim.openstreetmap.org/search');
+    expect(url.searchParams.get('q')).toBe('[amenity=restaurant]');
+    expect(url.searchParams.get('bounded')).toBe('1');
+    expect(url.searchParams.get('extratags')).toBe('1');
+    const [west, north, east, south] = url.searchParams.get('viewbox')!.split(',').map(Number);
+    expect(west! < 24.7536 && 24.7536 < east! && south! < 59.437 && 59.437 < north!).toBe(true);
+    expect(text).toContain('Olde Hansa, restaurant (regional)');
+    expect(text).toContain('Vana-Viru 7, Tallinn');
+    expect(text).toContain('open then');
+    expect(text).toContain('https://www.openstreetmap.org/node/1 · https://olde.example');
+    expect(text).not.toContain('A Shop');
+  });
+
+  it('searches every kind when none is asked for, a second apart', async () => {
+    jest.useFakeTimers({ now: new Date('2026-10-30T18:00:00Z') });
+    overpass([], false);
+    for (let i = 0; i < 5; i++) nominatim([]);
+    const pending = find({});
+    await jest.advanceTimersByTimeAsync(5_000);
+    await pending;
+
+    const asked = fetchMock.mock.calls.slice(1).map(([url]) => new URL(url as string).searchParams.get('q'));
+    expect(asked).toEqual(['[amenity=restaurant]', '[amenity=cafe]', '[amenity=bar]', '[amenity=pub]', '[amenity=fast_food]']);
+  });
+
+  it('looks a place up by name, and filters cuisine and distance itself', async () => {
+    overpass([], false);
+    nominatim([
+      listed(1, 'Pizza Near', { extratags: { cuisine: 'pizza;italian' } }),
+      listed(2, 'Sushi Near', { extratags: { cuisine: 'sushi' } }),
+      listed(3, 'Pizza Far', { lat: '59.4500', extratags: { cuisine: 'pizza' } })
+    ]);
+    const found = await findPlaces('c1', { name: 'Pizza', cuisine: 'Pizza', center: { lat: 59.437, lng: 24.7536 }, radius: 500 });
+    expect(new URL(fetchMock.mock.calls[1]![0] as string).searchParams.get('q')).toBe('Pizza');
+    expect(found.map((place) => place.name)).toEqual(['Pizza Near']);
+  });
+
+  it('leaves Overpass alone for a few minutes after it fails', async () => {
+    overpass([], false);
+    nominatim([]);
+    await find({ kind: 'cafe' });
+    nominatim([]);
+    await find({ kind: 'bar' });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(String(fetchMock.mock.calls[2]![0])).toContain('nominatim');
   });
 });

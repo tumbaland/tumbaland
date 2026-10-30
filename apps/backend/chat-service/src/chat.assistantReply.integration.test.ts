@@ -42,7 +42,7 @@ import { askClaude, type ClaudeRequest, type ClaudeReply } from './services/assi
 import { resetKeyCache } from './services/assistantKeyService';
 import { sendToUsers } from './services/pushService';
 import { subscribe } from './services/streamHub';
-import { activityFor, collageFrom, triggerAssistants } from './services/assistantReplyService';
+import { JOIN_IN, activityFor, collageFrom, triggerAssistants } from './services/assistantReplyService';
 import { AssistantProviderKey } from './models/AssistantProviderKey';
 import { AssistantPreference } from './models/AssistantPreference';
 import { AssistantUsage } from './models/AssistantUsage';
@@ -152,6 +152,16 @@ describe('an assistant answers when it is mentioned', () => {
     expect(request.user).toContain('Irja: we are back from the sea');
     expect(request.user).toContain('Tom just wrote to you, Tumbi: @Tumbi where should we eat Saturday?');
     expect(request.user).not.toContain('turned assistants on');
+  });
+
+  it('leaves its owner\u2019s private details out when someone else asks', async () => {
+    const id = await readyChat();
+    await send(id, '@Tumbi where should we eat Saturday?', IRJA);
+    await nextUsage();
+
+    const request = ask.mock.calls[0]![0];
+    expect(request.system[1]).toContain('Cheeky.');
+    expect(request.system[1]).not.toContain('Likes tea.');
   });
 
   it('posts plain chat text, not Markdown, with the pages it drew on underneath', async () => {
@@ -703,5 +713,119 @@ describe('reading what a tool made', () => {
     expect(activityFor('view_photos')).toBe('looking at photos');
     expect(activityFor('log_day')).toBe('writing in the journal');
     expect(activityFor('something_new')).toBe('working on it');
+  });
+});
+
+describe('an assistant that joins in unasked', () => {
+  const defaults = { ...JOIN_IN };
+  let dice: jest.SpyInstance;
+
+  beforeEach(() => {
+    // A short pause to wait out, and dice that always say yes unless a test says otherwise.
+    JOIN_IN.quietMs = 40;
+    dice = jest.spyOn(Math, 'random').mockReturnValue(0);
+  });
+  afterEach(() => {
+    Object.assign(JOIN_IN, defaults);
+    dice.mockRestore();
+  });
+
+  const letItJoinIn = async (id: string) => {
+    const botId = (await ChatBot.findOne())!._id.toString();
+    return as(TOM).patch(url(id, `/assistants/bots/${botId}`)).send({ joinsIn: true });
+  };
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 200));
+
+  it('stays out of it unless its owner lets it, and the thread says when they do', async () => {
+    const id = await readyChat();
+    await send(id, 'when does Rimi close?', IRJA);
+    await settle();
+    expect(ask).not.toHaveBeenCalled();
+
+    expect((await letItJoinIn(id)).body.data.bots[0].joinsIn).toBe(true);
+    expect(await systemLines(id)).toContain('Tom let Tumbi join in now and then without being asked');
+
+    const botId = (await ChatBot.findOne())!._id.toString();
+    await as(TOM).patch(url(id, `/assistants/bots/${botId}`)).send({ joinsIn: false });
+    expect(await systemLines(id)).toContain('Tom stopped Tumbi joining in unasked');
+  });
+
+  it('answers a question people ask each other, on its owner\u2019s allowance, only talking', async () => {
+    const id = await readyChat();
+    await letItJoinIn(id);
+    let scopes: string[] = [];
+    ask.mockImplementation(async (request) => {
+      scopes = ((await verifyApiKey(request.mcpToken)) as unknown as { scopes: string[] }).scopes;
+      return answer({ text: 'Rimi on Tartu mnt is open until 22:00.', servedBy: request.model });
+    });
+
+    await send(id, 'when does Rimi close?', IRJA);
+    const [reply] = await eventually(() => botMessages(id), (rows) => rows.length > 0);
+
+    expect(reply!.body).toBe('Rimi on Tartu mnt is open until 22:00.');
+    const request = ask.mock.calls[0]![0];
+    expect(request.user).toContain('Nobody asked you, Tumbi');
+    expect(request.user).toContain('Irja: when does Rimi close?');
+    expect(request.web).toBeDefined();
+    expect(request.system[1]).not.toContain('Likes tea.');
+    expect(request.clientTools!.map((tool) => tool.name)).toEqual(['find_places', 'get_weather', 'get_route', 'convert_currency']);
+    expect([...scopes].sort()).toEqual(['album:read', 'relationship:read']);
+    const [row] = await nextUsage();
+    expect(row).toMatchObject({ mentionerId: 'u-tom', mentionerEmail: 'tom@example.com', unasked: true, outcome: 'ok' });
+  });
+
+  it('keeps quiet when it has nothing to add, and still counts the call', async () => {
+    const id = await readyChat();
+    await letItJoinIn(id);
+    ask.mockImplementation(async (request) => answer({ text: 'Skip.', servedBy: request.model }));
+
+    await send(id, 'ok see you at home', IRJA);
+    await nextUsage();
+    await settle();
+    expect(await botMessages(id)).toHaveLength(0);
+  });
+
+  it('is likelier to answer a question than to chime in on anything else', async () => {
+    const id = await readyChat();
+    await letItJoinIn(id);
+    dice.mockReturnValue(0.3);
+
+    await send(id, 'ok see you at home', IRJA);
+    await settle();
+    expect(ask).not.toHaveBeenCalled();
+
+    await send(id, 'what should we watch?', IRJA);
+    await nextUsage();
+    expect(ask).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits for a pause, and keeps hours between two', async () => {
+    const id = await readyChat();
+    await letItJoinIn(id);
+
+    await send(id, 'what should we eat?', IRJA);
+    await send(id, 'something warm maybe');
+    await nextUsage();
+    await settle();
+    // The first was cut off by the second; only the pause after the second counted.
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(ask.mock.calls[0]![0].user).toContain('Tom: something warm maybe');
+
+    await send(id, 'and after that a film?', IRJA);
+    await settle();
+    expect(ask).toHaveBeenCalledTimes(1);
+  });
+
+  it('says nothing in the thread when it cannot answer', async () => {
+    const id = await readyChat();
+    await letItJoinIn(id);
+    const before = (await systemLines(id)).length;
+    ask.mockRejectedValue(Object.assign(new Error('overloaded'), { status: 529 }));
+
+    await send(id, 'what is the weather tomorrow?', IRJA);
+    await nextUsage();
+    await settle();
+    expect(await systemLines(id)).toHaveLength(before);
+    expect(await botMessages(id)).toHaveLength(0);
   });
 });

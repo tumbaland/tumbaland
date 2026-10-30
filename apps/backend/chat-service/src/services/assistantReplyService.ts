@@ -15,7 +15,7 @@ import { currencyTools } from './currency';
 import { travelTools } from './travel';
 import { weatherTools } from './weather';
 import { chatText, withSources } from './chatText';
-import { BASE_PROMPT, WEB_RULES, botPrompt, userMessage } from './assistantPrompt';
+import { BASE_PROMPT, SKIP, WEB_RULES, botPrompt, joinInMessage, userMessage } from './assistantPrompt';
 import { allowanceFor, assertCanAsk, chargeSpend } from './assistantUsageService';
 import { assistantsOn, effectiveModel } from './botService';
 import { touchConversation } from './conversationService';
@@ -43,6 +43,8 @@ const BOT_EMAIL = 'assistant@tumbaland.eu';
 const KEY_LIFETIME_MS = 5 * 60_000;
 /** Journal and photos. Money is left out: a reply is read by everyone in the chat. */
 const SCOPES: ApiKeyScope[] = ['relationship:read', 'relationship:write', 'album:read', 'album:write'];
+/** Joining in unasked, it only talks: it may read the journal and photos, never change them. */
+const READ_SCOPES: ApiKeyScope[] = ['relationship:read', 'album:read'];
 const RECENT_MESSAGES = 30;
 const REPLY_LIMIT = 4000;
 const TYPING_EVERY_MS = 3000;
@@ -97,10 +99,69 @@ export function triggerAssistants(person: Caller, conversation: IConversation, m
   // Only a person's words wake a bot: a bot that could wake a bot would answer itself forever, at our cost.
   if (message.kind !== 'text' || message.botId) return;
   // An @, or a reply to something a bot said: answering it is asking it again.
-  if (!message.body.includes('@') && !repliedBotId(message)) return;
+  if (!message.body.includes('@') && !repliedBotId(message)) {
+    void maybeJoinIn(conversation._id.toString(), message).catch((error: Error) =>
+      logger.error('Assistant join-in failed', { error: error.message, stack: error.stack })
+    );
+    return;
+  }
   void answerMentions(person, conversation._id.toString(), message).catch((error: Error) =>
     logger.error('Assistant reply failed', { error: error.message, stack: error.stack })
   );
+}
+
+/**
+ * Joining in unasked: a bot whose owner turned it on now and then answers a
+ * question people asked each other, or adds a line, without being mentioned.
+ *
+ * Rare by design, and cheap when it does not happen: a roll of the dice on a
+ * message nobody addressed to a bot (better odds for a question), a gap of
+ * hours between two, and a pause to wait out, so it never cuts into a
+ * conversation still going. Only then is Claude asked, on the owner's
+ * allowance, and it may still answer SKIP and post nothing. It only talks: no
+ * writing to the journal, no notes, no live locations, nothing its owner told
+ * it in private. Every failure is silent, since nobody is waiting for it.
+ */
+export const JOIN_IN = {
+  questionChance: 0.5,
+  otherChance: 0.1,
+  gapMs: 2 * 60 * 60_000,
+  quietMs: 20_000
+};
+
+const isQuestion = (body: string): boolean => body.includes('?');
+/** "SKIP", give or take a full stop or the case: its way of saying nothing. */
+const isSkip = (text: string): boolean => new RegExp(`^\\W*${SKIP}\\W*$`, 'i').test(text.trim());
+
+async function maybeJoinIn(conversationId: string, message: MessageView): Promise<void> {
+  const now = Date.now();
+  const cutoff = new Date(now - JOIN_IN.gapMs);
+  const willing = await ChatBot.find({ conversationId, joinsIn: true, paused: false, $or: [{ lastJoinedAt: null }, { lastJoinedAt: { $lt: cutoff } }] });
+  if (willing.length === 0) return;
+  if (Math.random() >= (isQuestion(message.body) ? JOIN_IN.questionChance : JOIN_IN.otherChance)) return;
+
+  // Wait for a pause: if someone writes again meanwhile, this turn is gone.
+  await new Promise((resolve) => setTimeout(resolve, JOIN_IN.quietMs));
+  const latest = await Message.findOne({ conversationId, deletedAt: null, kind: { $ne: 'system' } }).sort({ createdAt: -1 });
+  if (latest?._id.toString() !== message.id) return;
+
+  // One bot, and claimed: two messages rolling at once must not both send it.
+  const pick = willing[Math.floor(Math.random() * willing.length)]!;
+  const bot = await ChatBot.findOneAndUpdate(
+    { _id: pick._id, joinsIn: true, paused: false, $or: [{ lastJoinedAt: null }, { lastJoinedAt: { $lt: cutoff } }] },
+    { $set: { lastJoinedAt: new Date() } },
+    { new: true }
+  );
+  if (!bot) return;
+
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation) return;
+  const group = await getGroupOwner(conversation.groupId).catch(() => null);
+  if (!assistantsOn(conversation, group?.memberCount)) return;
+  // On its owner's allowance and with their key, so it reaches only what they can.
+  const owner = conversation.members.find((member) => member.userId === bot.ownerId);
+  if (!owner) return;
+  await replyAs(bot, { id: owner.userId, email: owner.email, name: bot.ownerName || owner.name || '', groups: [] }, conversation, null);
 }
 
 /** The bot a reply answers, when the quoted message was one of a bot's. */
@@ -201,10 +262,18 @@ async function recent(conversationId: string) {
 const resetsLine = (resetsOn: string): string =>
   new Date(`${resetsOn}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' });
 
-async function replyAs(bot: IChatBot, person: Caller, conversation: IConversation, asked: MessageView): Promise<void> {
+/**
+ * One reply. `asked` is the message it answers, from `person`; null when it is
+ * joining in unasked, and `person` is then its owner, whose allowance it uses.
+ */
+async function replyAs(bot: IChatBot, person: Caller, conversation: IConversation, asked: MessageView | null): Promise<void> {
+  const unasked = asked === null;
   // Best effort: a line that could not be posted must not cost the usage record below.
-  const notice = (text: string) =>
-    postSystemLine(person, conversation, text).catch((error: Error) => logger.warn('Assistant notice failed', { error: error.message }));
+  // Unasked, nobody is waiting, so nothing is said at all.
+  const notice = async (text: string) => {
+    if (unasked) return;
+    await postSystemLine(person, conversation, text).catch((error: Error) => logger.warn('Assistant notice failed', { error: error.message }));
+  };
   const who = person.name || 'Someone';
 
   if (bot.paused) return void (await notice(`${bot.name} is paused.`));
@@ -227,7 +296,8 @@ async function replyAs(bot: IChatBot, person: Caller, conversation: IConversatio
 
   const model = effectiveModel(bot, key.models);
   const started = Date.now();
-  const working = showWorking(conversation, bot);
+  // Unasked, it may yet decide to say nothing, so no "typing" is shown for it.
+  const working = unasked ? { activity: () => {}, stop: () => {} } : showWorking(conversation, bot);
   let minted: Awaited<ReturnType<typeof createApiKey>> | null = null;
   let outcome: AssistantOutcome = 'ok';
   let reply: ClaudeReply | null = null;
@@ -238,7 +308,7 @@ async function replyAs(bot: IChatBot, person: Caller, conversation: IConversatio
       userEmail: person.email,
       userName: person.name,
       name: `${bot.name} in chat`.slice(0, 60),
-      scopes: SCOPES,
+      scopes: unasked ? READ_SCOPES : SCOPES,
       tenants: [conversation.groupId],
       defaultTenant: conversation.groupId,
       expiresAt: new Date(Date.now() + KEY_LIFETIME_MS)
@@ -247,24 +317,49 @@ async function replyAs(bot: IChatBot, person: Caller, conversation: IConversatio
     reply = await askClaude({
       apiKey: key.apiKey,
       model,
-      system: [webOn() ? `${BASE_PROMPT}\n\n${WEB_RULES}` : BASE_PROMPT, botPrompt(bot, conversation.assistants?.aboutUs ?? '', conversation.assistants?.memory ?? '', memoryOn(conversation))],
-      clientTools: [...memoryTools(conversation), ...placeTools(conversation._id.toString()), ...weatherTools(conversation._id.toString(), PLACE.timeZone), ...chatTools(conversation, person, PLACE.timeZone, asked.id), ...travelTools(conversation._id.toString()), ...currencyTools(conversation._id.toString())],
-      user: userMessage({
-        asker: person.name || 'Someone',
-        asked: asked.body,
-        botName: bot.name,
-        recent: await recent(conversation._id.toString()),
-        photoAlbum: conversation.photoAlbum,
-        now: new Date(),
-        timeZone: PLACE.timeZone
-      }),
+      system: [
+        webOn() ? `${BASE_PROMPT}\n\n${WEB_RULES}` : BASE_PROMPT,
+        botPrompt(
+          // What its owner told it about themselves is theirs: it is not even read when someone else asks.
+          { name: bot.name, ownerName: bot.ownerName, personality: bot.personality, aboutOwner: !unasked && person.id === bot.ownerId ? bot.aboutOwner : '' },
+          conversation.assistants?.aboutUs ?? '',
+          conversation.assistants?.memory ?? '',
+          memoryOn(conversation)
+        )
+      ],
+      // Notes, saved places and where people are: things it does or reads only when someone asks.
+      // The order is kept as it always was: the tools are part of what the prompt cache matches.
+      clientTools: [
+        ...(unasked ? [] : memoryTools(conversation)),
+        ...placeTools(conversation._id.toString()),
+        ...weatherTools(conversation._id.toString(), PLACE.timeZone),
+        ...(unasked ? [] : chatTools(conversation, person, PLACE.timeZone, asked.id)),
+        ...travelTools(conversation._id.toString()),
+        ...currencyTools(conversation._id.toString())
+      ],
+      user: unasked
+        ? joinInMessage({ botName: bot.name, recent: await recent(conversation._id.toString()), photoAlbum: conversation.photoAlbum, now: new Date(), timeZone: PLACE.timeZone })
+        : userMessage({
+            asker: person.name || 'Someone',
+            asked: asked.body,
+            botName: bot.name,
+            recent: await recent(conversation._id.toString()),
+            photoAlbum: conversation.photoAlbum,
+            now: new Date(),
+            timeZone: PLACE.timeZone
+          }),
       web: webOn() ? { ...PLACE, maxUses: WEB_USES_PER_REPLY } : undefined,
       mcpUrl: mcpUrl(),
       mcpToken: minted.token,
       onTool: working.activity
     });
 
-    if (reply.refused) {
+    if (unasked) {
+      // Its choice to keep quiet, or a refusal nobody asked for: nothing is posted.
+      const text = chatText(reply.text);
+      if (!reply.refused && text && !isSkip(text)) await postBotMessage(conversation, bot, { body: withSources(text, reply.sources) });
+      if (reply.refused) outcome = 'refused';
+    } else if (reply.refused) {
       outcome = 'refused';
       await postBotMessage(conversation, bot, { body: "I can't help with that one." });
     } else {
@@ -313,12 +408,13 @@ async function replyAs(bot: IChatBot, person: Caller, conversation: IConversatio
     cacheWriteTokens: tokens.cacheWrite,
     units,
     durationMs: Date.now() - started,
-    outcome
+    outcome,
+    unasked
   });
   await chargeSpend(person.email, units);
 
   // One quiet heads-up, when this reply is the one that crossed 80%.
-  if (reply && before.percent !== null && before.percent < 80) {
+  if (!unasked && reply && before.percent !== null && before.percent < 80) {
     const after = await allowanceFor(person);
     if (after.percent !== null && after.percent >= 80 && !after.exhausted) {
       await notice(`${who} has used ${after.percent}% of this month's assistant allowance.`);

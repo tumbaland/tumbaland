@@ -10,6 +10,7 @@ export const bot = (overrides: Partial<Bot> = {}): Bot => ({
   model: 'claude-sonnet-5-5',
   modelLabel: 'Balanced',
   paused: false,
+  joinsIn: false,
   ownerId: 'u-tom',
   ownerName: 'Tom',
   mine: true,

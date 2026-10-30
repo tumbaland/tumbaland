@@ -171,7 +171,19 @@ export function Composer({
     inputRef.current?.focus();
   };
 
+  // The `@` list, while one is open: Tab fills in the first, as a tap on it would.
+  const suggested = !editing && !disabled && !voice?.active && bots ? mentionSuggestions(value, bots) : [];
+  const pickMention = (bot: Bot) => {
+    setValue(insertMention(value, bot.name));
+    inputRef.current?.focus();
+  };
+
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (event.key === 'Tab' && !event.shiftKey && suggested[0]) {
+      event.preventDefault();
+      pickMention(suggested[0]);
+      return;
+    }
     if (event.key === 'Escape' && editing) {
       event.preventDefault();
       onCancelEdit?.();
@@ -290,15 +302,7 @@ export function Composer({
         <RecentEmojiRow emoji={recentEmoji} onPick={insertEmoji} />
       )}
 
-      {!editing && !disabled && !voiceActive && bots && (
-        <MentionSuggestions
-          bots={mentionSuggestions(value, bots)}
-          onPick={(bot) => {
-            setValue(insertMention(value, bot.name));
-            inputRef.current?.focus();
-          }}
-        />
-      )}
+      <MentionSuggestions bots={suggested} onPick={pickMention} />
 
       {voice?.error && !voiceActive && (
         <Typography variant="caption" role="alert" sx={{ display: 'block', px: 2, pt: 0.5, color: 'error.main' }}>

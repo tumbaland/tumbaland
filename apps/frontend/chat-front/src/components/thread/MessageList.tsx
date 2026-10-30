@@ -45,6 +45,8 @@ export interface MessageListProps {
   members?: ConversationMember[];
   /** The chat's assistants, so what they wrote is drawn in their colour and labelled. */
   bots?: Bot[];
+  /** A tap on an assistant's name above what it wrote. */
+  onOpenBot?: (botId: string) => void;
   /** How far each of the others has read. */
   reads?: Record<string, ReadReceipt>;
   /**
@@ -127,6 +129,7 @@ export function MessageList({
   accent,
   members = NO_MEMBERS,
   bots = NO_BOTS,
+  onOpenBot,
   onReply,
   onOpenQuote,
   reads = NO_READS,
@@ -171,10 +174,10 @@ export function MessageList({
   const seen = useMemo(() => placeSeenMarkers(messages, reads, members), [messages, reads, members]);
   // What an assistant is called and coloured now, not when it wrote: a rename shows on its old messages too.
   const botsById = useMemo(() => new Map(bots.map((bot) => [bot.id, bot])), [bots]);
-  const botOf = (message: ThreadMessage): { name: string; color: string } | null => {
+  const botOf = (message: ThreadMessage): { id?: string; name: string; color: string } | null => {
     if (!message.botId) return null;
     const bot = botsById.get(message.botId);
-    return bot ? { name: bot.name, color: bot.color } : { name: message.senderName, color: GONE_BOT_COLOR };
+    return bot ? { id: bot.id, name: bot.name, color: bot.color } : { name: message.senderName, color: GONE_BOT_COLOR };
   };
 
   /**
@@ -450,6 +453,7 @@ export function MessageList({
                   senderPicture={pictures.get(message.senderId)}
                   senderName={names.get(message.senderId)}
                   bot={botOf(message)}
+                  onOpenBot={onOpenBot}
                 />
                 {seen.has(message.id) && <SeenMarker seers={seen.get(message.id)!} />}
               </Box>

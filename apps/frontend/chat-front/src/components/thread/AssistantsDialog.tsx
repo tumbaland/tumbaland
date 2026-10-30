@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -14,8 +14,11 @@ import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import DeleteIcon from '@mui/icons-material/DeleteOutlined';
+import EditIcon from '@mui/icons-material/EditOutlined';
 import PauseIcon from '@mui/icons-material/PauseCircleOutlined';
 import PlayIcon from '@mui/icons-material/PlayCircleOutlined';
+import ViewIcon from '@mui/icons-material/VisibilityOutlined';
 import { ink } from '@tumbaland/frontend-core';
 import type { AssistantSettingsChange, AssistantsView, Bot, BotChange, BotInput } from '../../types';
 import { AllowanceBar } from './AllowanceBar';
@@ -56,41 +59,19 @@ const status = (view: AssistantsView): string => {
 };
 
 /**
- * A text that follows the server until someone edits it here. From then on their
- * words stay, whatever arrives, until the server holds what they wrote (they
- * saved) or the dialog opens again. An assistant can add a note at any moment,
- * and that refresh must not take away what someone is in the middle of typing.
- */
-function useDraft(server: string | undefined, open: boolean): [string, (value: string) => void] {
-  const [draft, setDraft] = useState('');
-  // The server's text the draft last started from; unset while the dialog is closed.
-  const base = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    if (!open) {
-      base.current = undefined;
-      return;
-    }
-    if (server === undefined) return;
-    // Read now: the updater runs later, during render, by when the ref has moved on.
-    const previous = base.current;
-    base.current = server;
-    setDraft((current) => (previous === undefined || current === previous ? server : current));
-  }, [open, server]);
-  return [draft, setDraft];
-}
-
-/**
- * Assistants in this chat, in one place: whether they are on, who has added
- * one, what everyone has told them, and how much of your allowance is left.
+ * Assistants in this chat: whether they are on, who has added one, and how
+ * much of your allowance is left. Everything an assistant is told, its own and
+ * what the chat shares with every assistant, is in its settings.
  *
  * One switch for the whole chat, which anyone in it may flip; the thread says
- * who did. A message that mentions an assistant is sent to Anthropic to be answered, which
+ * who did. A chat an admin locked off (a lock no longer offered here) can be
+ * turned back on only by an admin, and that one switch also lifts the lock. A message that mentions an assistant is sent to Anthropic to be answered, which
  * is said here, where the choice is made.
  */
 export function AssistantsDialog({ open, onClose, view, onRefresh, actions }: AssistantsDialogProps) {
   const [editing, setEditing] = useState<Bot | 'new' | null>(null);
-  const [aboutUs, setAboutUs] = useDraft(view?.aboutUs, open);
-  const [memory, setMemory] = useDraft(view?.memory, open);
+  // Asked before removing: what it wrote stays, but the assistant and what it was told go.
+  const [removing, setRemoving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -113,6 +94,8 @@ export function AssistantsDialog({ open, onClose, view, onRefresh, actions }: As
     }
   };
 
+  // Those that may speak up unasked: the people here should know their messages can go to Anthropic then too.
+  const joining = view?.bots.filter((bot) => bot.joinsIn && !bot.paused) ?? [];
   const editedBot = editing && editing !== 'new' ? (view?.bots.find((bot) => bot.id === editing.id) ?? editing) : null;
 
   return (
@@ -137,8 +120,11 @@ export function AssistantsDialog({ open, onClose, view, onRefresh, actions }: As
                 control={
                   <Switch
                     checked={view.enabled}
-                    disabled={busy || view.lockedOff}
-                    onChange={(event) => void run(() => actions.change({ enabled: event.target.checked }))}
+                    disabled={busy || (view.lockedOff && !view.isManager)}
+                    onChange={(event) => {
+                      const enabled = event.target.checked;
+                      void run(() => actions.change(enabled && view.lockedOff ? { enabled, lockedOff: false } : { enabled }));
+                    }}
                   />
                 }
                 label="Allow assistants in this chat"
@@ -149,6 +135,8 @@ export function AssistantsDialog({ open, onClose, view, onRefresh, actions }: As
               <Typography variant="caption" sx={{ color: ink.muted, display: 'block' }}>
                 When someone mentions an assistant, that message and the recent ones around it are sent to Anthropic to
                 write the reply.
+                {joining.length > 0 &&
+                  ` ${joining.map((bot) => bot.name).join(' and ')} also ${joining.length === 1 ? 'joins' : 'join'} in now and then without being asked, and then the recent messages are sent too.`}
               </Typography>
 
               <Divider sx={{ my: 2.5 }} />
@@ -163,29 +151,59 @@ export function AssistantsDialog({ open, onClose, view, onRefresh, actions }: As
                 </Typography>
               )}
               {view.bots.map((bot) => (
-                <Box key={bot.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 0.75 }}>
-                  <BotAvatar color={bot.color} size={32} />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 600 }} noWrap>
-                      {bot.name}
-                      {bot.paused && <Chip label="Paused" size="small" sx={{ ml: 1 }} />}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: ink.muted }}>
-                      {bot.mine ? 'Yours' : `${bot.ownerName || 'Someone'}'s`} · {bot.modelLabel}
-                    </Typography>
-                  </Box>
-                  {bot.canManage && (
-                    <IconButton
-                      aria-label={bot.paused ? `Resume ${bot.name}` : `Pause ${bot.name}`}
-                      disabled={busy}
-                      onClick={() => void run(() => actions.updateBot(bot.id, { paused: !bot.paused }))}
-                    >
-                      {bot.paused ? <PlayIcon /> : <PauseIcon />}
+                <Box key={bot.id}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 0.75 }}>
+                    <BotAvatar color={bot.color} size={32} />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography sx={{ fontWeight: 600 }} noWrap>
+                        {bot.name}
+                        {bot.paused && <Chip label="Paused" size="small" sx={{ ml: 1 }} />}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: ink.muted }}>
+                        {bot.mine ? 'Yours' : `${bot.ownerName || 'Someone'}'s`} · {bot.modelLabel}
+                      </Typography>
+                    </Box>
+                    {bot.canManage && (
+                      <IconButton
+                        aria-label={bot.paused ? `Resume ${bot.name}` : `Pause ${bot.name}`}
+                        disabled={busy}
+                        onClick={() => void run(() => actions.updateBot(bot.id, { paused: !bot.paused }))}
+                      >
+                        {bot.paused ? <PlayIcon /> : <PauseIcon />}
+                      </IconButton>
+                    )}
+                    <IconButton aria-label={bot.canManage ? `Edit ${bot.name}` : `View ${bot.name}`} disabled={busy} onClick={() => setEditing(bot)}>
+                      {bot.canManage ? <EditIcon /> : <ViewIcon />}
                     </IconButton>
+                    {bot.canManage && (
+                      <IconButton aria-label={`Remove ${bot.name}`} disabled={busy} onClick={() => setRemoving(bot.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    )}
+                  </Box>
+                  {removing === bot.id && (
+                    <Alert
+                      severity="warning"
+                      sx={{ mb: 1 }}
+                      action={
+                        <>
+                          <Button
+                            color="error"
+                            size="small"
+                            disabled={busy}
+                            onClick={() => void run(() => actions.deleteBot(bot.id)).then(() => setRemoving(null))}
+                          >
+                            Yes, remove it
+                          </Button>
+                          <Button size="small" color="inherit" disabled={busy} onClick={() => setRemoving(null)}>
+                            Keep it
+                          </Button>
+                        </>
+                      }
+                    >
+                      Remove {bot.name}? What it wrote stays in the chat.
+                    </Alert>
                   )}
-                  <Button size="small" onClick={() => setEditing(bot)}>
-                    {bot.canManage ? 'Edit' : 'View'}
-                  </Button>
                 </Box>
               ))}
               {view.canAdd && (
@@ -199,67 +217,10 @@ export function AssistantsDialog({ open, onClose, view, onRefresh, actions }: As
                 </Typography>
               )}
 
-              <Divider sx={{ my: 2.5 }} />
-              <Heading>About you both</Heading>
-              <TextField
-                value={aboutUs}
-                onChange={(event) => setAboutUs(event.target.value)}
-                disabled={busy}
-                fullWidth
-                multiline
-                minRows={2}
-                maxRows={6}
-                placeholder="We live in Tallinn. Our anniversary is 21 October."
-                slotProps={{ htmlInput: { maxLength: 1500, 'aria-label': 'About you both' } }}
-                helperText="Every assistant in this chat keeps this in mind. Anyone here can change it."
-              />
-              <Button
-                sx={{ mt: 1 }}
-                disabled={busy || aboutUs === view.aboutUs}
-                onClick={() => void run(() => actions.change({ aboutUs }))}
-              >
-                Save
-              </Button>
-
-              <Divider sx={{ my: 2.5 }} />
-              <Heading>What the assistants have noted</Heading>
-              <TextField
-                value={memory}
-                onChange={(event) => setMemory(event.target.value)}
-                disabled={busy}
-                fullWidth
-                multiline
-                minRows={2}
-                maxRows={8}
-                placeholder="Nothing yet. Assistants add a line when you ask them to remember something."
-                slotProps={{ htmlInput: { maxLength: 1500, 'aria-label': 'What the assistants have noted' } }}
-                helperText="One note to a line. Anyone here can edit or delete them."
-              />
-              <Button sx={{ mt: 1 }} disabled={busy || memory === view.memory} onClick={() => void run(() => actions.change({ memory }))}>
-                Save
-              </Button>
-              <FormControlLabel
-                sx={{ display: 'block', mt: 1 }}
-                control={
-                  <Switch checked={view.memoryOn} disabled={busy} onChange={(event) => void run(() => actions.change({ memoryOn: event.target.checked }))} />
-                }
-                label="Let assistants add notes"
-              />
-
               {view.isManager && (
                 <>
                   <Divider sx={{ my: 2.5 }} />
                   <Heading>For admins</Heading>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={view.lockedOff}
-                        disabled={busy}
-                        onChange={(event) => void run(() => actions.change({ lockedOff: event.target.checked }))}
-                      />
-                    }
-                    label="Turn assistants off in this chat"
-                  />
                   <TextField
                     select
                     size="small"
@@ -267,7 +228,7 @@ export function AssistantsDialog({ open, onClose, view, onRefresh, actions }: As
                     value={view.whoCanAdd}
                     disabled={busy}
                     onChange={(event) => void run(() => actions.change({ whoCanAdd: event.target.value as 'everyone' | 'admins' }))}
-                    sx={{ display: 'flex', mt: 1.5, maxWidth: 280 }}
+                    sx={{ display: 'flex', mt: 0.5, maxWidth: 280 }}
                   >
                     <MenuItem value="everyone">Everyone</MenuItem>
                     <MenuItem value="admins">Admins only</MenuItem>
@@ -292,6 +253,7 @@ export function AssistantsDialog({ open, onClose, view, onRefresh, actions }: As
           onCreate={actions.createBot}
           onUpdate={actions.updateBot}
           onDelete={actions.deleteBot}
+          onChangeSettings={actions.change}
         />
       )}
     </>

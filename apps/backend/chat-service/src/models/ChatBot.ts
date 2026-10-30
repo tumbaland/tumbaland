@@ -41,6 +41,10 @@ export interface IChatBot extends Document {
   modelId: ModelId;
   /** Stays set up but does not answer. */
   paused: boolean;
+  /** Now and then speaks up without being asked: see `maybeJoinIn` in assistantReplyService. */
+  joinsIn: boolean;
+  /** When it last did, for the gap it keeps between two. */
+  lastJoinedAt: Date | null;
   /** Who last changed it: its owner, or an admin of the group. */
   updatedById: string | null;
   createdAt: Date;
@@ -58,6 +62,8 @@ const ChatBotSchema = new Schema<IChatBot>(
     color: { type: String, enum: BOT_COLORS, default: BOT_COLORS[0] },
     modelId: { type: String, enum: MODEL_IDS, required: true },
     paused: { type: Boolean, default: false },
+    joinsIn: { type: Boolean, default: false },
+    lastJoinedAt: { type: Date, default: null },
     updatedById: { type: String, default: null }
   },
   { timestamps: true }

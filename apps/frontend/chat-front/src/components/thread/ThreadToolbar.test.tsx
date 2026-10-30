@@ -122,6 +122,7 @@ const bot = (name: string, paused = false) => ({
   model: 'claude-sonnet-5-5' as const,
   modelLabel: 'Balanced',
   paused,
+  joinsIn: false,
   ownerId: 'u-tom',
   ownerName: 'Tom',
   mine: true,
@@ -161,6 +162,22 @@ describe('Assistants in the menu', () => {
     toolbar({ thread: thread({ assistants: view({ bots: [bot('Tumbi'), bot('Bubu')] }) }) });
     await userEvent.click(screen.getByRole('button', { name: 'Conversation options' }));
     expect(screen.getByRole('menuitem', { name: /Assistants/ })).toHaveTextContent('Tumbi and Bubu');
+  });
+
+  it('opens the settings of an assistant tapped in the thread, and leads on to the rest', async () => {
+    const onCloseBot = vi.fn();
+    const given = thread({ assistants: view({ bots: [bot('Tumbi')] }) });
+    toolbar({ thread: given, openBotId: 'Tumbi', onCloseBot });
+
+    expect(screen.getByRole('dialog', { name: 'Edit Tumbi' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Settings for all assistants in this chat' }));
+    expect(onCloseBot).toHaveBeenCalled();
+    expect(await screen.findByRole('dialog', { name: 'Assistants' })).toBeInTheDocument();
+  });
+
+  it('opens nothing for an assistant that is no longer there', () => {
+    toolbar({ thread: thread({ assistants: view({ bots: [] }) }), openBotId: 'Tumbi' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('is in the menu before it has loaded, with nothing under it', async () => {

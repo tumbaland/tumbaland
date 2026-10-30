@@ -15,15 +15,29 @@ import { isOpenAt, parseMoment } from './openingHours';
  *
  * Overpass is a shared public server, so searches are small, cached, and
  * limited for each conversation. `OVERPASS_URL` points at one of our own.
+ *
+ * It is also down for hours at a time. Then the same map data comes from
+ * Nominatim, OpenStreetMap's search: one request per kind of place, at most 40
+ * places each, ranked by importance rather than distance, and a cuisine
+ * filtered here since it cannot ask for one. Its policy allows one request a
+ * second from the whole server. `NOMINATIM_URL` points at one of our own.
  */
 
 const overpassUrl = (): string => process.env.OVERPASS_URL || 'https://overpass-api.de/api/interpreter';
+const nominatimUrl = (): string => (process.env.NOMINATIM_URL || 'https://nominatim.openstreetmap.org').replace(/\/$/, '');
+const USER_AGENT = 'Tumbaland/1.0 (chat assistant)';
 
 /** Where "near" means when no area is named: the middle of Tallinn. */
 const DEFAULT_CENTER = { lat: 59.437, lng: 24.7536 };
 const DEFAULT_RADIUS_M = 2_500;
 const MAX_RADIUS_M = 10_000;
-const TIMEOUT_MS = 20_000;
+/** A healthy Overpass answers these in a second or two; past this it is down, and Nominatim is asked. */
+const OVERPASS_TIMEOUT_MS = 10_000;
+/** After Overpass fails, how long searches go straight to Nominatim rather than wait on it again. */
+const OVERPASS_REST_MS = 5 * 60_000;
+const NOMINATIM_TIMEOUT_MS = 8_000;
+const NOMINATIM_GAP_MS = 1_000;
+const NOMINATIM_LIMIT = 40;
 /** Places taken from Overpass before sorting. Names are all that is asked for, so it stays small. */
 const POOL = 80;
 
@@ -58,9 +72,16 @@ export interface Found {
 const cache = new Map<string, { at: number; found: Found[] }>();
 const limit = hourlyLimit(20, 'The place search has been used 20 times this hour in this chat. Answer from what was found, or use the web search.');
 
+/** Until when Overpass is left alone after failing. */
+let overpassRestUntil = 0;
+/** When Nominatim may next be asked: one request a second, from every chat together. */
+let nominatimFreeAt = 0;
+
 export function resetPlaceFinder(): void {
   cache.clear();
   limit.reset();
+  overpassRestUntil = 0;
+  nominatimFreeAt = 0;
 }
 
 /** Letters, digits, spaces and a few marks: nothing that can change what the query means. */
@@ -91,7 +112,153 @@ function overpassQuery({ kind, cuisine, name, center, radius }: Query): string {
     cuisine && safe(cuisine) ? `["cuisine"~"${safe(cuisine)}",i]` : '',
     name && safe(name) ? `["name"~"${safe(name)}",i]` : ''
   ].join('');
-  return `[out:json][timeout:15];nwr["amenity"~"^(${amenity})$"]["name"]${filters}(around:${radius},${center.lat},${center.lng});out center tags ${POOL};`;
+  return `[out:json][timeout:8];nwr["amenity"~"^(${amenity})$"]["name"]${filters}(around:${radius},${center.lat},${center.lng});out center tags ${POOL};`;
+}
+
+function fromOverpassElement(element: Element, center: Query['center']): Found[] {
+  const tags = element.tags ?? {};
+  const lat = element.lat ?? element.center?.lat;
+  const lng = element.lon ?? element.center?.lon;
+  if (!tags.name || lat === undefined || lng === undefined) return [];
+  return [
+    {
+      id: `${element.type}/${element.id}`,
+      name: tags.name,
+      kind: (tags.amenity ?? '').replace('_', ' '),
+      cuisine: tags.cuisine?.replace(/;/g, ', ').replace(/_/g, ' '),
+      address: addressOf(tags),
+      distance: distanceMeters(center, { lat, lng }),
+      hours: tags.opening_hours,
+      website: tags.website ?? tags['contact:website'],
+      phone: tags.phone ?? tags['contact:phone'],
+      lat,
+      lng
+    }
+  ];
+}
+
+/** The places Overpass has, or null when it is not answering. */
+async function fromOverpass(query: Query, now: number): Promise<Found[] | null> {
+  if (now < overpassRestUntil) return null;
+  const response = await fetch(overpassUrl(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': USER_AGENT },
+    body: new URLSearchParams({ data: overpassQuery(query) }),
+    signal: AbortSignal.timeout(OVERPASS_TIMEOUT_MS)
+  }).catch((error: Error) => {
+    logger.warn('Overpass request failed', { error: error.message });
+    return null;
+  });
+  const body = response?.ok ? ((await response.json().catch(() => null)) as { elements?: Element[] } | null) : null;
+  if (!body) {
+    if (response) logger.warn('Overpass refused', { status: response.status });
+    overpassRestUntil = now + OVERPASS_REST_MS;
+    return null;
+  }
+  return (body.elements ?? []).flatMap((element) => fromOverpassElement(element, query.center));
+}
+
+interface NominatimPlace {
+  osm_type?: string;
+  osm_id?: number;
+  lat?: string;
+  lon?: string;
+  category?: string;
+  type?: string;
+  name?: string;
+  address?: Record<string, string>;
+  extratags?: Record<string, string> | null;
+}
+
+/** Waits for Nominatim's next free second, and takes it. */
+async function nominatimTurn(): Promise<void> {
+  const now = Date.now();
+  const wait = Math.max(0, nominatimFreeAt - now);
+  nominatimFreeAt = Math.max(now, nominatimFreeAt) + NOMINATIM_GAP_MS;
+  if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
+}
+
+/** One Nominatim search in the square around the centre, or null when it fails. */
+async function nominatimSearch(q: string, { center, radius }: Query): Promise<NominatimPlace[] | null> {
+  await nominatimTurn();
+  const dLat = radius / 111_320;
+  const dLng = radius / (111_320 * Math.cos((center.lat * Math.PI) / 180));
+  const params = new URLSearchParams({
+    q,
+    format: 'jsonv2',
+    extratags: '1',
+    addressdetails: '1',
+    bounded: '1',
+    viewbox: [center.lng - dLng, center.lat + dLat, center.lng + dLng, center.lat - dLat].map((n) => n.toFixed(5)).join(','),
+    limit: String(NOMINATIM_LIMIT)
+  });
+  const response = await fetch(`${nominatimUrl()}/search?${params}`, {
+    headers: { 'User-Agent': USER_AGENT },
+    signal: AbortSignal.timeout(NOMINATIM_TIMEOUT_MS)
+  }).catch((error: Error) => {
+    logger.warn('Nominatim request failed', { error: error.message });
+    return null;
+  });
+  if (!response?.ok) {
+    if (response) logger.warn('Nominatim refused', { status: response.status });
+    return null;
+  }
+  const body = (await response.json().catch(() => null)) as unknown;
+  return Array.isArray(body) ? (body as NominatimPlace[]) : null;
+}
+
+function fromNominatimPlace(place: NominatimPlace, center: Query['center']): Found[] {
+  const lat = Number(place.lat);
+  const lng = Number(place.lon);
+  const kind = KINDS.find((candidate) => candidate === place.type);
+  if (!place.name || place.category !== 'amenity' || !kind || !Number.isFinite(lat) || !Number.isFinite(lng)) return [];
+  const tags = place.extratags ?? {};
+  const address = place.address ?? {};
+  const street = [address.road, address.house_number].filter(Boolean).join(' ');
+  return [
+    {
+      id: `${place.osm_type}/${place.osm_id}`,
+      name: place.name,
+      kind: kind.replace('_', ' '),
+      cuisine: tags.cuisine?.replace(/;/g, ', ').replace(/_/g, ' '),
+      address: [street, address.city ?? address.town].filter(Boolean).join(', ') || undefined,
+      distance: distanceMeters(center, { lat, lng }),
+      hours: tags.opening_hours,
+      website: tags.website ?? tags['contact:website'],
+      phone: tags.phone ?? tags['contact:phone'],
+      lat,
+      lng
+    }
+  ];
+}
+
+/** The same search from Nominatim, or null when it is not answering either. */
+async function fromNominatim(query: Query): Promise<Found[] | null> {
+  const name = query.name && safe(query.name);
+  // A name is searched as words; otherwise each kind by its OpenStreetMap tag, which Nominatim reads as "places of this kind".
+  const searches = name ? [name] : (query.kind ? [query.kind] : KINDS).map((kind) => `[amenity=${kind}]`);
+  const answers: NominatimPlace[][] = [];
+  for (const q of searches) {
+    const answer = await nominatimSearch(q, query);
+    if (answer) answers.push(answer);
+  }
+  if (answers.length === 0) return null;
+
+  const cuisine = query.cuisine && safe(query.cuisine).toLowerCase();
+  const seen = new Set<string>();
+  return answers
+    .flat()
+    .flatMap((place) => fromNominatimPlace(place, query.center))
+    .filter((place) => {
+      if (seen.has(place.id)) return false;
+      seen.add(place.id);
+      // The square's corners reach past the radius.
+      if (place.distance > query.radius) return false;
+      if (query.kind && place.kind !== query.kind.replace('_', ' ')) return false;
+      if (cuisine && !place.cuisine?.toLowerCase().includes(cuisine)) return false;
+      return true;
+    })
+    .slice(0, POOL);
 }
 
 export async function findPlaces(conversationId: string, query: Query): Promise<Found[]> {
@@ -102,42 +269,8 @@ export async function findPlaces(conversationId: string, query: Query): Promise<
 
   limit.take(conversationId, now);
 
-  const response = await fetch(overpassUrl(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Tumbaland/1.0 (chat assistant)' },
-    body: new URLSearchParams({ data: overpassQuery(query) }),
-    signal: AbortSignal.timeout(TIMEOUT_MS)
-  }).catch((error: Error) => {
-    logger.warn('Overpass request failed', { error: error.message });
-    return null;
-  });
-  if (!response?.ok) {
-    if (response) logger.warn('Overpass refused', { status: response.status });
-    throw new Error('The map search is not answering right now. Use the web search instead.');
-  }
-
-  const body = (await response.json().catch(() => null)) as { elements?: Element[] } | null;
-  const found = (body?.elements ?? []).flatMap((element): Found[] => {
-    const tags = element.tags ?? {};
-    const lat = element.lat ?? element.center?.lat;
-    const lng = element.lon ?? element.center?.lon;
-    if (!tags.name || lat === undefined || lng === undefined) return [];
-    return [
-      {
-        id: `${element.type}/${element.id}`,
-        name: tags.name,
-        kind: (tags.amenity ?? '').replace('_', ' '),
-        cuisine: tags.cuisine?.replace(/;/g, ', ').replace(/_/g, ' '),
-        address: addressOf(tags),
-        distance: distanceMeters(query.center, { lat, lng }),
-        hours: tags.opening_hours,
-        website: tags.website ?? tags['contact:website'],
-        phone: tags.phone ?? tags['contact:phone'],
-        lat,
-        lng
-      }
-    ];
-  });
+  const found = (await fromOverpass(query, now)) ?? (await fromNominatim(query));
+  if (!found) throw new Error('The map search is not answering right now. Use the web search instead.');
 
   if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value as string);
   cache.set(key, { at: now, found });

@@ -8,6 +8,7 @@ import { ThemePicker } from './ThemePicker';
 import { AlbumPicker } from './AlbumPicker';
 import { AlbumCollageDialog } from './AlbumCollageDialog';
 import { AssistantsDialog } from './AssistantsDialog';
+import { BotEditorDialog } from './BotEditorDialog';
 import { chatColors, themeById } from './themes';
 import { chatApi } from '../../services/chatApi';
 import { requestCall } from '../../services/callBus';
@@ -53,6 +54,9 @@ interface Props {
   choosingAlbum: boolean;
   onCloseAlbum: () => void;
   onOpenCollage: (collageId: string) => void;
+  /** An assistant whose name was tapped in the thread: its settings are open. */
+  openBotId?: string | null;
+  onCloseBot?: () => void;
 }
 
 /** The thread header, calls and conversation settings. Message-level album changes live with media. */
@@ -68,11 +72,15 @@ export function ThreadToolbar({
   recordingVoice,
   choosingAlbum,
   onCloseAlbum,
-  onOpenCollage
+  onOpenCollage,
+  openBotId = null,
+  onCloseBot = () => {}
 }: Props) {
   const [choosingTheme, setChoosingTheme] = useState(false);
   const [albumAndCollage, setAlbumAndCollage] = useState(false);
   const [assistantsOpen, setAssistantsOpen] = useState(false);
+  // Gone from the view, removed here or by someone else, and the dialog closes.
+  const tappedBot = (openBotId && thread.assistants?.bots.find((bot) => bot.id === openBotId)) || null;
   const loadAlbums = useCallback(
     () => (conversationId ? chatApi.listAlbums(conversationId) : Promise.resolve([])),
     [conversationId]
@@ -155,6 +163,22 @@ export function ThreadToolbar({
         onRefresh={thread.refreshAssistants}
         actions={thread.assistantActions}
       />
+      {thread.assistants && (
+        <BotEditorDialog
+          open={tappedBot !== null}
+          onClose={onCloseBot}
+          bot={tappedBot}
+          view={thread.assistants}
+          onCreate={thread.assistantActions.createBot}
+          onUpdate={thread.assistantActions.updateBot}
+          onDelete={thread.assistantActions.deleteBot}
+          onChangeSettings={thread.assistantActions.change}
+          onOpenSettings={() => {
+            onCloseBot();
+            setAssistantsOpen(true);
+          }}
+        />
+      )}
       <ThemePicker
         open={choosingTheme}
         onClose={() => setChoosingTheme(false)}

@@ -28,6 +28,8 @@ export interface IAssistantUsage extends Document {
   units: number;
   durationMs: number;
   outcome: AssistantOutcome;
+  /** Spoke up without being asked, on its owner's allowance; `mentioner` is then the owner. */
+  unasked: boolean;
   createdAt: Date;
 }
 
@@ -46,7 +48,8 @@ const AssistantUsageSchema = new Schema<IAssistantUsage>(
     cacheWriteTokens: { type: Number, default: 0 },
     units: { type: Number, default: 0 },
     durationMs: { type: Number, default: 0 },
-    outcome: { type: String, enum: ['ok', 'refused', 'error', 'key_rejected'], required: true }
+    outcome: { type: String, enum: ['ok', 'refused', 'error', 'key_rejected'], required: true },
+    unasked: { type: Boolean, default: false }
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
