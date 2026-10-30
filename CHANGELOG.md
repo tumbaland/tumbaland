@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.546](https://github.com/tumbaland/tumbaland/compare/app-v0.0.545...app-v0.0.546) (2026-10-30)
+
+### Bug Fixes
+
+* test splits ([3b6a6c7](https://github.com/tumbaland/tumbaland/commit/3b6a6c71cef9893aa26203387563c29ae4ac29bb))
+
 ## [0.0.545](https://github.com/tumbaland/tumbaland/compare/app-v0.0.544...app-v0.0.545) (2026-10-30)
 
 ### Features
