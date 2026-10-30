@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.553](https://github.com/tumbaland/tumbaland/compare/app-v0.0.552...app-v0.0.553) (2026-10-30)
+
+### Bug Fixes
+
+* improve iphone compatability for text copy ([1dd453d](https://github.com/tumbaland/tumbaland/commit/1dd453da3752c4d2899b326d3765e8d944b9f764))
+
 ## [0.0.552](https://github.com/tumbaland/tumbaland/compare/app-v0.0.551...app-v0.0.552) (2026-10-30)
 
 ### Features
