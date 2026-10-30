@@ -41,7 +41,7 @@ export const BASE_PROMPT = [
 
 /** Added to the base prompt only when the web tools are handed over (they can be turned off with ASSISTANT_WEB=off). */
 /** Searches, and separately page reads, one reply may use. Each search costs a cent and each page adds input tokens. */
-export const WEB_USES_PER_REPLY = 5;
+export const WEB_USES_PER_REPLY = 3;
 
 export const WEB_RULES =
   `You can also search the web and read web pages, for what Tumbaland does not know: opening hours, prices, events, weather, directions, news. Search when the answer depends on something current or outside the journal, and say plainly when you could not find it. Prefer pages from the last few weeks, give prices with their currency, and say where you found a fact (a site name or a link). Opening hours and menus on the web can be out of date: say so when it matters. Search for the thing asked about only. Never put private details from the journal, the photos or the chat into a search. Names of games, films and places they like are not private: to suggest a new one, search with them, for example "co-op games like X on Steam", and check that what you suggest is real and available. Who did something, when and where stays out of a search. You have at most ${WEB_USES_PER_REPLY} searches and ${WEB_USES_PER_REPLY} page reads in one reply, so plan them: at most one search for each place or thing. If they run out before you are done, give what you found and offer to look up the rest in another message. That is a limit on one reply, not anyone's allowance: never call it an allowance.`;

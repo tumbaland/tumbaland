@@ -774,6 +774,20 @@ describe('an assistant that joins in unasked', () => {
     expect(row).toMatchObject({ mentionerId: 'u-tom', mentionerEmail: 'tom@example.com', unasked: true, outcome: 'ok' });
   });
 
+  it('runs on the cheapest model enabled, whatever its owner picked for what they ask', async () => {
+    const id = await readyChat();
+    await letItJoinIn(id);
+    const botId = (await ChatBot.findOne())!._id.toString();
+    await as(TOM).patch(url(id, `/assistants/bots/${botId}`)).send({ model: 'claude-opus-5-5' });
+    ask.mockImplementation(async (request) => answer({ text: 'Rimi closes at 22:00.', servedBy: request.model }));
+
+    await send(id, 'when does Rimi close?', IRJA);
+    const [row] = await nextUsage();
+
+    expect(ask.mock.calls[0]![0].model).toBe('claude-haiku-5-5');
+    expect(row).toMatchObject({ unasked: true, modelId: 'claude-haiku-5-5' });
+  });
+
   it('keeps quiet when it has nothing to add, and still counts the call', async () => {
     const id = await readyChat();
     await letItJoinIn(id);

@@ -8,7 +8,7 @@ import type { Caller } from './accessService';
 import { askClaude, type ClaudeReply, type ToolCall } from './assistantClaude';
 import { getActiveKey, markKeyRejected } from './assistantKeyService';
 import { memoryOn, memoryTools } from './assistantMemory';
-import { MODELS, costUnits } from './assistantModels';
+import { MODELS, cheapestOf, costUnits } from './assistantModels';
 import { placeTools } from './placeFinder';
 import { chatTools } from './chatTools';
 import { currencyTools } from './currency';
@@ -292,7 +292,9 @@ async function replyAs(bot: IChatBot, person: Caller, conversation: IConversatio
     return void (await notice((error as Error).message));
   }
 
-  const model = effectiveModel(bot, key.models);
+  // Joining in is a short, read-only line nobody asked for, and often SKIP: it never needs the
+  // model its owner picked for the things they ask, so it runs on the cheapest one enabled.
+  const model = (unasked ? cheapestOf(key.models.enabled) : undefined) ?? effectiveModel(bot, key.models);
   const started = Date.now();
   // Unasked, it may yet decide to say nothing, so no "typing" is shown for it.
   const working = unasked ? { activity: () => {}, stop: () => {} } : showWorking(conversation, bot);

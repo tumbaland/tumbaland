@@ -1,4 +1,4 @@
-import { MODELS, MODEL_IDS, UNITS_PER_DOLLAR, costUnits, isModelId, modelCatalog } from './assistantModels';
+import { MODELS, MODEL_IDS, UNITS_PER_DOLLAR, cheapestOf, costUnits, isModelId, modelCatalog } from './assistantModels';
 
 const none = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 
@@ -29,6 +29,18 @@ describe('costUnits', () => {
     expect(costUnits('claude-haiku-5-5', reply)).toBeLessThan(40);
     expect(costUnits('claude-sonnet-5-5', reply)).toBeGreaterThan(costUnits('claude-haiku-5-5', reply) * 10);
     expect(costUnits('claude-opus-5-5', reply)).toBeGreaterThan(costUnits('claude-sonnet-5-5', reply));
+  });
+});
+
+describe('cheapestOf', () => {
+  it('picks the lowest input price among those given, whatever the order', () => {
+    expect(cheapestOf(['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'])).toBe('claude-haiku-5-5');
+    expect(cheapestOf(['claude-opus-5-5', 'claude-sonnet-5-5'])).toBe('claude-sonnet-5-5');
+    expect(cheapestOf(['claude-opus-5-5'])).toBe('claude-opus-5-5');
+  });
+
+  it('says nothing for none', () => {
+    expect(cheapestOf([])).toBeUndefined();
   });
 });
 

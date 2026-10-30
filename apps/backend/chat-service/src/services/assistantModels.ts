@@ -84,6 +84,11 @@ export const MODELS: Readonly<Record<ModelId, ModelSpec>> = {
   }
 };
 
+/** The cheapest of these by input price, the first of equals; `undefined` for none. */
+export function cheapestOf(ids: readonly ModelId[]): ModelId | undefined {
+  return [...ids].sort((a, b) => MODELS[a].inputPerMTok - MODELS[b].inputPerMTok)[0];
+}
+
 /** Writing to the prompt cache costs a quarter more than reading input; reading it back costs a tenth. */
 const CACHE_WRITE_FACTOR = 1.25;
 const CACHE_READ_FACTOR = 0.1;
