@@ -1,4 +1,16 @@
 # Tumbalog
+## [0.0.545](https://github.com/tumbaland/tumbaland/compare/app-v0.0.544...app-v0.0.545) (2026-10-30)
+
+### Features
+
+* add assistants ([41aa23e](https://github.com/tumbaland/tumbaland/commit/41aa23e3facc31da0607fcd8fc678c27f897ec1a))
+* add new logo ([6096cd2](https://github.com/tumbaland/tumbaland/commit/6096cd246a8e9194346692cbf01874701b7b9a73))
+
+### Chores
+
+* **release:** @tumbaland/backend-core 1.52.0 ([4ad3a35](https://github.com/tumbaland/tumbaland/commit/4ad3a35723a045875b42d66c06a3d27081653579))
+* **release:** @tumbaland/frontend-core 1.25.0 ([bf1ed05](https://github.com/tumbaland/tumbaland/commit/bf1ed05dacbadac66f7da78ac3374e4109879a10))
+
 ## [0.0.544](https://github.com/tumbaland/tumbaland/compare/app-v0.0.543...app-v0.0.544) (2026-10-28)
 
 ### Features
