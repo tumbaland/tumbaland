@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.548](https://github.com/tumbaland/tumbaland/compare/app-v0.0.547...app-v0.0.548) (2026-10-30)
+
+### Bug Fixes
+
+* remove country code ([e4aa3ce](https://github.com/tumbaland/tumbaland/commit/e4aa3ce7fbdaa696ad6ace63e6f6fc758fcd8b0d))
+
 ## [0.0.547](https://github.com/tumbaland/tumbaland/compare/app-v0.0.546...app-v0.0.547) (2026-10-30)
 
 ### Features
