@@ -60,6 +60,7 @@ const answer = (overrides: Partial<ClaudeReply> = {}): ClaudeReply => ({
   text: 'Try the old town.',
   refused: false,
   toolCalls: [],
+  sources: [],
   usage,
   servedBy: 'claude-sonnet-5-5',
   ...overrides
@@ -90,12 +91,11 @@ const seedKey = async (overrides: object = {}) => {
   resetKeyCache();
 };
 
-/** Both people on the chat and agreed, Tom with a bot called Tumbi, and a key saved. */
+/** Both people on the chat, assistants on, Tom with a bot called Tumbi, and a key saved. */
 async function readyChat(): Promise<string> {
   const id = await conversationInG1();
   await as(IRJA).get(url(id));
   await as(TOM).patch(url(id, '/assistants')).send({ enabled: true });
-  await as(IRJA).patch(url(id, '/assistants')).send({ enabled: true });
   await makeBot(id, TOM, 'Tumbi', { personality: 'Cheeky.', aboutOwner: 'Likes tea.' });
   await as(TOM).patch(url(id, '/assistants')).send({ aboutUs: 'We live in Tallinn.' });
   await seedKey();
@@ -152,6 +152,68 @@ describe('an assistant answers when it is mentioned', () => {
     expect(request.user).toContain('Irja: we are back from the sea');
     expect(request.user).toContain('Tom just wrote to you, Tumbi: @Tumbi where should we eat Saturday?');
     expect(request.user).not.toContain('turned assistants on');
+  });
+
+  it('posts plain chat text, not Markdown, with the pages it drew on underneath', async () => {
+    const id = await readyChat();
+    ask.mockResolvedValue(answer({ text: '**Kolm Sõpra** is open late:\n- mains ~25 EUR', sources: [{ url: 'https://kolm.ee', title: 'Kolm Sõpra' }] }));
+    await send(id, '@Tumbi dinner?');
+    const [reply] = await eventually(() => botMessages(id), (rows) => rows.length === 1);
+    expect(reply!.body).toBe('Kolm Sõpra is open late:\n• mains ~25 EUR\n\nSources:\n• Kolm Sõpra: https://kolm.ee');
+  });
+
+  it('hands over the web, and tells the bot about it, unless the web is switched off', async () => {
+    const id = await readyChat();
+    await send(id, '@Tumbi hello');
+    await nextUsage();
+    expect(ask.mock.calls[0]![0].web).toMatchObject({ city: 'Tallinn', timeZone: 'Europe/Tallinn' });
+    expect(ask.mock.calls[0]![0].system[0]).toContain('search the web');
+
+    process.env.ASSISTANT_WEB = 'off';
+    try {
+      await send(id, '@Tumbi hello again');
+      await eventually(() => AssistantUsage.countDocuments(), (count) => count === 2);
+      expect(ask.mock.calls[1]![0].web).toBeUndefined();
+      expect(ask.mock.calls[1]![0].system[0]).not.toContain('search the web');
+    } finally {
+      delete process.env.ASSISTANT_WEB;
+    }
+  });
+
+  it('hands over the notes and the tools to keep them, and the place search', async () => {
+    const id = await readyChat();
+    await as(IRJA).patch(url(id, '/assistants')).send({ memory: 'Irja is vegetarian' });
+    await send(id, '@Tumbi hello');
+    await nextUsage();
+    const request = ask.mock.calls[0]![0];
+    expect(request.system[1]).toContain('Irja is vegetarian');
+    expect(request.system[1]).toContain('remember and forget tools');
+    expect(request.clientTools!.map((tool) => tool.name)).toEqual(['remember', 'forget', 'find_places', 'get_weather', 'search_chat', 'where_is', 'saved_places', 'get_route', 'convert_currency']);
+  });
+
+  it('leaves out the note tools, and the rules about them, when people turned noting off', async () => {
+    const id = await readyChat();
+    await as(IRJA).patch(url(id, '/assistants')).send({ memory: 'Irja is vegetarian', memoryOn: false });
+    await send(id, '@Tumbi hello');
+    await nextUsage();
+    const request = ask.mock.calls[0]![0];
+    expect(request.system[1]).toContain('Irja is vegetarian');
+    expect(request.system[1]).not.toContain('remember and forget');
+    expect(request.clientTools!.map((tool) => tool.name)).toEqual(['find_places', 'get_weather', 'search_chat', 'where_is', 'saved_places', 'get_route', 'convert_currency']);
+  });
+
+  it('saves a note the bot asks to keep where people can see it, without undoing an edit made meanwhile', async () => {
+    const id = await readyChat();
+    ask.mockImplementation(async (request: ClaudeRequest) => {
+      // Someone edits the notes while the bot is working; the bot's note lands on top of theirs.
+      await as(IRJA).patch(url(id, '/assistants')).send({ memory: 'Irja is vegetarian' });
+      const said = await request.clientTools!.find((tool) => tool.name === 'remember')!.run({ note: 'Tom likes tea' });
+      return answer({ text: said, servedBy: request.model });
+    });
+    await send(id, '@Tumbi remember Tom likes tea');
+    await nextUsage();
+    expect((await Conversation.findById(id))!.assistants!.memory).toBe('Irja is vegetarian\nTom likes tea');
+    expect((await as(TOM).get(url(id, '/assistants'))).body.data.memory).toBe('Irja is vegetarian\nTom likes tea');
   });
 
   it('is not held up by Claude: the send is answered first', async () => {
@@ -436,23 +498,19 @@ describe('what stops it, said in the thread', () => {
     expect(await botMessages(id)).toHaveLength(0);
   };
 
-  it('assistants that not everyone has agreed to', async () => {
+  it('assistants someone in the chat has turned off', async () => {
     const id = await readyChat();
     await as(IRJA).patch(url(id, '/assistants')).send({ enabled: false });
-    await never(id, 'Assistants are off in this chat. Everyone in it has to turn them on first.');
+    await never(id, 'Assistants are off in this chat. Anyone here can turn them on, under Assistants in the chat menu.');
   });
 
   it('assistants an admin has locked off', async () => {
     const id = await readyChat();
     await Conversation.updateOne({ _id: id }, { $set: { 'assistants.lockedOff': true } });
-    await never(id, 'Assistants are off in this chat. Everyone in it has to turn them on first.');
+    await never(id, 'Assistants are off in this chat. Anyone here can turn them on, under Assistants in the chat menu.');
   });
 
-  it('a group member who has never opened the chat', async () => {
-    const id = await readyChat();
-    (getGroupOwner as jest.Mock).mockResolvedValue({ groupId: 'g1', ownerEmail: 'tom@example.com', memberCount: 3, deleted: false });
-    await never(id, 'Assistants are off in this chat. Everyone in it has to turn them on first.');
-  });
+
 
   it('a paused assistant', async () => {
     const id = await readyChat();

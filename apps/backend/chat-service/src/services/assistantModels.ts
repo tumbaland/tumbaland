@@ -37,7 +37,16 @@ export interface ModelSpec {
   fallbacks: boolean;
   /** Thinking depth. The defaults differ per model, so it is set rather than left. */
   effort: 'low' | 'medium' | 'high';
+  /**
+   * The web tools this model can use. The 2026-02-09 versions filter what a page
+   * says before the model reads it, which saves tokens, but are documented only for
+   * Sonnet and Opus; Haiku gets the basic versions.
+   */
+  webTools: { search: string; fetch: string };
 }
+
+const FILTERED_WEB = { search: 'web_search_20260209', fetch: 'web_fetch_20260209' };
+const BASIC_WEB = { search: 'web_search_20250305', fetch: 'web_fetch_20250910' };
 
 export const MODELS: Readonly<Record<ModelId, ModelSpec>> = {
   'claude-haiku-5-5': {
@@ -48,7 +57,8 @@ export const MODELS: Readonly<Record<ModelId, ModelSpec>> = {
     inputPerMTok: 0.1,
     outputPerMTok: 0.5,
     fallbacks: false,
-    effort: 'medium'
+    effort: 'medium',
+    webTools: BASIC_WEB
   },
   'claude-sonnet-5-5': {
     id: 'claude-sonnet-5-5',
@@ -58,7 +68,8 @@ export const MODELS: Readonly<Record<ModelId, ModelSpec>> = {
     inputPerMTok: 2,
     outputPerMTok: 10,
     fallbacks: true,
-    effort: 'medium'
+    effort: 'medium',
+    webTools: FILTERED_WEB
   },
   'claude-opus-5-5': {
     id: 'claude-opus-5-5',
@@ -68,7 +79,8 @@ export const MODELS: Readonly<Record<ModelId, ModelSpec>> = {
     inputPerMTok: 4,
     outputPerMTok: 20,
     fallbacks: true,
-    effort: 'medium'
+    effort: 'medium',
+    webTools: FILTERED_WEB
   }
 };
 
@@ -84,11 +96,19 @@ const CACHE_READ_FACTOR = 0.1;
  */
 export const UNITS_PER_DOLLAR = 10_000;
 
+/**
+ * Anthropic bills a web search on its own, a cent each, on top of the tokens of
+ * the pages it brings back. List price as of 2026-10: check it against the bill.
+ */
+export const WEB_SEARCH_DOLLARS = 0.01;
+
 export interface TokenUsage {
   input: number;
   output: number;
   cacheRead: number;
   cacheWrite: number;
+  /** Searches the model ran. Left out where none could. */
+  webSearches?: number;
 }
 
 /** What a reply cost, in meter units, never less than one: every reply is counted. */
@@ -99,7 +119,8 @@ export function costUnits(model: ModelId, usage: TokenUsage): number {
       usage.cacheWrite * spec.inputPerMTok * CACHE_WRITE_FACTOR +
       usage.cacheRead * spec.inputPerMTok * CACHE_READ_FACTOR +
       usage.output * spec.outputPerMTok) /
-    1_000_000;
+      1_000_000 +
+    (usage.webSearches ?? 0) * WEB_SEARCH_DOLLARS;
   return Math.max(1, Math.ceil(dollars * UNITS_PER_DOLLAR));
 }
 

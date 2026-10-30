@@ -347,6 +347,8 @@ export const assistantSettingsSchema = z
   .object({
     enabled: z.boolean().optional(),
     aboutUs: botText.optional(),
+    memory: botText.optional(),
+    memoryOn: z.boolean().optional(),
     lockedOff: z.boolean().optional(),
     whoCanAdd: z.enum(['everyone', 'admins']).optional()
   })

@@ -47,18 +47,29 @@ export interface IAppearanceSetting {
 }
 
 /**
- * The conversation's assistants, as a whole: who has agreed to them, what they
+ * The conversation's assistants, as a whole: whether they are on, what they
  * all know, and what the group's admins have decided.
  *
- * Assistants are on only when every person in the conversation has agreed and
- * an admin has not locked them off. Each person's agreement is their own and
- * nobody can give it for them; an admin can only take assistants away.
+ * One switch for the whole conversation, and anyone in it may flip it; the
+ * thread says who did. An admin can lock them off whatever the switch says.
  */
 export interface IAssistantsSetting {
-  /** `User._id` of everyone who has switched assistants on for themselves. */
+  /**
+   * On or off for everyone here. Absent on a conversation from before the
+   * switch, which is read the old way: on when everyone had agreed.
+   */
+  on?: boolean | null;
+  /** The old way: `User._id` of everyone who switched assistants on for themselves. Read only when `on` is absent. */
   enabledBy: string[];
   /** Shared facts every assistant here should keep in mind: "we live in Tallinn". */
   aboutUs: string;
+  /**
+   * What the assistants have noted about the people here, a note to a line.
+   * Shown in the assistants dialog, where anyone in the chat can edit it.
+   */
+  memory: string;
+  /** Whether the assistants may add to `memory`. Off, they still read it. */
+  memoryOn: boolean;
   /** An owner or admin of the group has turned assistants off for this conversation. */
   lockedOff: boolean;
   /** Who may add a bot: anyone in the conversation, or only the group's owner and admins. */
@@ -142,14 +153,18 @@ const ConversationSchema = new Schema<IConversation>(
     assistants: {
       type: new Schema<IAssistantsSetting>(
         {
+          // No default: an absent value is what marks a conversation from before the switch.
+          on: { type: Boolean },
           enabledBy: { type: [String], default: [] },
           aboutUs: { type: String, default: '', maxlength: 1500 },
+          memory: { type: String, default: '', maxlength: 1500 },
+          memoryOn: { type: Boolean, default: true },
           lockedOff: { type: Boolean, default: false },
           whoCanAdd: { type: String, enum: ['everyone', 'admins'], default: 'everyone' }
         },
         { _id: false }
       ),
-      default: () => ({ enabledBy: [], aboutUs: '', lockedOff: false, whoCanAdd: 'everyone' })
+      default: () => ({ enabledBy: [], aboutUs: '', memory: '', memoryOn: true, lockedOff: false, whoCanAdd: 'everyone' })
     },
     deletedAt: { type: Date, default: null }
   },

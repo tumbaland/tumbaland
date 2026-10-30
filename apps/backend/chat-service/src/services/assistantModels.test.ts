@@ -13,6 +13,11 @@ describe('costUnits', () => {
     expect(costUnits('claude-opus-5-5', { ...none, cacheRead: 1_000_000 })).toBe(0.4 * UNITS_PER_DOLLAR);
   });
 
+  it('charges a cent for each web search on top of the tokens', () => {
+    expect(costUnits('claude-sonnet-5-5', { ...none, input: 1_000_000, webSearches: 3 })).toBe(2 * UNITS_PER_DOLLAR + 0.03 * UNITS_PER_DOLLAR);
+    expect(costUnits('claude-sonnet-5-5', { ...none, input: 1_000_000 })).toBe(2 * UNITS_PER_DOLLAR);
+  });
+
   it('counts the cheapest reply as one unit and not as nothing', () => {
     expect(costUnits('claude-haiku-5-5', { ...none, input: 10, output: 5 })).toBe(1);
     expect(costUnits('claude-haiku-5-5', none)).toBe(1);
@@ -41,6 +46,12 @@ describe('the model table', () => {
     expect(MODELS['claude-opus-5-5'].fallbacks).toBe(true);
   });
 
+  it('gives Haiku the basic web tools and the others the filtering ones', () => {
+    expect(MODELS['claude-haiku-5-5'].webTools).toEqual({ search: 'web_search_20250305', fetch: 'web_fetch_20250910' });
+    expect(MODELS['claude-sonnet-5-5'].webTools.search).toBe('web_search_20260209');
+    expect(MODELS['claude-opus-5-5'].webTools.fetch).toBe('web_fetch_20260209');
+  });
+
   it('recognises only its own ids', () => {
     expect(isModelId('claude-sonnet-5-5')).toBe(true);
     expect(isModelId('gpt-5')).toBe(false);
@@ -52,5 +63,6 @@ describe('the model table', () => {
     expect(catalog.map((entry) => entry.label)).toEqual(['Fast', 'Balanced', 'Best']);
     expect(catalog[0]).not.toHaveProperty('effort');
     expect(catalog[0]).not.toHaveProperty('fallbacks');
+    expect(catalog[0]).not.toHaveProperty('webTools');
   });
 });

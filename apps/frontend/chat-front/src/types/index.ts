@@ -439,13 +439,13 @@ export interface AssistantPreset {
 export interface AssistantsView {
   /** On right now: everyone has agreed and nobody has locked it. */
   enabled: boolean;
-  /** The viewer has agreed. */
-  mine: boolean;
-  /** Names of who has not agreed yet. */
-  waitingFor: string[];
   lockedOff: boolean;
   whoCanAdd: 'everyone' | 'admins';
   aboutUs: string;
+  /** What the assistants have noted about you, a note to a line. Anyone here can edit it. */
+  memory: string;
+  /** The assistants may add notes. Off, they still read what is there. */
+  memoryOn: boolean;
   /** The viewer is an owner or admin of the group. */
   isManager: boolean;
   /** The viewer may add a bot. */
@@ -470,6 +470,8 @@ export type BotChange = Partial<BotInput> & { paused?: boolean };
 export interface AssistantSettingsChange {
   enabled?: boolean;
   aboutUs?: string;
+  memory?: string;
+  memoryOn?: boolean;
   lockedOff?: boolean;
   whoCanAdd?: 'everyone' | 'admins';
 }

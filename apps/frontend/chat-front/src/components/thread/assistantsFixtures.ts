@@ -19,11 +19,11 @@ export const bot = (overrides: Partial<Bot> = {}): Bot => ({
 
 export const assistantsView = (overrides: Partial<AssistantsView> = {}): AssistantsView => ({
   enabled: true,
-  mine: true,
-  waitingFor: [],
   lockedOff: false,
   whoCanAdd: 'everyone',
   aboutUs: '',
+  memory: '',
+  memoryOn: true,
   isManager: false,
   canAdd: true,
   bots: [],

@@ -720,23 +720,28 @@ paths:
     get:
       summary: The assistants in this conversation, as the caller sees them
       description: |
-        Everything the Assistants dialog shows: whether assistants are on (everyone
-        in the conversation has agreed and nobody has locked them off), the caller's
-        own agreement, who has not agreed yet, the shared "About us" text, every
-        bot with what it was told (readable by everyone), the models an admin has
+        Everything the Assistants dialog shows: whether assistants are on (someone
+        turned them on and nobody has locked them off), the shared "About us" text,
+        what the assistants have noted and whether they may add to it, every bot
+        with what it was told (readable by everyone), the models an admin has
         turned on, the starting personalities, and the caller's monthly allowance.
         `canManage` on a bot and `isManager` are for the caller: a bot's owner and
         the group's owner and admins may change it.
       responses:
-        '200': { description: '`{ enabled, mine, waitingFor, lockedOff, whoCanAdd, aboutUs, isManager, canAdd, bots, presets, colors, models, allowance }`' }
+        '200': { description: '`{ enabled, lockedOff, whoCanAdd, aboutUs, memory, memoryOn, isManager, canAdd, bots, presets, colors, models, allowance }`' }
         '404': { description: 'No such conversation, or not the caller''s' }
     patch:
-      summary: Your own switch, the shared text, and the admins' two settings
+      summary: The chat's switch, the shared texts, and the admins' two settings
       description: |
-        `enabled` is the caller's own agreement and nobody can give it for them.
+        `enabled` turns assistants on or off for the whole conversation; anyone in it may
+        flip it, and the thread says who did. A lock from an admin wins over it.
         `aboutUs` is the text every assistant here keeps in mind; anyone may edit it.
-        `lockedOff` (turn assistants off for the whole conversation, whatever
-        anyone agreed) and `whoCanAdd` (`everyone` or `admins`) are for the group's
+        `memory` is what the assistants have noted about the people here, a note to a
+        line: the assistants add and remove lines themselves, and anyone may edit the
+        whole text. `memoryOn` says whether the assistants may add notes (they always
+        read them); anyone may switch it.
+        `lockedOff` (keep assistants off for the whole conversation, whatever the
+        switch says) and `whoCanAdd` (`everyone` or `admins`) are for the group's
         owner and admins. Each change is announced in the thread as a `system`
         message and to the group as `conversation.updated` with `{ assistants: true }`.
       requestBody:
@@ -748,6 +753,8 @@ paths:
               properties:
                 enabled: { type: boolean }
                 aboutUs: { type: string, maxLength: 1500 }
+                memory: { type: string, maxLength: 1500 }
+                memoryOn: { type: boolean }
                 lockedOff: { type: boolean }
                 whoCanAdd: { type: string, enum: [everyone, admins] }
       responses:

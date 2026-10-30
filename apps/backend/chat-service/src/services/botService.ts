@@ -44,22 +44,31 @@ export const RESERVED_NAMES = ['claude'];
 const settingOf = (conversation: IConversation): IAssistantsSetting => {
   const setting = conversation.assistants;
   return {
+    on: typeof setting?.on === 'boolean' ? setting.on : null,
     enabledBy: [...(setting?.enabledBy ?? [])],
     aboutUs: setting?.aboutUs ?? '',
+    memory: setting?.memory ?? '',
+    memoryOn: setting?.memoryOn ?? true,
     lockedOff: setting?.lockedOff ?? false,
     whoCanAdd: setting?.whoCanAdd ?? 'everyone'
   };
 };
 
 /**
- * Whether assistants are on here: nobody has locked them off, and everyone who
- * has opened the conversation has agreed. `groupSize` is how many people the
- * group has; one who has never opened the chat has not agreed either, so a
- * conversation with fewer people seen than the group has is not on yet.
+ * Whether assistants are on here: nobody has locked them off, and the switch is
+ * on. A conversation from before the switch is read the way it was then:
+ * everyone who has opened it has agreed, and so has the whole group
+ * (`groupSize`), since someone who never opened the chat has not agreed either.
  */
 export function assistantsOn(conversation: IConversation, groupSize?: number | null): boolean {
   const setting = settingOf(conversation);
-  if (setting.lockedOff || conversation.members.length === 0) return false;
+  if (setting.lockedOff) return false;
+  return setting.on ?? agreedTheOldWay(conversation, setting, groupSize);
+}
+
+/** Before the switch: everyone who has opened the chat agreed, and nobody in the group has yet to open it. */
+function agreedTheOldWay(conversation: IConversation, setting: IAssistantsSetting, groupSize?: number | null): boolean {
+  if (conversation.members.length === 0) return false;
   if (groupSize && conversation.members.length < groupSize) return false;
   return conversation.members.every((member) => setting.enabledBy.includes(member.userId));
 }
@@ -83,15 +92,15 @@ export interface BotView {
 }
 
 export interface AssistantsView {
-  /** On right now: everyone agreed and nobody locked it. */
+  /** On right now: the switch is on and nobody locked it. */
   enabled: boolean;
-  /** The viewer has agreed. */
-  mine: boolean;
-  /** Who has not agreed yet. */
-  waitingFor: string[];
   lockedOff: boolean;
   whoCanAdd: 'everyone' | 'admins';
   aboutUs: string;
+  /** What the assistants have noted, a note to a line. Anyone in the chat may edit it. */
+  memory: string;
+  /** The assistants may add notes. */
+  memoryOn: boolean;
   /** The viewer is an owner or admin of the group. */
   isManager: boolean;
   /** The viewer may add a bot: they have none yet, and `whoCanAdd` allows them. */
@@ -125,10 +134,6 @@ const toView = (bot: IChatBot, person: Caller, isManager: boolean, models: Model
   };
 };
 
-/** "1 person who has not opened this chat yet": someone in the group who cannot have agreed. */
-const unseen = (count: number): string =>
-  `${count} ${count === 1 ? 'person who has' : 'people who have'} not opened this chat yet`;
-
 export async function assistantsView(person: Caller, conversation: IConversation): Promise<AssistantsView> {
   const setting = settingOf(conversation);
   const [bots, isManager, models, allowance, group] = await Promise.all([
@@ -141,17 +146,13 @@ export async function assistantsView(person: Caller, conversation: IConversation
   ]);
   const catalog = modelCatalog().filter((model) => models.enabled.includes(model.id));
   const hasBot = bots.some((bot) => bot.ownerId === person.id);
-  const notSeen = Math.max(0, (group?.memberCount ?? 0) - conversation.members.length);
   return {
     enabled: assistantsOn(conversation, group?.memberCount),
-    mine: setting.enabledBy.includes(person.id),
-    waitingFor: [
-      ...conversation.members.filter((member) => !setting.enabledBy.includes(member.userId)).map((member) => member.name || member.email),
-      ...(notSeen > 0 ? [unseen(notSeen)] : [])
-    ],
     lockedOff: setting.lockedOff,
     whoCanAdd: setting.whoCanAdd,
     aboutUs: setting.aboutUs,
+    memory: setting.memory,
+    memoryOn: setting.memoryOn,
     isManager,
     canAdd: !hasBot && (setting.whoCanAdd === 'everyone' || isManager),
     bots: bots.map((bot) => toView(bot, person, isManager, models)),
@@ -163,7 +164,7 @@ export async function assistantsView(person: Caller, conversation: IConversation
 }
 
 /** Tells every open thread to reload what the assistants dialog shows. */
-function announce(conversation: IConversation): void {
+export function announce(conversation: IConversation): void {
   publishToGroup(conversation.groupId, {
     type: 'conversation.updated',
     conversationId: conversation._id.toString(),
@@ -190,6 +191,8 @@ const who = (person: Caller): string => person.name || 'Someone';
 export interface SettingsChange {
   enabled?: boolean;
   aboutUs?: string;
+  memory?: string;
+  memoryOn?: boolean;
   lockedOff?: boolean;
   whoCanAdd?: 'everyone' | 'admins';
 }
@@ -206,25 +209,38 @@ export async function changeSettings(person: Caller, conversation: IConversation
     }
   }
 
-  if (change.enabled !== undefined && change.enabled !== current.enabledBy.includes(person.id)) {
-    next.enabledBy = change.enabled ? [...current.enabledBy, person.id] : current.enabledBy.filter((id) => id !== person.id);
-    lines.push(`${who(person)} turned assistants ${change.enabled ? 'on' : 'off'}`);
+  if (change.enabled !== undefined) {
+    // Compared with what people see now, which for a conversation from before the switch takes the group's size.
+    const was = current.on ?? agreedTheOldWay(conversation, current, (await getGroupOwner(conversation.groupId).catch(() => null))?.memberCount);
+    // Set even when unchanged: from then on the conversation has the switch, and is no longer read the old way.
+    next.on = change.enabled;
+    if (change.enabled !== was) lines.push(`${who(person)} turned assistants ${change.enabled ? 'on' : 'off'} for this chat`);
   }
   if (change.aboutUs !== undefined && change.aboutUs !== current.aboutUs) {
     next.aboutUs = change.aboutUs;
     lines.push(`${who(person)} updated what the assistants know about you`);
   }
+  if (change.memory !== undefined && change.memory !== current.memory) {
+    next.memory = change.memory;
+    lines.push(`${who(person)} edited what the assistants have noted about you`);
+  }
+  if (change.memoryOn !== undefined && change.memoryOn !== current.memoryOn) {
+    next.memoryOn = change.memoryOn;
+    lines.push(change.memoryOn ? `${who(person)} let the assistants note things about you` : `${who(person)} stopped the assistants noting things about you`);
+  }
   if (change.lockedOff !== undefined && change.lockedOff !== current.lockedOff) {
     next.lockedOff = change.lockedOff;
-    lines.push(change.lockedOff ? `${who(person)} turned assistants off for this chat` : `${who(person)} allowed assistants in this chat again`);
+    lines.push(change.lockedOff ? `${who(person)} locked assistants off for this chat` : `${who(person)} unlocked assistants in this chat`);
   }
   if (change.whoCanAdd !== undefined && change.whoCanAdd !== current.whoCanAdd) {
     next.whoCanAdd = change.whoCanAdd;
     lines.push(change.whoCanAdd === 'admins' ? `${who(person)} made adding assistants admins only` : `${who(person)} let everyone add an assistant`);
   }
-  if (lines.length === 0) return;
+  // Only the fields that changed: the whole object would put back a note an assistant saved meanwhile.
+  const fields = (Object.keys(next) as Array<keyof IAssistantsSetting>).filter((key) => next[key] !== current[key]);
+  if (fields.length === 0) return;
 
-  await Conversation.updateOne({ _id: conversation._id }, { $set: { assistants: next } });
+  await Conversation.updateOne({ _id: conversation._id }, { $set: Object.fromEntries(fields.map((key) => [`assistants.${key}`, next[key]])) });
   conversation.assistants = next;
   for (const line of lines) await postSystemLine(person, conversation, line);
   announce(conversation);

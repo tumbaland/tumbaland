@@ -7,8 +7,15 @@ import { Message } from '../models/Message';
 import type { Caller } from './accessService';
 import { askClaude, type ClaudeReply, type ToolCall } from './assistantClaude';
 import { getActiveKey, markKeyRejected } from './assistantKeyService';
+import { memoryOn, memoryTools } from './assistantMemory';
 import { MODELS, costUnits } from './assistantModels';
-import { BASE_PROMPT, botPrompt, userMessage } from './assistantPrompt';
+import { placeTools } from './placeFinder';
+import { chatTools } from './chatTools';
+import { currencyTools } from './currency';
+import { travelTools } from './travel';
+import { weatherTools } from './weather';
+import { chatText, withSources } from './chatText';
+import { BASE_PROMPT, WEB_RULES, botPrompt, userMessage } from './assistantPrompt';
 import { allowanceFor, assertCanAsk, chargeSpend } from './assistantUsageService';
 import { assistantsOn, effectiveModel } from './botService';
 import { touchConversation } from './conversationService';
@@ -58,8 +65,27 @@ const ACTIVITY: Record<string, string> = {
   view_photos: 'looking at photos',
   get_photo_memories: 'looking at photos',
   tag_photos: 'tidying photos',
-  create_album: 'making an album'
+  create_album: 'making an album',
+  web_search: 'searching the web',
+  web_fetch: 'reading a web page',
+  find_places: 'looking for places',
+  get_weather: 'checking the weather',
+  search_chat: 'searching the chat',
+  where_is: 'checking the map',
+  get_route: 'working out the route',
+  convert_currency: 'converting money',
+  saved_places: 'checking saved places',
+  remember: 'making a note',
+  forget: 'making a note'
 };
+
+/** Where the chats are. One place for now: the people who use Tumbaland live there. */
+const PLACE = { city: 'Tallinn', country: 'EE', timeZone: 'Europe/Tallinn' } as const;
+
+/** Searches and pages one reply may use. Each search costs a cent and each page adds input tokens. */
+const WEB_USES_PER_REPLY = 5;
+
+const webOn = (): boolean => process.env.ASSISTANT_WEB !== 'off';
 export const activityFor = (tool: string): string => ACTIVITY[tool] ?? 'working on it';
 
 /**
@@ -102,7 +128,7 @@ async function answerMentions(person: Caller, conversationId: string, message: M
   if (!conversation) return;
   const group = await getGroupOwner(conversation.groupId).catch(() => null);
   if (!assistantsOn(conversation, group?.memberCount)) {
-    await postSystemLine(person, conversation, 'Assistants are off in this chat. Everyone in it has to turn them on first.');
+    await postSystemLine(person, conversation, 'Assistants are off in this chat. Anyone here can turn them on, under Assistants in the chat menu.');
     return;
   }
 
@@ -221,15 +247,18 @@ async function replyAs(bot: IChatBot, person: Caller, conversation: IConversatio
     reply = await askClaude({
       apiKey: key.apiKey,
       model,
-      system: [BASE_PROMPT, botPrompt(bot, conversation.assistants?.aboutUs ?? '')],
+      system: [webOn() ? `${BASE_PROMPT}\n\n${WEB_RULES}` : BASE_PROMPT, botPrompt(bot, conversation.assistants?.aboutUs ?? '', conversation.assistants?.memory ?? '', memoryOn(conversation))],
+      clientTools: [...memoryTools(conversation), ...placeTools(conversation._id.toString()), ...weatherTools(conversation._id.toString(), PLACE.timeZone), ...chatTools(conversation, person, PLACE.timeZone, asked.id), ...travelTools(conversation._id.toString()), ...currencyTools(conversation._id.toString())],
       user: userMessage({
         asker: person.name || 'Someone',
         asked: asked.body,
         botName: bot.name,
         recent: await recent(conversation._id.toString()),
         photoAlbum: conversation.photoAlbum,
-        now: new Date()
+        now: new Date(),
+        timeZone: PLACE.timeZone
       }),
+      web: webOn() ? { ...PLACE, maxUses: WEB_USES_PER_REPLY } : undefined,
       mcpUrl: mcpUrl(),
       mcpToken: minted.token,
       onTool: working.activity
@@ -241,7 +270,8 @@ async function replyAs(bot: IChatBot, person: Caller, conversation: IConversatio
     } else {
       const collage = collageFrom(reply.toolCalls);
       // A reply with no words but work done is still an answer.
-      await postBotMessage(conversation, bot, { body: reply.text || (reply.toolCalls.length ? 'Done.' : '...') });
+      const text = chatText(reply.text);
+      await postBotMessage(conversation, bot, { body: text ? withSources(text, reply.sources) : reply.toolCalls.length ? 'Done.' : '...' });
       if (collage) await postBotMessage(conversation, bot, { body: '', collage });
     }
   } catch (error) {

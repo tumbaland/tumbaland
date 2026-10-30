@@ -63,7 +63,7 @@ describe('useThreadAssistants', () => {
   });
 
   it('keeps what a change answers with, so the dialog needs no second request', async () => {
-    const changed = assistantsView({ mine: false, enabled: false });
+    const changed = assistantsView({ enabled: false });
     api.changeAssistants.mockResolvedValue(changed);
     const { result } = open('c1');
 

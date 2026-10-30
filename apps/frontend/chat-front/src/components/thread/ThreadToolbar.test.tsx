@@ -130,11 +130,11 @@ const bot = (name: string, paused = false) => ({
 
 const view = (overrides: Partial<AssistantsView> = {}): AssistantsView => ({
   enabled: true,
-  mine: true,
-  waitingFor: [],
   lockedOff: false,
   whoCanAdd: 'everyone',
   aboutUs: '',
+  memory: '',
+  memoryOn: true,
   isManager: false,
   canAdd: true,
   bots: [],
@@ -175,10 +175,8 @@ describe('assistantsSummary', () => {
     expect(assistantsSummary(null)).toBeUndefined();
   });
 
-  it('says off, waiting for someone, or locked by an admin', () => {
-    expect(assistantsSummary(view({ enabled: false, mine: false }))).toBe('Off');
-    expect(assistantsSummary(view({ enabled: false, mine: true, waitingFor: ['Irja'] }))).toBe('Waiting for Irja');
-    expect(assistantsSummary(view({ enabled: false, mine: true, waitingFor: [] }))).toBe('Off');
+  it('says off, or locked by an admin', () => {
+    expect(assistantsSummary(view({ enabled: false }))).toBe('Off');
     expect(assistantsSummary(view({ lockedOff: true, enabled: false }))).toBe('Turned off by an admin');
   });
 

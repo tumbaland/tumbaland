@@ -18,7 +18,7 @@ import type { UseChatThreadResult } from '../../hooks/useChatThread';
 export function assistantsSummary(view: UseChatThreadResult['assistants']): string | undefined {
   if (!view) return undefined;
   if (view.lockedOff) return 'Turned off by an admin';
-  if (!view.enabled) return view.mine && view.waitingFor.length > 0 ? `Waiting for ${view.waitingFor.join(' and ')}` : 'Off';
+  if (!view.enabled) return 'Off';
   const active = view.bots.filter((bot) => !bot.paused).map((bot) => bot.name);
   if (active.length === 0) return view.bots.length === 0 ? 'On, none added yet' : 'On, all paused';
   return active.length <= 2 ? active.join(' and ') : `${active.slice(0, 2).join(', ')} and ${active.length - 2} more`;

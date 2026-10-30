@@ -62,67 +62,55 @@ beforeEach(() => {
 const asManager = (...emails: string[]) =>
   (isGroupManager as jest.Mock).mockImplementation(async (_group: string, email: string) => emails.includes(email));
 
-describe('agreeing to assistants', () => {
-  it('starts off, and says who it is waiting for', async () => {
+describe('turning assistants on', () => {
+  it('starts off', async () => {
     const id = await chatWithBoth();
-    const data = await view(id);
-    expect(data).toMatchObject({ enabled: false, mine: false, lockedOff: false, whoCanAdd: 'everyone', bots: [] });
-    expect(data.waitingFor.sort()).toEqual(['Irja', 'Tom']);
+    expect(await view(id)).toMatchObject({ enabled: false, lockedOff: false, whoCanAdd: 'everyone', bots: [] });
   });
 
-  it('is on only when everyone in the chat has agreed, each for themselves', async () => {
+  it('is one switch for the whole chat, which anyone in it can flip either way', async () => {
     const id = await chatWithBoth();
 
     await as(TOM).patch(url(id)).send({ enabled: true });
-    let data = await view(id);
-    expect(data).toMatchObject({ enabled: false, mine: true, waitingFor: ['Irja'] });
-    expect((await view(id, IRJA)).mine).toBe(false);
-
-    await as(IRJA).patch(url(id)).send({ enabled: true });
-    expect(await view(id)).toMatchObject({ enabled: true, waitingFor: [] });
-
-    await as(TOM).patch(url(id)).send({ enabled: false });
-    data = await view(id);
-    expect(data).toMatchObject({ enabled: false, mine: false, waitingFor: ['Tom'] });
-  });
-
-  it('says so in the thread, and only when something changed', async () => {
-    const id = await chatWithBoth();
-    await as(TOM).patch(url(id)).send({ enabled: true });
-    await as(TOM).patch(url(id)).send({ enabled: true });
-    await as(TOM).patch(url(id)).send({ enabled: false });
-    expect(await lines(id)).toEqual(['Tom turned assistants on', 'Tom turned assistants off']);
-  });
-
-  it('turns off again when someone new opens the chat, until they agree too', async () => {
-    const id = await chatWithBoth();
-    await as(TOM).patch(url(id)).send({ enabled: true });
-    await as(IRJA).patch(url(id)).send({ enabled: true });
     expect((await view(id)).enabled).toBe(true);
+    expect((await view(id, IRJA)).enabled).toBe(true);
 
+    await as(IRJA).patch(url(id)).send({ enabled: false });
+    expect((await view(id)).enabled).toBe(false);
+  });
+
+  it('says in the thread who flipped it, and only when something changed', async () => {
+    const id = await chatWithBoth();
+    await as(TOM).patch(url(id)).send({ enabled: true });
+    await as(IRJA).patch(url(id)).send({ enabled: true });
+    await as(IRJA).patch(url(id)).send({ enabled: false });
+    expect(await lines(id)).toEqual(['Tom turned assistants on for this chat', 'Irja turned assistants off for this chat']);
+  });
+
+  it('stays on when someone new opens the chat, or when the group has people who never have', async () => {
+    const id = await chatWithBoth();
+    await as(TOM).patch(url(id)).send({ enabled: true });
     await as(MARI).get(`/api/chat/conversations/${id}`);
-    expect(await view(id)).toMatchObject({ enabled: false, waitingFor: ['Mari'] });
+    (getGroupOwner as jest.Mock).mockResolvedValue({ groupId: 'g1', ownerEmail: 'tom@example.com', memberCount: 9, deleted: false });
+    expect((await view(id)).enabled).toBe(true);
+    expect(assistantsOn((await Conversation.findById(id))!, 9)).toBe(true);
   });
 
-  it('says it is waiting for anyone in the group who has never opened the chat, as the replies do', async () => {
+  it('reads a chat from before the switch the old way, until someone flips it', async () => {
     const id = await chatWithBoth();
-    await as(TOM).patch(url(id)).send({ enabled: true });
-    await as(IRJA).patch(url(id)).send({ enabled: true });
-    (getGroupOwner as jest.Mock).mockResolvedValue({ groupId: 'g1', ownerEmail: 'tom@example.com', memberCount: 4, deleted: false });
-
-    expect(await view(id)).toMatchObject({ enabled: false, waitingFor: ['2 people who have not opened this chat yet'] });
-    (getGroupOwner as jest.Mock).mockResolvedValue({ groupId: 'g1', ownerEmail: 'tom@example.com', memberCount: 3, deleted: false });
-    expect((await view(id)).waitingFor).toEqual(['1 person who has not opened this chat yet']);
-  });
-
-  it('is not on while a group member has never opened the chat', async () => {
-    const id = await chatWithBoth();
-    await as(TOM).patch(url(id)).send({ enabled: true });
-    await as(IRJA).patch(url(id)).send({ enabled: true });
-    const conversation = (await Conversation.findById(id))!;
+    await Conversation.updateOne({ _id: id }, { $set: { 'assistants.enabledBy': ['u-tom', 'u-irja'] }, $unset: { 'assistants.on': 1 } });
+    let conversation = (await Conversation.findById(id))!;
     expect(assistantsOn(conversation, 2)).toBe(true);
     expect(assistantsOn(conversation, 3)).toBe(false);
-    expect(assistantsOn(conversation, null)).toBe(true);
+
+    await Conversation.updateOne({ _id: id }, { $set: { 'assistants.enabledBy': ['u-tom'] } });
+    expect((await view(id)).enabled).toBe(false);
+    // Turning on what was off by the old rule says so; from then on it is the switch.
+    await as(IRJA).patch(url(id)).send({ enabled: true });
+    expect(await lines(id)).toEqual(['Irja turned assistants on for this chat']);
+    conversation = (await Conversation.findById(id))!;
+    expect(conversation.assistants?.on).toBe(true);
+    expect(assistantsOn(conversation, 9)).toBe(true);
   });
 
   it('is not on in a chat nobody has opened', () => {
@@ -153,21 +141,23 @@ describe('what the assistants know about you both', () => {
 });
 
 describe('what the group admins decide', () => {
-  it('lets only an owner or admin turn assistants off for everyone, whatever people agreed', async () => {
+  it('lets only an owner or admin lock assistants off, whatever the switch says', async () => {
     const id = await chatWithBoth();
     await as(TOM).patch(url(id)).send({ enabled: true });
-    await as(IRJA).patch(url(id)).send({ enabled: true });
 
     expect((await as(TOM).patch(url(id)).send({ lockedOff: true })).status).toBe(403);
 
     asManager('irja@example.com');
     const res = await as(IRJA).patch(url(id)).send({ lockedOff: true });
     expect(res.body.data).toMatchObject({ lockedOff: true, enabled: false, isManager: true });
-    expect(await lines(id)).toContain('Irja turned assistants off for this chat');
+    expect(await lines(id)).toContain('Irja locked assistants off for this chat');
+    // The switch cannot get round the lock.
+    await as(TOM).patch(url(id)).send({ enabled: true });
+    expect((await view(id)).enabled).toBe(false);
 
     await as(IRJA).patch(url(id)).send({ lockedOff: false });
     expect((await view(id)).enabled).toBe(true);
-    expect(await lines(id)).toContain('Irja allowed assistants in this chat again');
+    expect(await lines(id)).toContain('Irja unlocked assistants in this chat');
   });
 
   it('lets them keep adding bots to admins only', async () => {
@@ -187,12 +177,7 @@ describe('what the group admins decide', () => {
     expect(await lines(id)).toContain('Irja let everyone add an assistant');
   });
 
-  it('cannot turn assistants on for anyone else', async () => {
-    const id = await chatWithBoth();
-    asManager('irja@example.com');
-    await as(IRJA).patch(url(id)).send({ enabled: true });
-    expect(await view(id)).toMatchObject({ mine: false, waitingFor: expect.arrayContaining(['Tom']) });
-  });
+
 });
 
 describe('adding a bot', () => {

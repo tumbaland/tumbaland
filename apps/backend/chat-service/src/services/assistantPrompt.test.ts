@@ -71,15 +71,22 @@ describe('userMessage', () => {
     botName: 'Tumbi',
     recent: [{ ...base, body: 'we got back' }, { ...base, kind: 'system' as const, body: 'noise' }],
     photoAlbum: { mode: 'album' as const, albumId: 'a1', albumName: 'Rome' },
-    now: new Date('2026-10-30T18:05:00Z')
+    now: new Date('2026-10-30T18:05:00Z'),
+    timeZone: 'Europe/Tallinn'
   };
 
   it('puts the date, the album, the recent chat and the question in that order', () => {
     const text = userMessage(context);
-    expect(text).toContain('2026-10-30 18:05 UTC (Friday)');
+    expect(text).toContain('2026-10-30 20:05 (Friday) in Europe/Tallinn');
     expect(text.indexOf('"Rome"')).toBeLessThan(text.indexOf('we got back'));
     expect(text.indexOf('we got back')).toBeLessThan(text.indexOf('Mia just wrote to you, Tumbi: @Tumbi make a collage'));
     expect(text).not.toContain('noise');
+  });
+
+  it('writes the chat in the chat’s own hours, not UTC, so that "after 21:00" is read right', () => {
+    // 18:02Z is 20:02 in Tallinn while it is on winter time (UTC+2).
+    expect(userMessage(context)).toContain('20:02 Mia: we got back');
+    expect(userMessage({ ...context, timeZone: 'UTC' })).toContain('18:02 Mia: we got back');
   });
 
   it('says the photos cannot be reached when the chat has no album', () => {

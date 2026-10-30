@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -49,25 +49,48 @@ function Heading({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** What is going on with agreement, in a sentence. */
+/** Where things stand, in a sentence. */
 const status = (view: AssistantsView): string => {
   if (view.lockedOff) return 'An admin has turned assistants off for this chat.';
-  if (view.enabled) return 'On. Everyone in this chat has agreed.';
-  if (view.mine && view.waitingFor.length > 0) return `Waiting for ${view.waitingFor.join(' and ')} to turn them on too.`;
-  return 'Off until everyone in this chat turns them on.';
+  return view.enabled ? 'On for everyone in this chat. Anyone here can turn them off.' : 'Off. Anyone in this chat can turn them on.';
 };
+
+/**
+ * A text that follows the server until someone edits it here. From then on their
+ * words stay, whatever arrives, until the server holds what they wrote (they
+ * saved) or the dialog opens again. An assistant can add a note at any moment,
+ * and that refresh must not take away what someone is in the middle of typing.
+ */
+function useDraft(server: string | undefined, open: boolean): [string, (value: string) => void] {
+  const [draft, setDraft] = useState('');
+  // The server's text the draft last started from; unset while the dialog is closed.
+  const base = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!open) {
+      base.current = undefined;
+      return;
+    }
+    if (server === undefined) return;
+    // Read now: the updater runs later, during render, by when the ref has moved on.
+    const previous = base.current;
+    base.current = server;
+    setDraft((current) => (previous === undefined || current === previous ? server : current));
+  }, [open, server]);
+  return [draft, setDraft];
+}
 
 /**
  * Assistants in this chat, in one place: whether they are on, who has added
  * one, what everyone has told them, and how much of your allowance is left.
  *
- * Switching them on is yours alone, and they run only when everyone has. A
- * message that mentions an assistant is sent to Anthropic to be answered, which
+ * One switch for the whole chat, which anyone in it may flip; the thread says
+ * who did. A message that mentions an assistant is sent to Anthropic to be answered, which
  * is said here, where the choice is made.
  */
 export function AssistantsDialog({ open, onClose, view, onRefresh, actions }: AssistantsDialogProps) {
   const [editing, setEditing] = useState<Bot | 'new' | null>(null);
-  const [aboutUs, setAboutUs] = useState('');
+  const [aboutUs, setAboutUs] = useDraft(view?.aboutUs, open);
+  const [memory, setMemory] = useDraft(view?.memory, open);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -76,12 +99,6 @@ export function AssistantsDialog({ open, onClose, view, onRefresh, actions }: As
     // Once per opening.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
-  // The shared text follows the server until it is being edited.
-  const serverAboutUs = view?.aboutUs;
-  useEffect(() => {
-    if (open && serverAboutUs !== undefined) setAboutUs(serverAboutUs);
-  }, [open, serverAboutUs]);
 
   const run = async (work: () => Promise<unknown>) => {
     setBusy(true);
@@ -119,8 +136,8 @@ export function AssistantsDialog({ open, onClose, view, onRefresh, actions }: As
               <FormControlLabel
                 control={
                   <Switch
-                    checked={view.mine}
-                    disabled={busy}
+                    checked={view.enabled}
+                    disabled={busy || view.lockedOff}
                     onChange={(event) => void run(() => actions.change({ enabled: event.target.checked }))}
                   />
                 }
@@ -203,6 +220,31 @@ export function AssistantsDialog({ open, onClose, view, onRefresh, actions }: As
               >
                 Save
               </Button>
+
+              <Divider sx={{ my: 2.5 }} />
+              <Heading>What the assistants have noted</Heading>
+              <TextField
+                value={memory}
+                onChange={(event) => setMemory(event.target.value)}
+                disabled={busy}
+                fullWidth
+                multiline
+                minRows={2}
+                maxRows={8}
+                placeholder="Nothing yet. Assistants add a line when you ask them to remember something."
+                slotProps={{ htmlInput: { maxLength: 1500, 'aria-label': 'What the assistants have noted' } }}
+                helperText="One note to a line. Anyone here can edit or delete them."
+              />
+              <Button sx={{ mt: 1 }} disabled={busy || memory === view.memory} onClick={() => void run(() => actions.change({ memory }))}>
+                Save
+              </Button>
+              <FormControlLabel
+                sx={{ display: 'block', mt: 1 }}
+                control={
+                  <Switch checked={view.memoryOn} disabled={busy} onChange={(event) => void run(() => actions.change({ memoryOn: event.target.checked }))} />
+                }
+                label="Let assistants add notes"
+              />
 
               {view.isManager && (
                 <>
