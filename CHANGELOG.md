@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.550](https://github.com/tumbaland/tumbaland/compare/app-v0.0.549...app-v0.0.550) (2026-10-30)
+
+### Features
+
+* **chat:** resizable desktop chat panel, and say why a web search failed ([5a031b4](https://github.com/tumbaland/tumbaland/commit/5a031b4acd697c36fc3aeeed0d7adaa7668d6fb2))
+
 ## [0.0.549](https://github.com/tumbaland/tumbaland/compare/app-v0.0.548...app-v0.0.549) (2026-10-30)
 
 ### Features
