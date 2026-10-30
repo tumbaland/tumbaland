@@ -72,14 +72,14 @@ describe('what is sent to Claude', () => {
 });
 
 describe('the web', () => {
-  const web = { city: 'Tallinn', country: 'EE', timeZone: 'Europe/Tallinn', maxUses: 5 };
+  const web = { city: 'Tallinn', timeZone: 'Europe/Tallinn', maxUses: 5 };
 
   it('adds search and fetch next to Tumbaland’s tools, placed where the chat is', async () => {
     stream.mockReturnValue(fakeStream({ content: [text('hi')], stop_reason: 'end_turn' }));
     await askClaude(request({ web }));
     expect(stream.mock.calls[0]![0].tools).toEqual([
       { type: 'mcp_toolset', mcp_server_name: MCP_SERVER_NAME },
-      { type: 'web_search_20260209', name: 'web_search', max_uses: 5, user_location: { type: 'approximate', city: 'Tallinn', country: 'EE', timezone: 'Europe/Tallinn' } },
+      { type: 'web_search_20260209', name: 'web_search', max_uses: 5, user_location: { type: 'approximate', city: 'Tallinn', timezone: 'Europe/Tallinn' } },
       { type: 'web_fetch_20260209', name: 'web_fetch', max_uses: 5 }
     ]);
   });

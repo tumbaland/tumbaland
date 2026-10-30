@@ -47,8 +47,10 @@ export interface ClaudeRequest {
   /**
    * Lets Claude search the web and read pages. Left out, it has only Tumbaland's
    * tools. The place is where the chat is, so "tonight" and "near me" mean something.
+   * No country: web search accepts only some, and rejects the whole request for
+   * Estonia ("Country code EE is not supported").
    */
-  web?: { city: string; country: string; timeZone: string; maxUses: number };
+  web?: { city: string; timeZone: string; maxUses: number };
   /** Tools that run here, next to Tumbaland's. */
   clientTools?: ClientTool[];
   /** Called with the tool's name when Claude starts using one. */
@@ -122,7 +124,7 @@ function webTools(request: ClaudeRequest, spec: ModelSpec): Block[] {
       type: spec.webTools.search,
       name: 'web_search',
       max_uses: web.maxUses,
-      user_location: { type: 'approximate', city: web.city, country: web.country, timezone: web.timeZone }
+      user_location: { type: 'approximate', city: web.city, timezone: web.timeZone }
     },
     { type: spec.webTools.fetch, name: 'web_fetch', max_uses: web.maxUses }
   ];

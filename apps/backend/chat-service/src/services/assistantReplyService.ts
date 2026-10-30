@@ -80,7 +80,7 @@ const ACTIVITY: Record<string, string> = {
 };
 
 /** Where the chats are. One place for now: the people who use Tumbaland live there. */
-const PLACE = { city: 'Tallinn', country: 'EE', timeZone: 'Europe/Tallinn' } as const;
+const PLACE = { city: 'Tallinn', timeZone: 'Europe/Tallinn' } as const;
 
 /** Searches and pages one reply may use. Each search costs a cent and each page adds input tokens. */
 const WEB_USES_PER_REPLY = 5;
