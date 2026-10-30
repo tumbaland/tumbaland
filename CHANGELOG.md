@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.549](https://github.com/tumbaland/tumbaland/compare/app-v0.0.548...app-v0.0.549) (2026-10-30)
+
+### Features
+
+* **chat:** let assistants join in unasked and keep their settings in one place ([2b1f503](https://github.com/tumbaland/tumbaland/commit/2b1f503ea771e1751518f46dffc4d61762671950))
+
 ## [0.0.548](https://github.com/tumbaland/tumbaland/compare/app-v0.0.547...app-v0.0.548) (2026-10-30)
 
 ### Bug Fixes
