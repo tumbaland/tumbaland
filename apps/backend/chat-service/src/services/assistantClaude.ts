@@ -1,3 +1,4 @@
+import { logger } from '@tumbaland/backend-core';
 import { createAnthropic } from './anthropicClient';
 import { MODELS, isModelId, type ModelId, type ModelSpec, type TokenUsage } from './assistantModels';
 
@@ -99,6 +100,20 @@ function sourcesOf(blocks: Block[]): Source[] {
 
 type Block = { type: string } & Record<string, unknown>;
 
+/**
+ * Why a web search or a page read failed, from the result blocks: the API answers
+ * 200 and puts the error in the block, as an object where a success is a list or
+ * a document. `["search: max_uses_exceeded"]`, or empty when nothing failed.
+ */
+export function webErrorsOf(blocks: Block[]): string[] {
+  return blocks.flatMap((block) => {
+    if (block.type !== 'web_search_tool_result' && block.type !== 'web_fetch_tool_result') return [];
+    const result = block.content as { error_code?: unknown } | null | undefined;
+    if (!result || Array.isArray(result) || typeof result.error_code !== 'string') return [];
+    return [`${block.type === 'web_search_tool_result' ? 'search' : 'fetch'}: ${result.error_code}`];
+  });
+}
+
 /** One result for every call to a tool of ours, in a single message, as the API asks. */
 async function runClientTools(content: Block[], tools: ClientTool[]): Promise<Block[]> {
   const calls = content.filter((block) => block.type === 'tool_use');
@@ -193,6 +208,10 @@ export async function askClaude(request: ClaudeRequest): Promise<ClaudeReply> {
   // The answer is what was said after our last tool ran. What came before was a lead-in to it
   // ("I'll note that"), and joined to the answer it reads as one run-on sentence.
   const textOf = (blocks: Block[]) => blocks.filter((block) => block.type === 'text');
+  // Nothing raises for these, so without this line nobody would know why a search came back empty.
+  const webErrors = webErrorsOf(content);
+  if (webErrors.length > 0) logger.warn('Web tool failed', { model: request.model, errors: webErrors });
+
   const answer = textOf(sinceTools).some((block) => String(block.text ?? '').trim()) ? textOf(sinceTools) : textOf(content);
   const text = answer
     .map((block) => String(block.text ?? ''))

@@ -1,7 +1,7 @@
 jest.mock('./anthropicClient', () => ({ createAnthropic: jest.fn() }));
 
 import { createAnthropic } from './anthropicClient';
-import { askClaude, MCP_SERVER_NAME, type ClaudeRequest } from './assistantClaude';
+import { askClaude, MCP_SERVER_NAME, webErrorsOf, type ClaudeRequest } from './assistantClaude';
 
 const stream = jest.fn();
 beforeEach(() => {
@@ -298,5 +298,19 @@ describe('the answer, and where it came from', () => {
       { url: 'https://kolm.ee', title: 'Kolm Sõpra' },
       { url: 'https://menu.ee', title: 'https://menu.ee' }
     ]);
+  });
+});
+
+describe('webErrorsOf', () => {
+  it('reads why a search or a page read failed, and passes over what worked', () => {
+    expect(
+      webErrorsOf([
+        { type: 'web_search_tool_result', tool_use_id: 's1', content: [{ type: 'web_search_result', url: 'https://a.example' }] },
+        { type: 'web_search_tool_result', tool_use_id: 's2', content: { type: 'web_search_tool_result_error', error_code: 'max_uses_exceeded' } },
+        { type: 'web_fetch_tool_result', tool_use_id: 'f1', content: { type: 'web_fetch_tool_error', error_code: 'unavailable' } },
+        { type: 'web_fetch_tool_result', tool_use_id: 'f2', content: { type: 'web_fetch_result', url: 'https://b.example' } },
+        { type: 'text', text: 'hi' }
+      ])
+    ).toEqual(['search: max_uses_exceeded', 'fetch: unavailable']);
   });
 });

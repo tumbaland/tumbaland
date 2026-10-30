@@ -162,7 +162,9 @@ export function ThreadHeader({
           </IconButton>
         )}
         {lead && (
-          <Box sx={{ flexShrink: 0, '@container (max-width: 340px)': { display: 'none' } }}>
+          // Smaller in a narrow bar (the desktop chat panel, a small phone) rather than gone:
+          // their picture and the online dot are how a glance tells who and whether they are here.
+          <Box sx={{ flexShrink: 0, '@container (max-width: 340px)': { '& .MuiAvatar-root': { width: 28, height: 28, fontSize: 12.6 } } }}>
             <MemberAvatar
               name={lead.name || lead.email}
               picture={others.length === 1 ? lead.picture : null}

@@ -1,4 +1,4 @@
-import { BASE_PROMPT, MAX_PHOTOS_VIEWED, botPrompt, transcriptLine, userMessage } from './assistantPrompt';
+import { BASE_PROMPT, MAX_PHOTOS_VIEWED, WEB_RULES, WEB_USES_PER_REPLY, botPrompt, transcriptLine, userMessage } from './assistantPrompt';
 
 const at = new Date('2026-10-30T18:02:00Z');
 const base = { kind: 'text' as const, body: '', attachments: [] as never[], collage: null, plan: null, senderName: 'Mia', botId: null, createdAt: at };
@@ -92,5 +92,13 @@ describe('userMessage', () => {
   it('says the photos cannot be reached when the chat has no album', () => {
     expect(userMessage({ ...context, photoAlbum: { mode: 'off' } })).toMatch(/not saved to an album/);
     expect(userMessage({ ...context, photoAlbum: undefined })).toMatch(/not saved to an album/);
+  });
+});
+
+describe('WEB_RULES', () => {
+  it('tells it the limit on searches in one reply, and not to call it an allowance', () => {
+    expect(WEB_RULES).toContain(`at most ${WEB_USES_PER_REPLY} searches and ${WEB_USES_PER_REPLY} page reads in one reply`);
+    expect(WEB_RULES).toContain('never call it an allowance');
+    expect(WEB_RULES).not.toContain('—');
   });
 });

@@ -15,7 +15,7 @@ import { currencyTools } from './currency';
 import { travelTools } from './travel';
 import { weatherTools } from './weather';
 import { chatText, withSources } from './chatText';
-import { BASE_PROMPT, SKIP, WEB_RULES, botPrompt, joinInMessage, userMessage } from './assistantPrompt';
+import { BASE_PROMPT, SKIP, WEB_RULES, WEB_USES_PER_REPLY, botPrompt, joinInMessage, userMessage } from './assistantPrompt';
 import { allowanceFor, assertCanAsk, chargeSpend } from './assistantUsageService';
 import { assistantsOn, effectiveModel } from './botService';
 import { touchConversation } from './conversationService';
@@ -84,8 +84,6 @@ const ACTIVITY: Record<string, string> = {
 /** Where the chats are. One place for now: the people who use Tumbaland live there. */
 const PLACE = { city: 'Tallinn', timeZone: 'Europe/Tallinn' } as const;
 
-/** Searches and pages one reply may use. Each search costs a cent and each page adds input tokens. */
-const WEB_USES_PER_REPLY = 5;
 
 const webOn = (): boolean => process.env.ASSISTANT_WEB !== 'off';
 export const activityFor = (tool: string): string => ACTIVITY[tool] ?? 'working on it';
