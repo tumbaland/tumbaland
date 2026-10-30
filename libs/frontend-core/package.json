@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/frontend-core",
-  "version": "1.24.0",
+  "version": "1.25.0",
   "description": "Shared frontend logic, components and theme for Tumbaland frontends",
   "author": "Tumbaland",
   "license": "MIT",
