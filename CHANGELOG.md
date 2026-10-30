@@ -1,4 +1,11 @@
 # Tumbalog
+## [0.0.551](https://github.com/tumbaland/tumbaland/compare/app-v0.0.550...app-v0.0.551) (2026-10-30)
+
+### Features
+
+* improve proactive bot messages ([d04e9db](https://github.com/tumbaland/tumbaland/commit/d04e9dbe78b6c315e24c9545c776a47f9ffe767a))
+* optimize token usage ([cd507f8](https://github.com/tumbaland/tumbaland/commit/cd507f8b05aeac5bf44d54a51fa76ec985798187))
+
 ## [0.0.550](https://github.com/tumbaland/tumbaland/compare/app-v0.0.549...app-v0.0.550) (2026-10-30)
 
 ### Features
