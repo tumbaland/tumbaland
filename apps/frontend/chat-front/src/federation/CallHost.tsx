@@ -149,7 +149,9 @@ export function CallLayer() {
   });
 
   useCallSounds(state);
-  useWakeLock(state.phase === 'connecting' || state.phase === 'active');
+  // Also while calling out: a screen that dims during the ringing pauses the
+  // page, and the other person's answer waits there until it is touched.
+  useWakeLock(state.phase === 'outgoing' || state.phase === 'connecting' || state.phase === 'active');
   useCloseCallNotification(state);
 
   const engine = () => engineRef.current;
