@@ -240,6 +240,14 @@ export function MessageBubble({
               // Sideways is this bubble's (a swipe to reply); scrolling and
               // pinching stay the page's.
               touchAction: 'pan-y pinch-zoom',
+              // A long press on a finger is this bubble's menu, which has Copy and Select text.
+              // iOS would also start its own word selection under the same touch, and the two
+              // draw over each other. A mouse keeps selecting as usual.
+              '@media (hover: none) and (pointer: coarse)': {
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                WebkitTouchCallout: 'none'
+              },
               maxWidth: '100%',
               borderRadius: 3,
               px: jumbo || mediaOnly ? 0 : 1.5,
