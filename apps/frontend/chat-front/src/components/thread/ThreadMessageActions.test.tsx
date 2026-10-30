@@ -109,6 +109,54 @@ describe('ThreadMessageActions', () => {
     expect(given.onUnsend).toHaveBeenCalledWith('m1');
   });
 
+  it('copies what a message says, whoever wrote it', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const given = props({ messages: [message({ senderId: 'u-irja', body: 'Suši haus, 21:15' })] });
+    render(<ThreadMessageActions {...given} />);
+
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Copy' }));
+
+    expect(writeText).toHaveBeenCalledWith('Suši haus, 21:15');
+    expect(given.onError).not.toHaveBeenCalled();
+  });
+
+  it('opens the text on its own so part of it can be selected, and closes again', async () => {
+    const given = props({ messages: [message({ senderId: 'u-irja', body: 'Suši haus,\nkristiine 21:15' })] });
+    render(<ThreadMessageActions {...given} />);
+
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Select text' }));
+    const dialog = screen.getByRole('dialog', { name: 'Select text' });
+    expect(dialog).toHaveTextContent('Suši haus, kristiine 21:15');
+    expect(getComputedStyle(screen.getByText(/kristiine/)).userSelect).toBe('text');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }));
+    await vi.waitFor(() => expect(screen.queryByRole('dialog', { name: 'Select text' })).not.toBeInTheDocument());
+  });
+
+  it('says so when the phone will not let it copy', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) }, configurable: true });
+    const given = props();
+    render(<ThreadMessageActions {...given} />);
+
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Copy' }));
+
+    await vi.waitFor(() => expect(given.onError).toHaveBeenCalledWith('Could not copy that message.'));
+  });
+
+  it('offers no copy where there is no text: a photo alone, an unsent message, or a line from the chat itself', () => {
+    const photo = { fileId: 'f1', mimetype: 'image/jpeg', sizeBytes: 1 };
+    const none = (overrides: Partial<ThreadMessage>) => {
+      const { unmount } = render(<ThreadMessageActions {...props({ messages: [message(overrides)] })} />);
+      expect(screen.queryByRole('menuitem', { name: 'Copy' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('menuitem', { name: 'Select text' })).not.toBeInTheDocument();
+      unmount();
+    };
+    none({ body: '', attachments: [photo] });
+    none({ deletedAt: '2026-10-22T10:05:00.000Z' });
+    none({ kind: 'system', body: 'Tom changed the theme' });
+  });
+
   it('says so when unsending fails', async () => {
     const given = props({ onUnsend: vi.fn(async () => Promise.reject(new Error('offline'))) });
     render(<ThreadMessageActions {...given} />);

@@ -5,8 +5,10 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PhotoAlbumOutlinedIcon from '@mui/icons-material/PhotoAlbumOutlined';
+import SelectAllOutlinedIcon from '@mui/icons-material/SelectAllOutlined';
 import ReplyIcon from '@mui/icons-material/Reply';
 import UndoIcon from '@mui/icons-material/Undo';
 import { EmojiPicker, type MessageAction } from './EmojiPicker';
@@ -49,12 +51,22 @@ export function ThreadMessageActions({
 }: Props) {
   const [more, setMore] = useState<PickedMessage | null>(null);
   const [unsending, setUnsending] = useState<string | null>(null);
+  /** The text of a message opened to pick part of it. */
+  const [selecting, setSelecting] = useState<string | null>(null);
   const message = messages.find((entry) => entry.id === picked?.messageId);
   const stored = message && !message.deletedAt && message.delivery !== 'pending' && message.delivery !== 'failed';
   const inAlbum = Boolean(message?.attachments.some((photo) => photo.albumId));
   const actions: MessageAction[] = [
     ...(stored && message.kind !== 'system'
       ? [{ label: 'Reply', icon: <ReplyIcon fontSize="small" />, onClick: () => onReply(message.id) }]
+      : []),
+    // A long press opens this menu, not the browser's text selection, so a phone copies from here:
+    // the whole message, or part of it picked in a plain view of its text.
+    ...(stored && message.kind !== 'system' && message.body.trim()
+      ? [
+          { label: 'Copy', icon: <ContentCopyOutlinedIcon fontSize="small" />, onClick: () => void copy(message.body) },
+          { label: 'Select text', icon: <SelectAllOutlinedIcon fontSize="small" />, onClick: () => setSelecting(message.body) }
+        ]
       : []),
     ...(stored && message.attachments.some((photo) => isVisualType(photo.mimetype))
       ? [
@@ -82,6 +94,13 @@ export function ThreadMessageActions({
     recordEmoji(emoji);
     void onReact(target.messageId, emoji);
   };
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      onError('Could not copy that message.');
+    }
+  };
   const unsend = async () => {
     if (!unsending) return;
     const id = unsending;
@@ -107,6 +126,21 @@ export function ThreadMessageActions({
         onClose={() => setMore(null)}
         onPick={(emoji) => react(more, emoji)}
       />
+      <Dialog open={selecting !== null} onClose={() => setSelecting(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Select text</DialogTitle>
+        <DialogContent>
+          {/* Nothing here listens for a long press, so the browser's own selection handles work. */}
+          <DialogContentText
+            component="div"
+            sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', userSelect: 'text', WebkitUserSelect: 'text', color: 'text.primary' }}
+          >
+            {selecting}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSelecting(null)}>Done</Button>
+        </DialogActions>
+      </Dialog>
       <Dialog open={Boolean(unsending)} onClose={() => setUnsending(null)} maxWidth="xs" fullWidth>
         <DialogTitle>Unsend this message?</DialogTitle>
         <DialogContent>
