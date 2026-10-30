@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.554](https://github.com/tumbaland/tumbaland/compare/app-v0.0.553...app-v0.0.554) (2026-10-30)
+
+### Features
+
+* dont let phone go dark when on call ([045192b](https://github.com/tumbaland/tumbaland/commit/045192b3f55de13fe01f129f002b4500d297d444))
+
 ## [0.0.553](https://github.com/tumbaland/tumbaland/compare/app-v0.0.552...app-v0.0.553) (2026-10-30)
 
 ### Bug Fixes
