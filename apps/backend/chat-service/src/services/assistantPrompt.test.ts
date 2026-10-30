@@ -1,4 +1,4 @@
-import { BASE_PROMPT, MAX_PHOTOS_VIEWED, WEB_RULES, WEB_USES_PER_REPLY, botPrompt, transcriptLine, userMessage } from './assistantPrompt';
+import { BASE_PROMPT, MAX_PHOTOS_VIEWED, SKIP, WEB_RULES, WEB_USES_PER_REPLY, botPrompt, joinInMessage, transcriptLine, userMessage } from './assistantPrompt';
 
 const at = new Date('2026-10-30T18:02:00Z');
 const base = { kind: 'text' as const, body: '', attachments: [] as never[], collage: null, plan: null, senderName: 'Mia', botId: null, createdAt: at };
@@ -92,6 +92,24 @@ describe('userMessage', () => {
   it('says the photos cannot be reached when the chat has no album', () => {
     expect(userMessage({ ...context, photoAlbum: { mode: 'off' } })).toMatch(/not saved to an album/);
     expect(userMessage({ ...context, photoAlbum: undefined })).toMatch(/not saved to an album/);
+  });
+});
+
+describe('joinInMessage', () => {
+  const context = {
+    botName: 'Tumbi',
+    recent: [{ ...base, body: 'Хорошо' }],
+    photoAlbum: { mode: 'off' as const },
+    now: new Date('2026-10-30T18:05:00Z'),
+    timeZone: 'Europe/Tallinn'
+  };
+
+  it('has no asker, and tells it to write in the chat’s language and skip the filler', () => {
+    const text = joinInMessage(context);
+    expect(text).toContain('Nobody asked you, Tumbi');
+    expect(text).toContain('Write in the language the last messages are in');
+    expect(text).toContain('no cheering opener, no sign-off');
+    expect(text).toContain(`exactly ${SKIP}`);
   });
 });
 

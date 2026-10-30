@@ -151,6 +151,7 @@ export function joinInMessage(context: Omit<ReplyContext, 'asker' | 'asked'>): s
     `Nobody asked you, ${context.botName}: now and then you join in on your own. Look at the last few messages.`,
     'If someone asked a question you can answer, answer it in a sentence or two, and search the web when it needs something current. Otherwise, if something short fits, a joke or a reaction in your own manner, say that.',
     'Only talk: do not change the journal or the photos. Do not say that nobody asked you.',
+    'Write in the language the last messages are in, even when they are typed in Latin letters. Say only the useful part: no cheering opener, no sign-off.',
     `If you have nothing worth adding, answer with exactly ${SKIP} and nothing else.`
   ].join('\n');
 }

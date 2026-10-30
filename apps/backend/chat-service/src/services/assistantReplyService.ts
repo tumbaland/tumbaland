@@ -116,7 +116,9 @@ export function triggerAssistants(person: Caller, conversation: IConversation, m
  * message nobody addressed to a bot (better odds for a question), a gap of
  * hours between two, and a pause to wait out, so it never cuts into a
  * conversation still going. Only then is Claude asked, on the owner's
- * allowance, and it may still answer SKIP and post nothing. It only talks: no
+ * allowance, and it may still answer SKIP and post nothing. Only a line that
+ * was posted keeps the hours: a SKIP holds it back for a few minutes, so a
+ * lucky roll on a dull moment does not cost it the next good one. It only talks: no
  * writing to the journal, no notes, no live locations, nothing its owner told
  * it in private. Every failure is silent, since nobody is waiting for it.
  */
@@ -124,6 +126,8 @@ export const JOIN_IN = {
   questionChance: 0.5,
   otherChance: 0.1,
   gapMs: 2 * 60 * 60_000,
+  /** How long it waits before trying again when it looked and said nothing, or could not. */
+  retryMs: 10 * 60_000,
   quietMs: 20_000
 };
 
@@ -143,11 +147,12 @@ async function maybeJoinIn(conversationId: string, message: MessageView): Promis
   const latest = await Message.findOne({ conversationId, deletedAt: null, kind: { $ne: 'system' } }).sort({ createdAt: -1 });
   if (latest?._id.toString() !== message.id) return;
 
-  // One bot, and claimed: two messages rolling at once must not both send it.
+  // One bot, and claimed: two messages rolling at once must not both send it. The claim holds it
+  // for `retryMs` only, by dating it that far short of the full gap; posting something makes it the whole gap.
   const pick = willing[Math.floor(Math.random() * willing.length)]!;
   const bot = await ChatBot.findOneAndUpdate(
     { _id: pick._id, joinsIn: true, paused: false, $or: [{ lastJoinedAt: null }, { lastJoinedAt: { $lt: cutoff } }] },
-    { $set: { lastJoinedAt: new Date() } },
+    { $set: { lastJoinedAt: new Date(now - JOIN_IN.gapMs + JOIN_IN.retryMs) } },
     { new: true }
   );
   if (!bot) return;
@@ -357,7 +362,11 @@ async function replyAs(bot: IChatBot, person: Caller, conversation: IConversatio
     if (unasked) {
       // Its choice to keep quiet, or a refusal nobody asked for: nothing is posted.
       const text = chatText(reply.text);
-      if (!reply.refused && text && !isSkip(text)) await postBotMessage(conversation, bot, { body: withSources(text, reply.sources) });
+      if (!reply.refused && text && !isSkip(text)) {
+        await postBotMessage(conversation, bot, { body: withSources(text, reply.sources) });
+        // It spoke: now the hours between two count from here.
+        await ChatBot.updateOne({ _id: bot._id }, { $set: { lastJoinedAt: new Date() } });
+      }
       if (reply.refused) outcome = 'refused';
     } else if (reply.refused) {
       outcome = 'refused';

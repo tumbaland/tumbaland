@@ -799,6 +799,31 @@ describe('an assistant that joins in unasked', () => {
     expect(await botMessages(id)).toHaveLength(0);
   });
 
+  it('does not spend its hours on a SKIP: it tries again soon, and only a line it posted holds it back', async () => {
+    JOIN_IN.retryMs = 300;
+    const id = await readyChat();
+    await letItJoinIn(id);
+    ask.mockImplementationOnce(async (request) => answer({ text: 'SKIP', servedBy: request.model }));
+
+    await send(id, 'ok see you at home', IRJA);
+    await nextUsage();
+    // Still holding off straight after looking.
+    await send(id, 'what should we eat?', IRJA);
+    await settle();
+    expect(ask).toHaveBeenCalledTimes(1);
+
+    // The short wait is over: the next one gets through, and this time it says something.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await send(id, 'or a film?', IRJA);
+    await eventually(() => botMessages(id), (rows) => rows.length > 0);
+    expect(ask).toHaveBeenCalledTimes(2);
+
+    // That one was posted, so now it is the full gap.
+    await send(id, 'and some tea?', IRJA);
+    await settle();
+    expect(ask).toHaveBeenCalledTimes(2);
+  });
+
   it('is likelier to answer a question than to chime in on anything else', async () => {
     const id = await readyChat();
     await letItJoinIn(id);
