@@ -1,8 +1,21 @@
-// Random-portfolio Monte Carlo over historical daily returns: samples random
-// weight vectors on the simplex and scores each portfolio by annualized
-// return/volatility/Sharpe. Extracted from the old PortfolioOptimizer page so
-// the planner page can stay lean and the math is testable on its own.
+// The efficient frontier of the holdings, from historical returns.
+//
+// The covariance comes from the price history, which is what history is good at.
+// The expected returns do not: a mean estimated from a few years is mostly noise,
+// and an optimizer will faithfully put the money wherever the noise was highest.
+// So expected returns are blended toward a long-run anchor by default, and the
+// frontier itself is solved (see optimizer.ts) rather than sampled. A cloud of
+// random portfolios is still computed, only to show where the ordinary ones sit.
 import { mean, covariance } from './portfolioMath';
+import {
+  DEFAULT_ANCHOR_PCT,
+  ReturnMode,
+  expectedReturnsPct,
+  historyWeight,
+  optimize,
+  OptimalPortfolio,
+  projectCappedSimplex
+} from './optimizer';
 
 export const TRADING_DAYS = 252;
 export const TRADING_WEEKS = 52;
@@ -116,6 +129,60 @@ export function returnIndices(dates: string[], maxGapDays: number = MAX_GAP_DAYS
   return indices;
 }
 
+/**
+ * A weekly series must cover this many times as much market as the daily one
+ * before it is preferred. Over the same stretch daily has five times the
+ * observations, which is worth more than a few extra weeks of reach.
+ */
+export const WEEKLY_REACH_ADVANTAGE = 1.5;
+
+/** Years of market a series covers, in trading days: observations scaled to a year. */
+export const coverageDays = (observations: number, basis: ReturnBasis) =>
+  (observations * TRADING_DAYS) / PERIODS_PER_YEAR[basis];
+
+export interface LimitingHolding {
+  ticker: string;
+  /** The first day it has a price. */
+  since: string;
+  /** Years the holdings share now, and the years they would share without it. */
+  yearsWith: number;
+  yearsWithout: number;
+}
+
+/**
+ * The holding whose short history sets the length of everyone's, when leaving it
+ * out would clearly lengthen the sample. The frontier is only as long as the days
+ * all holdings traded, so one young fund caps the rest.
+ *
+ * Null when it would not matter much, or when leaving one out would leave fewer
+ * than three holdings, which is too few to say anything about a frontier.
+ */
+export function findLimitingHolding(
+  pricesByTicker: Record<string, PricePoint[]>,
+  minGain = 1.3
+): LimitingHolding | null {
+  const tickers = Object.keys(pricesByTicker);
+  if (tickers.length < 4) return null;
+
+  const firstDay = (t: string) => dayOf(pricesByTicker[t][0].date);
+  const byYoungest = [...tickers].sort((a, b) => firstDay(b).localeCompare(firstDay(a)));
+  const [youngest, next] = byYoungest;
+  // A tie means leaving one out does not help: the other starts the same day.
+  if (firstDay(youngest) === firstDay(next)) return null;
+
+  const withAll = alignSeries(pricesByTicker);
+  const rest = Object.fromEntries(tickers.filter((t) => t !== youngest).map((t) => [t, pricesByTicker[t]]));
+  const without = alignSeries(rest);
+  if (withAll.spanDays <= 0 || without.spanDays < withAll.spanDays * minGain) return null;
+
+  return {
+    ticker: youngest,
+    since: firstDay(youngest),
+    yearsWith: withAll.spanDays / 365,
+    yearsWithout: without.spanDays / 365
+  };
+}
+
 export interface SimPoint {
   ret: number; // annualized return, %
   vol: number; // annualized volatility, %
@@ -123,9 +190,26 @@ export interface SimPoint {
   weights: number[];
 }
 
+/** What the optimizer was given, so anything derived from the frontier can use the same inputs. */
+export interface FrontierModel {
+  /** Expected annual return of each holding, decimal, under the chosen mode. */
+  mu: number[];
+  /** Annualized covariance of the holdings. */
+  cov: number[][];
+  /** Each holding's period returns over the shared window, for looking back. */
+  returnSeries: number[][];
+  periodsPerYear: number;
+}
+
 export interface FrontierSim {
   tickers: string[];
+  /** A cloud of random long-only portfolios, for context. Not where the answer comes from. */
   points: SimPoint[];
+  /** The solved efficient frontier, least risk first. */
+  frontier: SimPoint[];
+  /** The most any one holding may weigh, as a share, after allowing for an equal split. */
+  cap: number;
+  model: FrontierModel;
   maxSharpe: SimPoint;
   minVol: SimPoint;
   current: SimPoint | null;
@@ -202,6 +286,18 @@ export interface SimBreakdown {
   /** For the portfolio the user actually holds; `null` without quantities. */
   current: PortfolioBreakdown | null;
   riskFreeRatePct: number;
+  /** How the returns the optimizer worked with were arrived at. */
+  expected: ExpectedReturns;
+}
+
+export interface ExpectedReturns {
+  mode: ReturnMode;
+  /** What every holding is assumed to earn before looking at its past, % a year. */
+  anchorPct: number;
+  /** How much of each expected return is history rather than the anchor, 0 to 1. */
+  historyWeight: number;
+  /** Per holding, % a year, under the mode. */
+  perAssetPct: number[];
 }
 
 /**
@@ -278,15 +374,38 @@ export function randomWeights(n: number): number[] {
   return raw.map(x => x / sum);
 }
 
+const toPoint = (p: OptimalPortfolio): SimPoint => ({
+  ret: p.ret * 100,
+  vol: p.vol * 100,
+  sharpe: p.sharpe,
+  weights: p.weights
+});
+
 export function runFrontierSimulation(opts: {
   pricesByTicker: Record<string, PricePoint[]>;
   quantityByTicker: Record<string, number>;
   riskFreeRatePct: number;
+  /** How many random portfolios to scatter for context. */
   simulations?: number;
   /** Which series `pricesByTicker` holds. Decides the annualization factor. */
   basis?: ReturnBasis;
+  /** Whether returns come from history, are blended toward the anchor (default), or are all equal. */
+  returnMode?: ReturnMode;
+  /** The long-run return every holding is assumed to earn before looking at its own past, % a year. */
+  anchorPct?: number;
+  /** The most any one holding may weigh, in percent. 100 means no limit. */
+  maxWeightPct?: number;
 }): FrontierSim | null {
-  const { pricesByTicker, quantityByTicker, riskFreeRatePct, simulations = 2000, basis = 'daily' } = opts;
+  const {
+    pricesByTicker,
+    quantityByTicker,
+    riskFreeRatePct,
+    simulations = 600,
+    basis = 'daily',
+    returnMode = 'shrunk',
+    anchorPct = DEFAULT_ANCHOR_PCT,
+    maxWeightPct = 100
+  } = opts;
   const periods = PERIODS_PER_YEAR[basis];
   const { tickers, dates, prices: aligned } = alignSeries(pricesByTicker);
   if (tickers.length < 2) return null;
@@ -299,14 +418,28 @@ export function runFrontierSimulation(opts: {
   const cov = tickers.map((_, i) => tickers.map((_, j) => covariance(returnSeries[i], returnSeries[j])));
   const rfPeriod = riskFreeRatePct / 100 / periods;
 
+  // What each holding is expected to earn. History only informs this, in
+  // proportion to how much of it there is.
+  const equivalentTradingDays = Math.round((at.length * TRADING_DAYS) / periods);
+  const historicalPct = means.map((m) => m * periods * 100);
+  const expectedPct = expectedReturnsPct(historicalPct, returnMode, equivalentTradingDays, anchorPct);
+  const expectedPeriodMeans = expectedPct.map((r) => r / 100 / periods);
+
+  // The frontier is solved on annual figures.
+  const mu = expectedPct.map((r) => r / 100);
+  const covAnnual = cov.map((row) => row.map((c) => c * periods));
+  const optimum = optimize(mu, covAnnual, riskFreeRatePct / 100, maxWeightPct / 100);
+
+  // The cloud obeys the same limit as the frontier. Otherwise it fills with
+  // portfolios the frontier is not allowed to hold, and some of them sit above it.
   const points: SimPoint[] = [];
   for (let s = 0; s < simulations; s++) {
-    const w = randomWeights(tickers.length);
-    points.push({ ...portfolioStats(w, means, cov, rfPeriod, periods), weights: w });
+    const w = optimum.cap < 1 ? projectCappedSimplex(randomWeights(tickers.length), optimum.cap) : randomWeights(tickers.length);
+    points.push({ ...portfolioStats(w, expectedPeriodMeans, cov, rfPeriod, periods), weights: w });
   }
 
-  const maxSharpe = points.reduce((b, p) => (p.sharpe > b.sharpe ? p : b), points[0]);
-  const minVol = points.reduce((b, p) => (p.vol < b.vol ? p : b), points[0]);
+  const maxSharpe = toPoint(optimum.maxSharpe);
+  const minVol = toPoint(optimum.minVol);
 
   // Valued on the last day they all traded, so the weights that come out
   // describe one moment rather than a mix of stale and fresh closes.
@@ -316,7 +449,7 @@ export function runFrontierSimulation(opts: {
   let current: SimPoint | null = null;
   if (totalVal > 0) {
     const w = values.map(v => v / totalVal);
-    current = { ...portfolioStats(w, means, cov, rfPeriod, periods), weights: w };
+    current = { ...portfolioStats(w, expectedPeriodMeans, cov, rfPeriod, periods), weights: w };
   }
 
   const dataPoints = at.length;
@@ -325,7 +458,7 @@ export function runFrontierSimulation(opts: {
   const breakdown: SimBreakdown = {
     basis,
     periodsPerYear: periods,
-    equivalentTradingDays: Math.round((at.length * TRADING_DAYS) / periods),
+    equivalentTradingDays,
     window: {
       from: dates[0],
       to: dates[dates.length - 1],
@@ -355,8 +488,25 @@ export function runFrontierSimulation(opts: {
     current: current
       ? describePortfolio(current.weights, means, cov, riskFreeRatePct, at.length, basis)
       : null,
-    riskFreeRatePct
+    riskFreeRatePct,
+    expected: {
+      mode: returnMode,
+      anchorPct,
+      historyWeight: returnMode === 'history' ? 1 : returnMode === 'equal' ? 0 : historyWeight(equivalentTradingDays),
+      perAssetPct: expectedPct
+    }
   };
 
-  return { tickers, points, maxSharpe, minVol, current, dataPoints, breakdown };
+  return {
+    tickers,
+    points,
+    frontier: optimum.frontier.map(toPoint),
+    cap: optimum.cap,
+    model: { mu, cov: covAnnual, returnSeries, periodsPerYear: periods },
+    maxSharpe,
+    minVol,
+    current,
+    dataPoints,
+    breakdown
+  };
 }

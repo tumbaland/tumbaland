@@ -14,15 +14,17 @@ import {
   MAX_GAP_DAYS,
   PricePoint,
   ReturnBasis,
+  WEEKLY_REACH_ADVANTAGE,
   alignSeries,
+  coverageDays,
+  findLimitingHolding,
   returnIndices,
   runFrontierSimulation
 } from '../utils/frontierSim';
-import HoldingsTable, { HoldingStat } from '../components/planner/HoldingsTable';
+import { DEFAULT_ANCHOR_PCT, ReturnMode, frontierPointAtVol } from '../utils/optimizer';
 import FrontierSection from '../components/planner/FrontierSection';
-import ProjectionSection from '../components/planner/ProjectionSection';
+import PlanSection from '../components/planner/PlanSection';
 
-const SIMULATIONS = 2000;
 /** How far back to pull daily closes for the covariance estimate. */
 const HISTORY_YEARS = 2;
 /**
@@ -52,7 +54,7 @@ const MIN_OBSERVATIONS_PER_ASSET = 10;
 // long-horizon growth projection instead of asking the user to guess them.
 const PortfolioPlanner: React.FC = () => {
   const tenantGroupId = useTenantFilter();
-  const { data: holdings = [], isLoading: holdingsLoading } = useHoldings(tenantGroupId);
+  const { data: holdings = [], isLoading: holdingsLoading, refetch: refetchHoldings } = useHoldings(tenantGroupId);
   const { data: trackedTickers = [] } = useTrackedTickers(tenantGroupId);
 
   /** Both series, kept side by side so the basis can be chosen from the data. */
@@ -64,6 +66,9 @@ const PortfolioPlanner: React.FC = () => {
   const [priceError, setPriceError] = useState<string | null>(null);
   /** False until the first load resolves, so "no data yet" cannot read as "too little". */
   const [pricesLoaded, setPricesLoaded] = useState(false);
+  /** Bumped by the refresh button, which reloads the prices and solves the frontier again. */
+  const [refreshCount, setRefreshCount] = useState(0);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
   // The caller's own retention window, which decides whether a short history is
   // something they can buy their way out of. `retry: false` and no error
@@ -75,6 +80,15 @@ const PortfolioPlanner: React.FC = () => {
     retry: false
   });
   const [riskFreeRate, setRiskFreeRate] = usePersistedState('finance-planner-risk-free-rate', '3'); // % per year
+  // What the frontier assumes. Returns are blended toward a long-run figure by
+  // default, because history alone rewards whatever did best recently.
+  const [returnMode, setReturnMode] = usePersistedState<ReturnMode>('finance-planner-return-mode', 'shrunk');
+  const [anchorPct, setAnchorPct] = usePersistedState('finance-planner-anchor', String(DEFAULT_ANCHOR_PCT)); // % per year
+  // Capped by default: with no limit the minimum-risk answer is usually the two
+  // least correlated holdings and nothing else.
+  const [maxWeight, setMaxWeight] = usePersistedState('finance-planner-max-weight', '40'); // % of the portfolio
+  /** Holdings left out of the frontier, because a young one would cap the history of the rest. */
+  const [excluded, setExcluded] = usePersistedState<string[]>('finance-planner-excluded', []);
   const [tab, setTab] = useState(0);
 
   const nameByTicker = useMemo(() => {
@@ -139,56 +153,45 @@ const PortfolioPlanner: React.FC = () => {
       .then(([daily, weekly]) => {
         setSeriesByBasis({ daily, weekly });
         setPricesLoaded(true);
+        setUpdatedAt(new Date());
       })
       .catch(() => setPriceError('Failed to load price history'))
       .finally(() => setLoadingPrices(false));
-  }, [holdings]);
-
-  // Frontier simulation — stored as state so results are stable across
-  // re-renders. Re-runs only when price data loads or on explicit Re-run.
-  const [sim, setSim] = useState<FrontierSim | null>(null);
-
-  const runSim = () => {
-    const quantityByTicker: Record<string, number> = {};
-    holdings.forEach((h) => (quantityByTicker[h.ticker] = h.quantity));
-    setSim(
-      runFrontierSimulation({
-        pricesByTicker,
-        quantityByTicker,
-        riskFreeRatePct: parseFloat(riskFreeRate) || 0,
-        simulations: SIMULATIONS,
-        basis
-      })
-    );
-  };
+  }, [holdings, refreshCount]);
 
   /**
    * Which series to estimate from, and the overlap it yields.
    *
-   * **The basis with more usable observations wins**, because that is what the
-   * estimate's error bar is made of. It picks weekly for a portfolio holding an
-   * instrument listed last year — a decade of weekly closes beats five months of
-   * daily ones — and flips back to daily on its own once enough daily history
-   * has accrued, since three years of daily closes is 756 observations against
-   * the same period's 156 weekly. No setting, and nothing to keep in sync.
+   * **The basis that covers more market wins**, with daily kept unless weekly
+   * reaches clearly further. Counting observations picked five months of daily
+   * closes over two and a half years of weekly ones, because 165 beats 125, and
+   * the free data tier will never serve daily history past ~100 days. Over the
+   * same stretch daily has five times the observations, so it stays when the
+   * two are close, and it takes over again on its own once enough has accrued.
+   * No setting, and nothing to keep in sync.
+   *
+   * Holdings in `excluded` are left out first, so the overlap is measured on
+   * the ones that are actually being optimized.
    */
-  const { basis, aligned, pricesByTicker } = useMemo(() => {
+  const { basis, aligned, pricesByTicker, limiting } = useMemo(() => {
     const usable = (candidate: ReturnBasis) => {
-      const series = seriesByBasis[candidate];
+      const series = Object.fromEntries(Object.entries(seriesByBasis[candidate]).filter(([t]) => !excluded.includes(t)));
       const alignment = alignSeries(series);
+      // Gap-spanning steps are dropped by the sim, so they are not counted here.
+      const observations = returnIndices(alignment.dates, MAX_GAP_DAYS[candidate]).length;
       return {
         basis: candidate,
         aligned: alignment,
         pricesByTicker: series,
-        // Gap-spanning steps are dropped by the sim, so they are not counted here.
-        observations: returnIndices(alignment.dates, MAX_GAP_DAYS[candidate]).length
+        coverage: coverageDays(observations, candidate)
       };
     };
 
     const daily = usable('daily');
     const weekly = usable('weekly');
-    return weekly.observations > daily.observations ? weekly : daily;
-  }, [seriesByBasis]);
+    const chosen = weekly.coverage > daily.coverage * WEEKLY_REACH_ADVANTAGE ? weekly : daily;
+    return { ...chosen, limiting: findLimitingHolding(chosen.pricesByTicker) };
+  }, [seriesByBasis, excluded]);
 
   const alignedSeries: AlignedSeries = aligned;
 
@@ -229,47 +232,59 @@ const PortfolioPlanner: React.FC = () => {
     if (shellFrontUrl && window.top?.location) window.top.location.href = `${shellFrontUrl}/payments`;
   }, []);
 
-  // oxlint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (Object.keys(pricesByTicker).length >= 2 && hasEnoughHistory) runSim();
-  }, [pricesByTicker]);
+  // The frontier follows its assumptions: change one and it is solved again.
+  // Solved rather than sampled, so there is nothing to re-run by hand.
+  const sim: FrontierSim | null = useMemo(() => {
+    if (Object.keys(pricesByTicker).length < 2 || !hasEnoughHistory) return null;
+    const quantityByTicker: Record<string, number> = {};
+    holdings.forEach((h) => (quantityByTicker[h.ticker] = h.quantity));
+    return runFrontierSimulation({
+      pricesByTicker,
+      quantityByTicker,
+      riskFreeRatePct: parseFloat(riskFreeRate) || 0,
+      basis,
+      returnMode,
+      anchorPct: parseFloat(anchorPct) || 0,
+      maxWeightPct: Math.min(100, Math.max(1, parseFloat(maxWeight) || 100))
+    });
+  }, [pricesByTicker, hasEnoughHistory, holdings, riskFreeRate, basis, returnMode, anchorPct, maxWeight]);
 
-  // Target risk level chosen by the user via slider — persisted so a returning
-  // user's plan doesn't reset to Max Sharpe on every visit.
+  // The risk level the user chose with the slider, and only that: until they
+  // move it, the target follows the best Sharpe ratio. The default is not
+  // saved, because a saved default goes stale the moment an assumption changes
+  // the frontier, and the slider then sits stuck at the minimum.
   const [targetVol, setTargetVol] = usePersistedState<number | null>('finance-planner-target-vol', null);
 
-  // oxlint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (sim && targetVol === null) setTargetVol(sim.maxSharpe.vol);
-  }, [sim]);
-
-  // Efficient frontier point at or below targetVol: highest return at that risk level
-  const targetPortfolio = useMemo(() => {
+  // The level in use: the chosen one unless it is below the least risk the
+  // frontier now allows, in which case it is stale and the best Sharpe takes over.
+  const activeTargetVol = useMemo(() => {
     if (!sim) return null;
-    const vol = targetVol ?? sim.maxSharpe.vol;
-    const candidates = sim.points.filter((p) => p.vol <= vol);
-    if (candidates.length === 0) return sim.minVol;
-    return candidates.reduce((b, p) => (p.ret > b.ret ? p : b));
+    return targetVol !== null && targetVol >= sim.minVol.vol - 0.05 ? targetVol : sim.maxSharpe.vol;
   }, [sim, targetVol]);
 
-  // Per-holding performance stats
-  const holdingStats = useMemo<HoldingStat[]>(() => {
-    return holdings
-      .map((p) => {
-        const prices = pricesByTicker[p.ticker];
-        // Each holding's own newest close — unlike the frontier, a row's
-        // current value has no reason to wait for the other tickers.
-        const latestPrice = prices?.length ? prices[prices.length - 1].price : null;
-        const returnPct = latestPrice != null ? ((latestPrice - p.avgBuyPrice) / p.avgBuyPrice) * 100 : null;
-        const currentValue = latestPrice != null ? latestPrice * p.quantity : null;
-        return { ...p, latestPrice, returnPct, currentValue };
-      })
-      .sort((a, b) => (b.currentValue ?? 0) - (a.currentValue ?? 0));
-  }, [holdings, pricesByTicker]);
+  // The efficient portfolio at that risk: the most the frontier earns at or below it.
+  const targetPortfolio = useMemo(() => {
+    if (!sim || activeTargetVol === null) return null;
+    return frontierPointAtVol(sim.frontier, activeTargetVol) ?? sim.minVol;
+  }, [sim, activeTargetVol]);
 
-  const totalValue = holdingStats.reduce((s, h) => s + (h.currentValue ?? 0), 0);
+  // What the holdings in the frontier are worth, for turning the target weights
+  // into euros. Each at its own newest close: unlike the frontier, a holding's
+  // value has no reason to wait for the other tickers. Holdings left out are not
+  // counted, because the weights do not cover them.
+  const totalValue = useMemo(
+    () =>
+      holdings.reduce((sum, h) => {
+        const prices = pricesByTicker[h.ticker];
+        return prices?.length ? sum + prices[prices.length - 1].price * h.quantity : sum;
+      }, 0),
+    [holdings, pricesByTicker]
+  );
 
-  const isLoading = holdingsLoading || loadingPrices;
+  // Only the first load replaces the page. A refresh keeps what is on screen, so
+  // the amount typed into the buy plan and the switches are still there when the
+  // new numbers arrive.
+  const isLoading = holdingsLoading || (loadingPrices && !pricesLoaded);
 
   if (isLoading) {
     return (
@@ -279,7 +294,7 @@ const PortfolioPlanner: React.FC = () => {
     );
   }
 
-  const tickersWithoutData = holdings.map((p) => p.ticker).filter((t) => !pricesByTicker[t]);
+  const tickersWithoutData = holdings.map((p) => p.ticker).filter((t) => !pricesByTicker[t] && !excluded.includes(t));
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -293,8 +308,7 @@ const PortfolioPlanner: React.FC = () => {
       )}
       {holdings.length === 0 && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          Add holdings in the Investments page to optimize your allocation — until then the projection below runs on
-          manual assumptions.
+          Add holdings in the Investments page to see how they could be allocated. The Plan tab works without them.
         </Alert>
       )}
       {tickersWithoutData.length > 0 && (
@@ -308,17 +322,14 @@ const PortfolioPlanner: React.FC = () => {
         onChange={(_, v) => setTab(v)}
         sx={{ mb: 2, borderBottom: '1px solid', borderColor: 'divider' }}
       >
-        <Tab label="Holdings" />
+        <Tab label="Plan" />
         <Tab label="Frontier" />
-        <Tab label="Projection" />
       </Tabs>
 
       {/* Panels stay mounted (just hidden) so switching tabs never re-fetches or
           resets in-progress input — only one is visible at a time. */}
       <Box role="tabpanel" hidden={tab !== 0}>
-        {holdings.length > 0 && (
-          <HoldingsTable holdings={holdingStats} nameByTicker={nameByTicker} totalValue={totalValue} />
-        )}
+        <PlanSection />
       </Box>
 
       <Box role="tabpanel" hidden={tab !== 1}>
@@ -326,14 +337,30 @@ const PortfolioPlanner: React.FC = () => {
           <FrontierSection
             sim={sim}
             targetPortfolio={targetPortfolio}
-            targetVol={targetVol}
+            targetVol={activeTargetVol}
             onTargetVolChange={setTargetVol}
             riskFreeRate={riskFreeRate}
             onRiskFreeRateChange={setRiskFreeRate}
-            onRerun={runSim}
+            returnMode={returnMode}
+            onReturnModeChange={setReturnMode}
+            anchorPct={anchorPct}
+            onAnchorPctChange={setAnchorPct}
+            maxWeight={maxWeight}
+            onMaxWeightChange={setMaxWeight}
+            onRefresh={() => {
+              // Quantities as well as prices: a trade made since the page opened
+              // changes the weights the plan starts from.
+              void refetchHoldings?.();
+              setRefreshCount((count) => count + 1);
+            }}
+            refreshing={loadingPrices}
+            updatedAt={updatedAt}
+            limiting={limiting}
+            excluded={excluded}
+            onExclude={(ticker) => setExcluded((current) => [...new Set([...current, ticker])])}
+            onInclude={(ticker) => setExcluded((current) => current.filter((t) => t !== ticker))}
             totalValue={totalValue}
             nameByTicker={nameByTicker}
-            simulations={SIMULATIONS}
           />
         ) : holdings.length > 0 && !hasEnoughHistory ? (
           /*
@@ -387,10 +414,6 @@ const PortfolioPlanner: React.FC = () => {
             </Alert>
           )
         )}
-      </Box>
-
-      <Box role="tabpanel" hidden={tab !== 2}>
-        <ProjectionSection sim={sim} targetPortfolio={targetPortfolio} portfolioValue={totalValue} />
       </Box>
     </Box>
   );

@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { FrontierSim, TRADING_DAYS } from '../../utils/frontierSim';
-import { ANCHOR_DAYS, LONG_RUN_RETURN_PCT, shrinkExpectedReturn } from '../../utils/growthProjection';
+import { ANCHOR_DAYS } from '../../utils/optimizer';
 
 /**
  * The frontier's arithmetic, written out with this portfolio's own numbers in it.
@@ -70,7 +70,7 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 );
 
 const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameByTicker }) => {
-  const { basis, periodsPerYear, window, assets, correlations, current, riskFreeRatePct } = sim.breakdown;
+  const { basis, periodsPerYear, window, assets, correlations, current, riskFreeRatePct, expected } = sim.breakdown;
 
   // Everything on this panel is stated in the units it was estimated in, so the
   // reader can check the multiplication rather than take the annualized number
@@ -82,8 +82,9 @@ const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameBy
   // there are no weights, so there is no portfolio arithmetic to show — only
   // the per-holding inputs.
   const sampleDays = sim.breakdown.equivalentTradingDays;
-  const shrunk = current ? shrinkExpectedReturn(current.arithmeticPct, sampleDays) : null;
   const historyWeight = sampleDays / (sampleDays + ANCHOR_DAYS);
+  const anchor = expected.anchorPct;
+  const shrunk = current ? historyWeight * current.arithmeticPct + (1 - historyWeight) * anchor : null;
 
   // Shown as the exact ratio rather than a rounded multiplier: 252/52 is 4.85,
   // and a panel whose whole claim is "check the arithmetic yourself" cannot
@@ -234,23 +235,65 @@ const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameBy
               </Alert>
             </Section>
 
-            <Section title="6. What the projection actually uses">
-              <Formula>
-                {[
-                  `sample           = ${window.observations} ${period}${periodFactor}`.padEnd(42) +
-                    `= ${sampleDays} trading days`,
-                  `history weight   = n ÷ (n + ${ANCHOR_DAYS})`.padEnd(42) + `= ${historyWeight.toFixed(2)}`,
-                  `projection input = ${historyWeight.toFixed(2)} × ${current.arithmeticPct.toFixed(1)}% + ${(1 - historyWeight).toFixed(2)} × ${LONG_RUN_RETURN_PCT}%`,
-                  `                 = ${pct(shrunk ?? 0)}`
-                ].join('\n')}
-              </Formula>
-              <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1.5 }}>
-                The Projection tab does not compound the figure above. It blends it toward a {LONG_RUN_RETURN_PCT}%
-                long-run equity anchor in proportion to how much history stands behind it — {ANCHOR_DAYS}{' '}
-                trading days (about three years) earns history equal weight. On this sample the
-                historical estimate carries {(historyWeight * 100).toFixed(0)}% of the answer
-                {basis === 'weekly' && ' — weekly closes are converted to trading-day equivalents first, so a long weekly history is not discounted for being sampled coarsely'}.
+            <Section title="6. The returns the frontier assumes">
+              {expected.mode === 'shrunk' && (
+                <Formula>
+                  {[
+                    `sample           = ${window.observations} ${period}${periodFactor}`.padEnd(42) +
+                      `= ${sampleDays} trading days`,
+                    `history weight   = n ÷ (n + ${ANCHOR_DAYS})`.padEnd(42) + `= ${historyWeight.toFixed(2)}`,
+                    `expected return  = ${historyWeight.toFixed(2)} × ${current.arithmeticPct.toFixed(1)}% + ${(1 - historyWeight).toFixed(2)} × ${anchor}%`,
+                    `                 = ${pct(shrunk ?? 0)}`
+                  ].join('\n')}
+                </Formula>
+              )}
+              <Typography variant="body2" sx={{ color: 'text.secondary', mt: expected.mode === 'shrunk' ? 1.5 : 0 }}>
+                {expected.mode === 'shrunk' && (
+                  <>
+                    The frontier does not take the historical figure at face value. Each holding&apos;s
+                    return is blended toward a {anchor}% long-run anchor in proportion to how much history
+                    stands behind it — {ANCHOR_DAYS} trading days (about three years) earns history equal
+                    weight. On this sample the historical estimate carries {(historyWeight * 100).toFixed(0)}%
+                    of the answer
+                    {basis === 'weekly' && ' — weekly closes are converted to trading-day equivalents first, so a long weekly history is not discounted for being sampled coarsely'}.
+                    Without this, an optimizer puts the money wherever the recent past happened to be best.
+                  </>
+                )}
+                {expected.mode === 'history' && (
+                  <>
+                    Returns are taken as measured over the window, with no blending. An optimizer run on a
+                    short sample will lean heavily on whatever did best in it, so read the weights as a
+                    description of the past rather than a recommendation.
+                  </>
+                )}
+                {expected.mode === 'equal' && (
+                  <>
+                    Every holding is assumed to earn the same {anchor}% a year, so the history says nothing about
+                    returns and the frontier is decided by risk and correlation alone. That is the part of
+                    the data that can be estimated reliably.
+                  </>
+                )}
               </Typography>
+              <TableContainer component={Paper} elevation={0} variant="outlined" sx={{ borderRadius: 2, mt: 1.5 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Holding</TableCell>
+                      <TableCell align="right">From history</TableCell>
+                      <TableCell align="right">Assumed</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {assets.map((asset, i) => (
+                      <TableRow key={asset.ticker}>
+                        <TableCell sx={{ fontWeight: 600 }}>{asset.ticker}</TableCell>
+                        <TableCell align="right">{pct(asset.annualizedPct)}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600 }}>{pct(expected.perAssetPct[i])}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </Section>
           </>
         )}

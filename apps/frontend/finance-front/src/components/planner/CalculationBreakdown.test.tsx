@@ -11,6 +11,9 @@ const sim = (overrides: Partial<FrontierSim['breakdown']> = {}): FrontierSim =>
   ({
     tickers: ['VWCE.DEX', 'XNAS.DEX'],
     points: [],
+    frontier: [],
+    cap: 1,
+    model: { mu: [], cov: [], returnSeries: [], periodsPerYear: 252 },
     maxSharpe: { ret: 40, vol: 15, sharpe: 2.5, weights: [0.5, 0.5] },
     minVol: { ret: 30, vol: 12, sharpe: 2.2, weights: [0.7, 0.3] },
     current: { ret: 34, vol: 13.9, sharpe: 2.23, weights: [0.6, 0.4] },
@@ -54,6 +57,7 @@ const sim = (overrides: Partial<FrontierSim['breakdown']> = {}): FrontierSim =>
         ci95: [-8.1, 76.1]
       },
       riskFreeRatePct: 3,
+      expected: { mode: 'shrunk', anchorPct: 8, historyWeight: 0.12, perAssetPct: [10.6, 12.4] },
       ...overrides
     }
   }) as FrontierSim;
@@ -151,13 +155,48 @@ it('drops the loss warning once the estimate is comfortably positive', async () 
   expect(screen.getByText(/estimated from 105 observations/i)).toBeInTheDocument();
 });
 
-it('shows the shrunk figure the projection tab actually runs on', async () => {
+it('shows the shrunk figure the frontier actually runs on', async () => {
   render(<CalculationBreakdown sim={sim()} nameByTicker={names} />);
   await open();
 
   // 105 / (105 + 756) = 0.12 → 0.12 × 34 + 0.88 × 8 ≈ 11.2%
   expect(screen.getByText(/history weight/)).toHaveTextContent('0.12');
-  expect(screen.getByText(/projection input/)).toHaveTextContent('11.2%');
+  expect(screen.getByText(/history weight/)).toHaveTextContent('11.2%');
+});
+
+it('lists what each holding is assumed to earn beside what history says', async () => {
+  render(<CalculationBreakdown sim={sim()} nameByTicker={names} />);
+  await open();
+
+  const section = screen.getByText('6. The returns the frontier assumes').parentElement!;
+  expect(within(section).getByText('From history')).toBeInTheDocument();
+  expect(within(section).getByText('10.6%')).toBeInTheDocument();
+  expect(within(section).getByText('12.4%')).toBeInTheDocument();
+});
+
+it('says history is taken as it is when asked to, and gives no blend to show', async () => {
+  render(
+    <CalculationBreakdown
+      sim={sim({ expected: { mode: 'history', anchorPct: 6, historyWeight: 1, perAssetPct: [30.9, 44.2] } })}
+      nameByTicker={names}
+    />
+  );
+  await open();
+
+  expect(screen.getByText(/taken as measured over the window/i)).toBeInTheDocument();
+  expect(screen.queryByText(/history weight/)).not.toBeInTheDocument();
+});
+
+it('says the holdings are assumed to earn the same when history is set aside', async () => {
+  render(
+    <CalculationBreakdown
+      sim={sim({ expected: { mode: 'equal', anchorPct: 5, historyWeight: 0, perAssetPct: [5, 5] } })}
+      nameByTicker={names}
+    />
+  );
+  await open();
+
+  expect(screen.getByText(/every holding is assumed to earn the same 5% a year/i)).toBeInTheDocument();
 });
 
 it('flags a correlated pair as buying no diversification', async () => {

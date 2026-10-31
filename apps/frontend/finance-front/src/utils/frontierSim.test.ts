@@ -8,6 +8,8 @@ import {
   alignSeries,
   dailyReturns,
   describePortfolio,
+  coverageDays,
+  findLimitingHolding,
   portfolioStats,
   randomWeights,
   returnIndices,
@@ -147,13 +149,18 @@ describe('runFrontierSimulation', () => {
     ).toBeNull();
   });
 
-  it('samples the requested number of portfolios and flags the extremes', () => {
+  it('scatters the requested number of random portfolios for context', () => {
     const sim = runFrontierSimulation({ pricesByTicker, quantityByTicker, riskFreeRatePct: 3, simulations: 200 })!;
     expect(sim.points).toHaveLength(200);
     expect(sim.tickers).toEqual(['AAPL', 'MSFT']);
     expect(sim.dataPoints).toBe(24);
-    expect(Math.max(...sim.points.map(p => p.sharpe))).toBe(sim.maxSharpe.sharpe);
-    expect(Math.min(...sim.points.map(p => p.vol))).toBe(sim.minVol.vol);
+  });
+
+  it('finds an optimum no random portfolio beats, instead of the best of the sample', () => {
+    const sim = runFrontierSimulation({ pricesByTicker, quantityByTicker, riskFreeRatePct: 3, simulations: 2000 })!;
+
+    expect(sim.maxSharpe.sharpe).toBeGreaterThanOrEqual(Math.max(...sim.points.map(p => p.sharpe)) - 1e-9);
+    expect(sim.minVol.vol).toBeLessThanOrEqual(Math.min(...sim.points.map(p => p.vol)) + 1e-9);
   });
 
   it('weights the current portfolio by holding value at the latest price', () => {
@@ -262,7 +269,8 @@ describe('runFrontierSimulation breakdown', () => {
   });
 
   it('decomposes the portfolio figure into per-holding contributions that sum to it', () => {
-    const sim = runFrontierSimulation({ pricesByTicker, quantityByTicker, riskFreeRatePct: 3, simulations: 50 })!;
+    // On history alone, which is what the contributions are measured on
+    const sim = runFrontierSimulation({ pricesByTicker, quantityByTicker, riskFreeRatePct: 3, simulations: 50, returnMode: 'history' })!;
     const { assets, current } = sim.breakdown;
 
     const summed = assets.reduce((s, a) => s + (a.contributionPct ?? 0), 0);
@@ -417,5 +425,138 @@ describe('return basis', () => {
     })!;
 
     expect(long.breakdown.current!.standardErrorPct).toBeLessThan(short.breakdown.current!.standardErrorPct);
+  });
+});
+
+describe('expected returns', () => {
+  const pricesByTicker = { AAPL: series(150, 1), MSFT: series(300, 2) };
+  const quantityByTicker = { AAPL: 10, MSFT: 5 };
+  const run = (extra = {}) =>
+    runFrontierSimulation({ pricesByTicker, quantityByTicker, riskFreeRatePct: 3, simulations: 50, ...extra })!;
+
+  it('blends history toward the long-run anchor by default', () => {
+    const sim = run({ anchorPct: 6 });
+    const { expected, assets } = sim.breakdown;
+
+    expect(expected.mode).toBe('shrunk');
+    expect(expected.historyWeight).toBeGreaterThan(0);
+    expect(expected.historyWeight).toBeLessThan(1);
+    expected.perAssetPct.forEach((pct, i) => {
+      const [lo, hi] = [Math.min(assets[i].annualizedPct, 6), Math.max(assets[i].annualizedPct, 6)];
+      expect(pct).toBeGreaterThanOrEqual(lo - 1e-9);
+      expect(pct).toBeLessThanOrEqual(hi + 1e-9);
+    });
+  });
+
+  it('can take history as it is', () => {
+    const sim = run({ returnMode: 'history' });
+
+    expect(sim.breakdown.expected.historyWeight).toBe(1);
+    sim.breakdown.expected.perAssetPct.forEach((pct, i) => expect(pct).toBeCloseTo(sim.breakdown.assets[i].annualizedPct, 8));
+  });
+
+  it('can give every holding the same return, so the frontier is about risk alone', () => {
+    const sim = run({ returnMode: 'equal', anchorPct: 5 });
+
+    expect(sim.breakdown.expected.historyWeight).toBe(0);
+    expect(sim.breakdown.expected.perAssetPct).toEqual([5, 5]);
+    // with equal returns the best Sharpe is simply the least risky mix
+    expect(sim.maxSharpe.weights[0]).toBeCloseTo(sim.minVol.weights[0], 3);
+  });
+
+  it('gives the portfolio held the expected return, not the historical one', () => {
+    const history = run({ returnMode: 'history' }).current!.ret;
+    const equal = run({ returnMode: 'equal', anchorPct: 5 }).current!.ret;
+
+    expect(equal).toBeCloseTo(5, 8);
+    expect(history).not.toBeCloseTo(equal, 2);
+  });
+});
+
+describe('the solved frontier', () => {
+  const pricesByTicker = { AAPL: series(150, 1), MSFT: series(300, 2), NVDA: series(80, 3) };
+  const quantityByTicker = { AAPL: 10, MSFT: 5, NVDA: 20 };
+  const run = (extra = {}) =>
+    runFrontierSimulation({ pricesByTicker, quantityByTicker, riskFreeRatePct: 3, simulations: 50, ...extra })!;
+
+  it('runs from the least risk to the most return, earning more as it takes more risk', () => {
+    const { frontier, minVol } = run();
+
+    expect(frontier[0].vol).toBeCloseTo(minVol.vol, 6);
+    for (let i = 1; i < frontier.length; i++) {
+      expect(frontier[i].vol).toBeGreaterThan(frontier[i - 1].vol);
+      expect(frontier[i].ret).toBeGreaterThan(frontier[i - 1].ret);
+    }
+  });
+
+  it('caps the weight of any one holding', () => {
+    const sim = run({ maxWeightPct: 40 });
+
+    [...sim.frontier, sim.maxSharpe, sim.minVol].forEach(p => p.weights.forEach(w => expect(w).toBeLessThanOrEqual(0.4 + 1e-6)));
+    expect(sim.cap).toBeCloseTo(0.4, 9);
+  });
+
+  it('cannot cap below an equal split', () => {
+    expect(run({ maxWeightPct: 10 }).cap).toBeCloseTo(1 / 3, 9);
+  });
+
+  it('holds the random cloud to the same limit, so none of it sits above the frontier', () => {
+    const sim = run({ maxWeightPct: 40, simulations: 300 });
+
+    sim.points.forEach(p => p.weights.forEach(w => expect(w).toBeLessThanOrEqual(0.4 + 1e-6)));
+    sim.points
+      .filter(p => p.vol >= sim.frontier[0].vol && p.vol <= sim.frontier[sim.frontier.length - 1].vol)
+      .forEach(p => {
+        const above = sim.frontier.filter(f => f.vol <= p.vol).pop()!;
+        const next = sim.frontier.find(f => f.vol >= p.vol)!;
+        const t = next.vol > above.vol ? (p.vol - above.vol) / (next.vol - above.vol) : 0;
+        expect(p.ret).toBeLessThanOrEqual(above.ret + t * (next.ret - above.ret) + 1e-4);
+      });
+  });
+
+  it('keeps what the optimizer was given, for looking at a portfolio the same way', () => {
+    const { model, dataPoints, tickers } = run();
+
+    expect(model.mu).toHaveLength(tickers.length);
+    expect(model.cov).toHaveLength(tickers.length);
+    expect(model.cov[0][1]).toBeCloseTo(model.cov[1][0], 12);
+    expect(model.returnSeries[0]).toHaveLength(dataPoints);
+    expect(model.periodsPerYear).toBe(TRADING_DAYS);
+  });
+});
+
+describe('coverageDays', () => {
+  it('counts the market a series covers, so a weekly one is comparable with a daily one', () => {
+    expect(coverageDays(252, 'daily')).toBe(252);
+    expect(coverageDays(52, 'weekly')).toBe(252);
+    expect(coverageDays(125, 'weekly')).toBeCloseTo(605.8, 0);
+  });
+});
+
+describe('findLimitingHolding', () => {
+  const long = (seed: number, count = 300) => dated(Array.from({ length: count }, (_, i) => 100 + i * 0.1 + Math.sin(i * seed) * 3));
+  /** The same days, but only from day 200 on: a fund listed later. */
+  const young = (seed: number) => long(seed).slice(200);
+
+  it('names the young holding whose short history caps the rest', () => {
+    const found = findLimitingHolding({ A: long(1), B: long(2), C: long(3), NEW: young(4) });
+
+    expect(found).toMatchObject({ ticker: 'NEW' });
+    expect(found!.since).toBe(long(4)[200].date);
+    expect(found!.yearsWithout).toBeGreaterThan(found!.yearsWith * 2);
+  });
+
+  it('has nothing to say with fewer than four, since leaving one out would leave too few', () => {
+    expect(findLimitingHolding({ A: long(1), B: long(2), NEW: young(4) })).toBeNull();
+  });
+
+  it('has nothing to say when two holdings start together, because leaving one out does not help', () => {
+    expect(findLimitingHolding({ A: long(1), B: long(2), C: young(3), NEW: young(4) })).toBeNull();
+  });
+
+  it('has nothing to say when it would barely lengthen the sample', () => {
+    const slightlyYoung = long(4).slice(5);
+
+    expect(findLimitingHolding({ A: long(1), B: long(2), C: long(3), NEW: slightlyYoung })).toBeNull();
   });
 });

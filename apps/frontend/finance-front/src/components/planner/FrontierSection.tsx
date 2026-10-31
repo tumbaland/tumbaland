@@ -10,24 +10,31 @@ import {
   TableCell,
   TableContainer,
   TextField,
-  Chip,
   Button,
+  Chip,
+  CircularProgress,
   Slider,
   Tooltip,
   Alert,
+  FormControl,
   FormControlLabel,
+  InputLabel,
+  MenuItem,
+  Select,
   Switch,
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
 
 // Below this many trading days, the return/volatility estimates behind the
 // frontier are based on a fairly short price history and should be read as
 // a rough guide rather than a precise forecast.
 const LOW_DATA_THRESHOLD_DAYS = 252;
-import { FrontierSim, SimPoint } from '../../utils/frontierSim';
+import { FrontierSim, LimitingHolding, SimPoint } from '../../utils/frontierSim';
+import { ReturnMode, frontierReturnAtVol, frontierVolAtReturn, holdingsUsed, newMoneyPlan } from '../../utils/optimizer';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import FrontierChart from './FrontierChart';
+import FrontierInsights from './FrontierInsights';
 import CalculationBreakdown from './CalculationBreakdown';
 
 // Tints behind the buy/sell figures. Translucent, so they sit on light and
@@ -42,11 +49,44 @@ interface FrontierSectionProps {
   onTargetVolChange: (vol: number) => void;
   riskFreeRate: string;
   onRiskFreeRateChange: (value: string) => void;
-  onRerun: () => void;
+  returnMode: ReturnMode;
+  onReturnModeChange: (mode: ReturnMode) => void;
+  /** The long-run return every holding is assumed to earn, % a year, as typed. */
+  anchorPct: string;
+  onAnchorPctChange: (value: string) => void;
+  /** The most any one holding may weigh, % of the portfolio, as typed. */
+  maxWeight: string;
+  onMaxWeightChange: (value: string) => void;
+  /** Reload the prices and holdings and solve the frontier again. */
+  onRefresh: () => void;
+  refreshing: boolean;
+  /** When the prices behind the frontier were last loaded. */
+  updatedAt: Date | null;
+  /** The holding whose short history caps the sample, when leaving it out would clearly help. */
+  limiting: LimitingHolding | null;
+  /** Holdings left out of the frontier. */
+  excluded: string[];
+  onExclude: (ticker: string) => void;
+  onInclude: (ticker: string) => void;
   totalValue: number;
   nameByTicker: Record<string, string>;
-  simulations: number;
 }
+
+const MODE_LABELS: Record<ReturnMode, string> = {
+  shrunk: 'History, blended with the long run',
+  equal: 'All the same, risk decides',
+  history: 'History only'
+};
+
+const CAP_OPTIONS = ['100', '50', '40', '30', '25'];
+
+/**
+ * How far below the frontier counts as close enough. A couple of years of prices
+ * cannot tell a mix from its neighbours by less than this, so a smaller gap is not
+ * a reason to sell anything, which would also realise tax.
+ */
+const CLOSE_RETURN_POINTS = 1;
+const CLOSE_RISK_POINTS = 2;
 
 const FrontierSection: React.FC<FrontierSectionProps> = ({
   sim,
@@ -55,10 +95,21 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
   onTargetVolChange,
   riskFreeRate,
   onRiskFreeRateChange,
-  onRerun,
+  returnMode,
+  onReturnModeChange,
+  anchorPct,
+  onAnchorPctChange,
+  maxWeight,
+  onMaxWeightChange,
+  onRefresh,
+  refreshing,
+  updatedAt,
+  limiting,
+  excluded,
+  onExclude,
+  onInclude,
   totalValue,
-  nameByTicker,
-  simulations
+  nameByTicker
 }) => {
   const [investAmount, setInvestAmount] = useState<string>('1000');
   const investEuros = parseFloat(investAmount) || 0;
@@ -76,6 +127,20 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
       retDelta: targetPortfolio.ret - c.ret
     };
   }, [sim, targetPortfolio]);
+
+  // Are you on the frontier? Compare against what the same risk could earn, and
+  // what the same return could do with less risk.
+  const verdict = useMemo(() => {
+    if (!sim.current) return null;
+    const best = frontierReturnAtVol(sim.frontier, sim.current.vol);
+    const leaner = frontierVolAtReturn(sim.frontier, sim.current.ret);
+    return {
+      extraReturn: best === null ? null : Math.max(0, best - sim.current.ret),
+      lessRisk: leaner === null ? null : Math.max(0, sim.current.vol - leaner),
+      bestReturn: best,
+      leanerVol: leaner
+    };
+  }, [sim]);
 
   // Buy-only plan: how to allocate next investment to move toward target.
   // Rebalance mode additionally allows negative amounts (sells) so the plan
@@ -100,36 +165,26 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
       });
     }
 
-    const needed = tickers.map((_, i) => {
-      const currentVal = sim.current!.weights[i] * totalValue;
-      const targetVal = targetPortfolio.weights[i] * newTotal;
-      return Math.max(0, targetVal - currentVal);
-    });
-    const totalNeeded = needed.reduce((s, n) => s + n, 0);
-    return tickers.map((ticker, i) => {
-      const currentVal = sim.current!.weights[i] * totalValue;
-      const buyAmt = totalNeeded > 0 ? (needed[i] / totalNeeded) * investEuros : investEuros / tickers.length;
-      return {
-        ticker,
-        currentPct: sim.current!.weights[i] * 100,
-        targetPct: targetPortfolio.weights[i] * 100,
-        buyAmt,
-        resultPct: ((currentVal + buyAmt) / newTotal) * 100
-      };
-    });
+    const currentValues = tickers.map((_, i) => sim.current!.weights[i] * totalValue);
+    const purchases = newMoneyPlan(currentValues, targetPortfolio.weights, investEuros);
+    return tickers.map((ticker, i) => ({
+      ticker,
+      currentPct: sim.current!.weights[i] * 100,
+      targetPct: targetPortfolio.weights[i] * 100,
+      buyAmt: purchases[i],
+      resultPct: ((currentValues[i] + purchases[i]) / newTotal) * 100
+    }));
   }, [sim, targetPortfolio, investEuros, totalValue, rebalanceMode]);
 
   return (
     <>
-      {/* Header + controls */}
+      {/* Header + assumptions */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5, gap: 1, flexWrap: 'wrap' }}>
         <Box>
           <Typography variant="h6">Efficient Frontier</Typography>
-          <Typography variant="caption" sx={{
-            color: "text.secondary"
-          }}>
-            {simulations.toLocaleString()} portfolios · {sim.dataPoints} days
-            {sim.dataPoints < LOW_DATA_THRESHOLD_DAYS && (
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            Solved, long-only · {sim.dataPoints} {sim.breakdown.basis} returns
+            {sim.dataPoints < LOW_DATA_THRESHOLD_DAYS && sim.breakdown.basis === 'daily' && (
               <Box component="span" sx={{ color: 'warning.main', fontWeight: 600 }}>
                 {' '}· based on limited history, treat as a rough guide
               </Box>
@@ -137,19 +192,137 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <TextField
-            label="Risk-free (%/yr)"
+          {updatedAt && (
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              Updated {updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+            </Typography>
+          )}
+          <Button
+            variant="outlined"
             size="small"
-            value={riskFreeRate}
-            onChange={e => onRiskFreeRateChange(e.target.value)}
-            slotProps={{ htmlInput: { inputMode: 'decimal', style: { width: 48 } } }}
-            sx={{ width: 140 }}
-          />
-          <Button variant="outlined" size="small" startIcon={<RefreshIcon />} onClick={onRerun}>
-            Re-run
+            onClick={onRefresh}
+            disabled={refreshing}
+            startIcon={refreshing ? <CircularProgress size={14} /> : <RefreshIcon />}
+          >
+            {refreshing ? 'Refreshing' : 'Refresh'}
           </Button>
         </Box>
       </Box>
+
+      <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'flex-start', mb: 2 }}>
+        <FormControl size="small" sx={{ minWidth: 260 }}>
+          <InputLabel>Expected returns</InputLabel>
+          <Select
+            label="Expected returns"
+            value={returnMode}
+            onChange={(e) => onReturnModeChange(e.target.value as ReturnMode)}
+          >
+            {(Object.keys(MODE_LABELS) as ReturnMode[]).map((mode) => (
+              <MenuItem key={mode} value={mode}>
+                {MODE_LABELS[mode]}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        {returnMode !== 'history' && (
+          <TextField
+            label="Long-run return (%/yr)"
+            size="small"
+            value={anchorPct}
+            onChange={(e) => onAnchorPctChange(e.target.value)}
+            slotProps={{ htmlInput: { inputMode: 'decimal' } }}
+            sx={{ width: 170 }}
+          />
+        )}
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Max per holding</InputLabel>
+          <Select label="Max per holding" value={maxWeight} onChange={(e) => onMaxWeightChange(e.target.value)}>
+            {CAP_OPTIONS.map((cap) => (
+              <MenuItem key={cap} value={cap}>
+                {cap === '100' ? 'No limit' : `${cap}%`}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <TextField
+          label="Risk-free (%/yr)"
+          size="small"
+          value={riskFreeRate}
+          onChange={(e) => onRiskFreeRateChange(e.target.value)}
+          slotProps={{ htmlInput: { inputMode: 'decimal' } }}
+          sx={{ width: 140 }}
+        />
+      </Box>
+
+      {limiting && (
+        <Alert
+          severity="info"
+          sx={{ mb: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={() => onExclude(limiting.ticker)}>
+              Leave out {limiting.ticker}
+            </Button>
+          }
+        >
+          The history here is {limiting.yearsWith.toFixed(1)} years because {limiting.ticker} only has prices since{' '}
+          {limiting.since}. Without it the other funds share {limiting.yearsWithout.toFixed(1)} years, which makes the
+          rest of the frontier more reliable.
+        </Alert>
+      )}
+
+      {excluded.length > 0 && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            Left out, so their money is not in the plan below:
+          </Typography>
+          {excluded.map((ticker) => (
+            <Chip key={ticker} size="small" label={ticker} onDelete={() => onInclude(ticker)} />
+          ))}
+        </Box>
+      )}
+
+      {returnMode === 'history' && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          History only is the noisiest way to run this. The weights below lean on whatever did best in the window,
+          so read them as a description of the past, not a recommendation.
+        </Alert>
+      )}
+
+      {targetPortfolio && sim.tickers.length >= 4 && holdingsUsed(targetPortfolio.weights) <= 2 && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          The target uses only {holdingsUsed(targetPortfolio.weights)} of your {sim.tickers.length} funds. An
+          optimizer favours a few funds that move differently from each other, and a fund that already holds a bit
+          of everything can look redundant next to them. Set a max per holding to see a spread.
+        </Alert>
+      )}
+
+      {verdict && sim.current && (() => {
+        const extra = verdict.extraReturn ?? 0;
+        const less = verdict.lessRisk ?? 0;
+        const close = extra < CLOSE_RETURN_POINTS && less < CLOSE_RISK_POINTS;
+        const gaps = [
+          extra >= 0.1 && verdict.bestReturn !== null
+            ? `The same risk could earn ${verdict.bestReturn.toFixed(1)}% (+${extra.toFixed(1)} points)`
+            : null,
+          less >= 0.1 && verdict.leanerVol !== null
+            ? `the same return needs ${verdict.leanerVol.toFixed(1)}% risk (${less.toFixed(1)} points less)`
+            : null
+        ].filter(Boolean);
+        return (
+          <Alert severity={close ? 'success' : 'info'} sx={{ mb: 2 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {close ? 'You are close to the frontier.' : 'You are below the frontier.'}
+            </Typography>
+            <Typography variant="body2">
+              You hold {sim.current.vol.toFixed(1)}% risk for {sim.current.ret.toFixed(1)}% expected return.
+              {gaps.length > 0 && <> {gaps.join(', or ')}.</>}{' '}
+              {close
+                ? 'That gap is smaller than this much history can tell apart, so there is no case for rebalancing.'
+                : 'That is a gap worth closing, and new money is the cheapest way to start.'}
+            </Typography>
+          </Alert>
+        );
+      })()}
 
       {/* Target risk slider — full width, above the chart */}
       <Box sx={{ mb: 2.5 }}>
@@ -159,7 +332,7 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
           </Typography>
           <Slider
             min={parseFloat(sim.minVol.vol.toFixed(1))}
-            max={parseFloat((Math.max(sim.maxSharpe.vol * 1.8, (sim.current?.vol ?? 0) * 1.15)).toFixed(1))}
+            max={Math.ceil(Math.max(sim.frontier[sim.frontier.length - 1].vol, sim.maxSharpe.vol) * 10) / 10}
             step={0.1}
             value={targetVol ?? sim.maxSharpe.vol}
             onChange={(_, v) => onTargetVolChange(v as number)}
@@ -354,6 +527,8 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
         </Box>
       </Box>
 
+      <FrontierInsights sim={sim} targetPortfolio={targetPortfolio} nameByTicker={nameByTicker} />
+
       {/* ── Portfolio metrics summary (full width below) ──────────────── */}
       {/* CSS Grid with minmax(0, 1fr) tracks — unlike flex-wrap + flex-basis,
           this can't be forced wider than the viewport by a card's content. */}
@@ -369,7 +544,7 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
             <Paper key={label} elevation={0} sx={{ minWidth: 0, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
               <Typography variant="caption" sx={{ color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</Typography>
               <Box sx={{ mt: 1 }}>
-                <Typography variant="body2">Return: <b>{point!.ret.toFixed(1)}%</b></Typography>
+                <Typography variant="body2">Expected return: <b>{point!.ret.toFixed(1)}%</b></Typography>
                 <Typography variant="body2">Volatility: <b>{point!.vol.toFixed(1)}%</b></Typography>
                 <Typography variant="body2">Sharpe: <b>{point!.sharpe.toFixed(2)}</b></Typography>
               </Box>

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vite-plus/test';
 
@@ -22,6 +22,8 @@ vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
 
 vi.mock('../hooks/useHoldings', () => ({ useHoldings: vi.fn() }));
 vi.mock('../hooks/useTrackedTicker', () => ({ useTrackedTickers: vi.fn() }));
+// The Plan tab starts from the dashboard; this file is about the other tabs.
+vi.mock('../hooks/useDashboard', () => ({ useDashboard: () => ({ data: undefined, isLoading: false }) }));
 vi.mock('../services/tickerPriceHistoryService', () => ({ getTickerPriceHistory: vi.fn() }));
 
 // The page reads its own retention window to decide whether a short history is
@@ -89,20 +91,9 @@ const fullHistory = [
   ...series(300, 2).map((d) => ({ ticker: 'MSFT', ...d }))
 ];
 
-// The projection debounces its (heavy) Monte Carlo recompute by 250ms, so
-// results always appear asynchronously — allow generous find timeouts.
+// The frontier is worked out after prices load, so results appear asynchronously —
+// allow generous find timeouts.
 const FIND = { timeout: 4000 };
-
-function getNumberInput(label: string) {
-  return screen.getByLabelText(label) as HTMLInputElement;
-}
-
-async function setNumber(label: string, value: string) {
-  const input = getNumberInput(label);
-  await userEvent.clear(input);
-  if (value !== '') await userEvent.type(input, value);
-  return input;
-}
 
 // These MUI Selects don't wire aria-labelledby back to the floating InputLabel, so
 // getByLabelText can't find them — locate the <label> by its exact text instead, then
@@ -141,6 +132,17 @@ beforeEach(() => {
   mockedUseQuery.mockReturnValue(onPlan(-1));
 });
 
+it('opens on the plan, with the other tabs beside it', async () => {
+  render(<PortfolioPlanner />);
+
+  expect(await screen.findByRole('tab', { name: 'Plan', selected: true })).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: 'Frontier', selected: false })).toBeInTheDocument();
+  // Holdings live on the Investments page, with live prices and gains
+  expect(screen.queryByRole('tab', { name: 'Holdings' })).not.toBeInTheDocument();
+  // The old growth calculator is gone; the Plan tab covers it
+  expect(screen.queryByRole('tab', { name: 'Projection' })).not.toBeInTheDocument();
+});
+
 it('shows a spinner while holdings or prices are loading', () => {
   mockedUseHoldings.mockReturnValue({ data: [], isLoading: true });
   mockedGetHistory.mockReturnValue(new Promise(() => {}));
@@ -154,53 +156,152 @@ it('shows an error message when price history fails to load', async () => {
   expect(await screen.findByText('Failed to load price history')).toBeInTheDocument();
 });
 
-it('falls back to a manual-assumptions projection when there are no holdings', async () => {
+it('has no frontier without holdings, and says where to add them', async () => {
   mockedUseHoldings.mockReturnValue({ data: [], isLoading: false });
   render(<PortfolioPlanner />);
 
-  expect(screen.getByText(/add holdings in the investments page/i)).toBeInTheDocument();
-  // No frontier without holdings, but the projection still runs on manual fields
+  expect(await screen.findByText(/add holdings in the investments page/i)).toBeInTheDocument();
   expect(screen.queryByText('Efficient Frontier')).not.toBeInTheDocument();
-  expect(hasFormLabel('Growth (%)')).toBe(true);
-  expect(hasFormLabel('Volatility (%)')).toBe(true);
-  expect(await screen.findByText('Detailed Yearly Breakdown', undefined, FIND)).toBeInTheDocument();
-  expect(screen.getByText('Showing 30 years of projection')).toBeInTheDocument();
 });
 
-it('renders holdings, the efficient frontier and a history-derived projection once prices load', async () => {
+it('renders the solved efficient frontier once prices load', async () => {
   render(<PortfolioPlanner />);
 
-  // `getAllByText`: the holdings table names each instrument, and so does the
-  // calculation breakdown that explains where the frontier's numbers came from.
+  // The calculation breakdown names each instrument it explains
   expect(await screen.findAllByText('Apple Inc')).not.toHaveLength(0);
   expect(screen.getAllByText('Microsoft Corp')).not.toHaveLength(0);
   expect(screen.queryByText(/no price history for/i)).not.toBeInTheDocument();
 
   expect(await screen.findByText('Efficient Frontier')).toBeInTheDocument();
-  expect(screen.getByText(/2,000 portfolios/)).toBeInTheDocument();
+  expect(screen.getByText(/Solved, long-only/)).toBeInTheDocument();
   expect(screen.getByText('What to Buy Next')).toBeInTheDocument();
   expect(screen.getByText('Your Portfolio')).toBeInTheDocument();
   expect(screen.getByText('★ Max Sharpe')).toBeInTheDocument();
   expect(screen.getByText('● Min Risk')).toBeInTheDocument();
-
-  // Projection basis defaults to the current portfolio, with derived, shrunk assumptions
-  expect(hasFormLabel('Projection Basis')).toBe(true);
-  const basisLabel = Array.from(document.querySelectorAll('label')).find((l) => l.textContent === 'Projection Basis')!;
-  const basisCombobox = basisLabel.closest('.MuiFormControl-root')!.querySelector('[role="combobox"]') as HTMLElement;
-  expect(basisCombobox).toHaveTextContent('Current portfolio');
-  expect(screen.getByText(/derived from your holdings/i)).toBeInTheDocument();
-  expect(screen.getByText(/shrunk toward a long-run/i)).toBeInTheDocument();
-  expect(hasFormLabel('Growth (%)')).toBe(false);
-  expect(await screen.findByText('Detailed Yearly Breakdown', undefined, FIND)).toBeInTheDocument();
+  // what the weights alone do not show
+  expect(screen.getByText('Where the risk comes from')).toBeInTheDocument();
+  expect(screen.getByText('What it would have been through')).toBeInTheDocument();
+  // and no random sampling to re-run by hand
+  expect(screen.queryByRole('button', { name: /re-run/i })).not.toBeInTheDocument();
 });
 
-it('defaults the starting capital to the real portfolio value', async () => {
+it('says whether the portfolio held is on the frontier', async () => {
   render(<PortfolioPlanner />);
   await screen.findByText('Efficient Frontier');
 
-  const capital = getNumberInput('Starting Capital (EUR)');
-  await waitFor(() => expect(parseFloat(capital.value)).toBeGreaterThan(1000));
-  expect(screen.getByText('Defaults to your portfolio value')).toBeInTheDocument();
+  expect(screen.getByText(/You are (close to|below) the frontier\./)).toBeInTheDocument();
+  expect(screen.getByText(/You hold [\d.]+% risk for [\d.]+% expected return/)).toBeInTheDocument();
+});
+
+it('blends history toward the long run by default, and can be told to use history alone', async () => {
+  render(<PortfolioPlanner />);
+  await screen.findByText('Efficient Frontier');
+
+  const combobox = () => {
+    const label = Array.from(document.querySelectorAll('label')).find((l) => l.textContent === 'Expected returns')!;
+    return label.closest('.MuiFormControl-root')!.querySelector('[role="combobox"]') as HTMLElement;
+  };
+  expect(combobox()).toHaveTextContent('History, blended with the long run');
+  expect(screen.queryByText(/History only is the noisiest way/)).not.toBeInTheDocument();
+  expect(hasFormLabel('Long-run return (%/yr)')).toBe(true);
+
+  await selectOption('Expected returns', 'History only');
+
+  expect(await screen.findByText(/History only is the noisiest way/)).toBeInTheDocument();
+  // nothing to blend toward, so no long-run figure to set
+  expect(hasFormLabel('Long-run return (%/yr)')).toBe(false);
+});
+
+it('can give every holding the same return, so risk alone decides', async () => {
+  render(<PortfolioPlanner />);
+  await screen.findByText('Efficient Frontier');
+
+  await selectOption('Expected returns', 'All the same, risk decides');
+
+  expect(hasFormLabel('Long-run return (%/yr)')).toBe(true);
+  expect(screen.queryByText(/History only is the noisiest way/)).not.toBeInTheDocument();
+});
+
+it('limits any one holding to 40% by default, so the answer is not a pair of funds', async () => {
+  render(<PortfolioPlanner />);
+  await screen.findByText('Efficient Frontier');
+
+  const label = Array.from(document.querySelectorAll('label')).find((l) => l.textContent === 'Max per holding')!;
+  const combobox = label.closest('.MuiFormControl-root')!.querySelector('[role="combobox"]') as HTMLElement;
+  expect(combobox).toHaveTextContent('40%');
+});
+
+it('keeps any one holding under the chosen limit', async () => {
+  render(<PortfolioPlanner />);
+  await screen.findByText('Efficient Frontier');
+  await switchTab('Frontier');
+
+  await selectOption('Max per holding', '50%');
+
+  // two holdings, so a 50% limit forces an even split in the target
+  await waitFor(() => {
+    const table = screen.getByRole('table', { name: 'Where the risk comes from' });
+    const targets = within(table).getAllByRole('row').slice(1).map((row) => within(row).getAllByRole('cell')[3].textContent);
+    targets.forEach((cell) => expect(parseFloat(cell!.replace('%', ''))).toBeCloseTo(50, 0));
+  });
+});
+
+describe('refresh', () => {
+  const refresh = () => userEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+
+  it('reloads the price history, for both series, and solves the frontier again', async () => {
+    render(<PortfolioPlanner />);
+    await screen.findByText('Efficient Frontier');
+    await switchTab('Frontier');
+    const before = mockedGetHistory.mock.calls.length;
+
+    await refresh();
+
+    // two tickers, daily and weekly
+    await waitFor(() => expect(mockedGetHistory.mock.calls.length).toBe(before * 2));
+    expect(screen.getByText('Efficient Frontier')).toBeInTheDocument();
+  });
+
+  it('keeps what was typed into the buy plan, instead of replacing the page with a spinner', async () => {
+    render(<PortfolioPlanner />);
+    await screen.findByText('Efficient Frontier');
+    await switchTab('Frontier');
+
+    const invest = screen.getByLabelText('Invest (€)');
+    await userEvent.clear(invest);
+    await userEvent.type(invest, '2500');
+    await refresh();
+
+    expect(screen.queryByRole('progressbar', { name: '' })).toBeNull();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled());
+    expect(screen.getByLabelText('Invest (€)')).toHaveValue('2500');
+  });
+
+  it('is disabled while the prices are loading', async () => {
+    render(<PortfolioPlanner />);
+    await screen.findByText('Efficient Frontier');
+    await switchTab('Frontier');
+    mockedGetHistory.mockReturnValue(new Promise(() => {}));
+
+    await refresh();
+
+    expect(await screen.findByRole('button', { name: 'Refreshing' })).toBeDisabled();
+    expect(screen.getByText('Efficient Frontier')).toBeInTheDocument();
+  });
+});
+
+it('solves the frontier again when the risk-free rate changes, with nothing to re-run by hand', async () => {
+  render(<PortfolioPlanner />);
+  await screen.findByText('Efficient Frontier');
+  await switchTab('Frontier');
+
+  const riskFreeInput = screen.getByLabelText('Risk-free (%/yr)');
+  await userEvent.clear(riskFreeInput);
+  await userEvent.type(riskFreeInput, '5');
+
+  expect(riskFreeInput).toHaveValue('5');
+  expect(screen.getByText('Efficient Frontier')).toBeInTheDocument();
+  expect(localStorage.getItem('finance-planner-risk-free-rate')).toBe('"5"');
 });
 
 it('warns about holdings missing price history and skips the frontier below 2 tickers', async () => {
@@ -209,54 +310,6 @@ it('warns about holdings missing price history and skips the frontier below 2 ti
 
   expect(await screen.findByText(/no price history for: MSFT/i)).toBeInTheDocument();
   expect(await screen.findByText(/need price history for at least 2 holdings/i)).toBeInTheDocument();
-  // Manual projection still available
-  expect(hasFormLabel('Growth (%)')).toBe(true);
-});
-
-it('switches the projection basis and updates the derived assumptions', async () => {
-  render(<PortfolioPlanner />);
-  await screen.findByText('Efficient Frontier');
-  await switchTab('Projection');
-  await setNumber('Investment Period (Years)', '3'); // keep Monte Carlo runs cheap
-
-  const basisLabel = Array.from(document.querySelectorAll('label')).find((l) => l.textContent === 'Projection Basis')!;
-  const basisCombobox = basisLabel.closest('.MuiFormControl-root')!.querySelector('[role="combobox"]') as HTMLElement;
-  expect(basisCombobox).toHaveTextContent('Current portfolio');
-
-  await selectOption('Projection Basis', 'Min Risk');
-  expect(basisCombobox).toHaveTextContent('Min Risk');
-  // No manual growth/volatility fields once a frontier-derived basis is active
-  expect(hasFormLabel('Growth (%)')).toBe(false);
-});
-
-it('recalculates when the investment period changes', async () => {
-  render(<PortfolioPlanner />);
-  await screen.findByText('Efficient Frontier');
-  await switchTab('Projection');
-
-  await setNumber('Investment Period (Years)', '5');
-  expect(await screen.findByText('Showing 5 years of projection', undefined, FIND)).toBeInTheDocument();
-});
-
-it('shows years-to-goal when a reachable target goal is set', async () => {
-  render(<PortfolioPlanner />);
-  await screen.findByText('Efficient Frontier');
-  await switchTab('Projection');
-  await setNumber('Investment Period (Years)', '5');
-  await setNumber('Target Goal (EUR)', '5000');
-
-  expect(await screen.findByText('Years to Goal', undefined, FIND)).toBeInTheDocument();
-  expect(await screen.findByText(/^\d+ years$/, undefined, FIND)).toBeInTheDocument();
-});
-
-it('shows "Not reached" when the goal is out of reach', async () => {
-  render(<PortfolioPlanner />);
-  await screen.findByText('Efficient Frontier');
-  await switchTab('Projection');
-  await setNumber('Investment Period (Years)', '3');
-  await setNumber('Target Goal (EUR)', '999999999');
-
-  expect(await screen.findByText('Not reached', undefined, FIND)).toBeInTheDocument();
 });
 
 it('shows the buy plan by default and asks for an amount when cleared', async () => {
@@ -271,18 +324,29 @@ it('shows the buy plan by default and asks for an amount when cleared', async ()
   expect(await screen.findByText(/enter an amount above/i)).toBeInTheDocument();
 });
 
-it('updates the risk-free rate and re-runs the simulation on demand', async () => {
+it('follows the best Sharpe ratio until the slider is moved, and does not save that default', async () => {
   render(<PortfolioPlanner />);
   await screen.findByText('Efficient Frontier');
   await switchTab('Frontier');
 
-  const riskFreeInput = screen.getByLabelText('Risk-free (%/yr)');
-  await userEvent.clear(riskFreeInput);
-  await userEvent.type(riskFreeInput, '5');
-  expect(riskFreeInput).toHaveValue('5');
+  const slider = document.querySelector('input[type="range"]') as HTMLInputElement;
+  const maxSharpe = parseFloat(screen.getByText(/% Max Sharpe/).textContent!.match(/[\d.]+/)![0]);
+  expect(parseFloat(slider.value)).toBeCloseTo(maxSharpe, 1);
+  expect(localStorage.getItem('finance-planner-target-vol')).toBeNull();
+});
 
-  await userEvent.click(screen.getByRole('button', { name: /re-run/i }));
-  expect(screen.getByText('Efficient Frontier')).toBeInTheDocument();
+it('ignores a saved risk level the frontier no longer reaches, instead of sticking at the minimum', async () => {
+  // Saved by an earlier run, below what the frontier can do now
+  localStorage.setItem('finance-planner-target-vol', JSON.stringify(0.5));
+  render(<PortfolioPlanner />);
+  await screen.findByText('Efficient Frontier');
+  await switchTab('Frontier');
+
+  const slider = document.querySelector('input[type="range"]') as HTMLInputElement;
+  const min = parseFloat(slider.min);
+  const maxSharpe = parseFloat(screen.getByText(/% Max Sharpe/).textContent!.match(/[\d.]+/)![0]);
+  expect(parseFloat(slider.value)).toBeCloseTo(maxSharpe, 1);
+  expect(parseFloat(slider.value)).toBeGreaterThanOrEqual(min);
 });
 
 it('moves the target-risk slider', async () => {
@@ -300,44 +364,6 @@ it('moves the target-risk slider', async () => {
   await waitFor(() => expect(slider.value).toBe(slider.max));
 });
 
-it('shows the inflation field directly, with no fee field or hidden section', async () => {
-  render(<PortfolioPlanner />);
-  await screen.findByText('Efficient Frontier');
-  await switchTab('Projection');
-
-  expect(screen.getByLabelText('Inflation (%)')).toBeInTheDocument();
-  expect(screen.queryByText('Advanced assumptions')).not.toBeInTheDocument();
-  expect(screen.queryByLabelText('Annual Fee (%)')).not.toBeInTheDocument();
-});
-
-it('downloads a CSV of the projection', async () => {
-  const createObjectURL = vi.fn().mockReturnValue('blob:mock');
-  const revokeObjectURL = vi.fn();
-  const realURL = URL;
-  vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
-  const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-  const timers = vi.spyOn(globalThis, 'setTimeout');
-
-  render(<PortfolioPlanner />);
-  await screen.findByText('Efficient Frontier');
-  await switchTab('Projection');
-  await userEvent.click(await screen.findByRole('button', { name: /download csv/i }, FIND));
-
-  expect(createObjectURL).toHaveBeenCalled();
-  expect(clickSpy).toHaveBeenCalled();
-  // Released a minute later, once the browser has read the blob.
-  expect(revokeObjectURL).not.toHaveBeenCalled();
-  (timers.mock.calls.find(([, ms]) => ms === 60_000)![0] as () => void)();
-  expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock');
-  timers.mockRestore();
-
-  clickSpy.mockRestore();
-  // Restore only what this test stubbed. `vi.unstubAllGlobals()` would also
-  // drop the `localStorage` stub that `test/setup.ts` installs once at module
-  // load, silently breaking every test declared after this one.
-  vi.stubGlobal('URL', realURL);
-});
-
 describe('retention-truncated price history', () => {
   const truncated = [
     ...truncatedSeries(150, 1).map((d) => ({ ticker: 'AAPL', ...d })),
@@ -349,7 +375,7 @@ describe('retention-truncated price history', () => {
     mockedGetHistory.mockResolvedValue(truncated);
     render(<PortfolioPlanner />);
     // Tabs only exist once loading finishes.
-    await screen.findByText('Apple Inc');
+    await screen.findByRole('tab', { name: 'Frontier' });
     await switchTab('Frontier');
 
     // A covariance estimate off ninety closes is not a rougher answer, it is a
@@ -362,7 +388,7 @@ describe('retention-truncated price history', () => {
     mockedUseQuery.mockReturnValue(onPlan(90));
     mockedGetHistory.mockResolvedValue(truncated);
     render(<PortfolioPlanner />);
-    await screen.findByText('Apple Inc');
+    await screen.findByRole('tab', { name: 'Frontier' });
     await switchTab('Frontier');
     await screen.findByText(/Not enough overlapping price history/i, {}, FIND);
 
@@ -378,7 +404,7 @@ describe('retention-truncated price history', () => {
     mockedUseQuery.mockReturnValue(onPlan(-1));
     mockedGetHistory.mockResolvedValue(truncated);
     render(<PortfolioPlanner />);
-    await screen.findByText('Apple Inc');
+    await screen.findByRole('tab', { name: 'Frontier' });
     await switchTab('Frontier');
     await screen.findByText(/Not enough overlapping price history/i, {}, FIND);
 
@@ -390,7 +416,7 @@ describe('retention-truncated price history', () => {
     mockedUseQuery.mockReturnValue({ data: undefined });
     mockedGetHistory.mockResolvedValue(truncated);
     render(<PortfolioPlanner />);
-    await screen.findByText('Apple Inc');
+    await screen.findByRole('tab', { name: 'Frontier' });
     await switchTab('Frontier');
     await screen.findByText(/Not enough overlapping price history/i, {}, FIND);
 
@@ -401,7 +427,7 @@ describe('retention-truncated price history', () => {
     mockedUseQuery.mockReturnValue(onPlan(90));
     mockedGetHistory.mockResolvedValue(truncated);
     render(<PortfolioPlanner />);
-    await screen.findByText('Apple Inc');
+    await screen.findByRole('tab', { name: 'Frontier' });
     await switchTab('Frontier');
     await screen.findByText(/Not enough overlapping price history/i, {}, FIND);
 
@@ -429,7 +455,7 @@ describe('retention-truncated price history', () => {
       ...series(300, 2, 60).map((d) => ({ ticker: 'MSFT', ...d }))
     ]);
     render(<PortfolioPlanner />);
-    await screen.findByText('Apple Inc');
+    await screen.findByRole('tab', { name: 'Frontier' });
     await switchTab('Frontier');
 
     expect(await screen.findByText(/Not enough overlapping price history/i, {}, FIND)).toBeInTheDocument();
@@ -475,6 +501,48 @@ describe('choosing the estimation basis', () => {
     expect(screen.getByText(/Σ wᵢ·μᵢ × 52\b/)).toBeInTheDocument();
   });
 
+  it('prefers weekly closes that reach clearly further, even when daily has more observations', async () => {
+    // The live case: about 165 daily closes over eight months against about 125
+    // weekly ones over two and a half years. Counting observations chose daily.
+    const daily = [
+      ...series(150, 1, 230).map((d) => ({ ticker: 'AAPL', ...d })),
+      ...series(300, 2, 230).map((d) => ({ ticker: 'MSFT', ...d }))
+    ];
+    const weekly = [
+      ...weeklySeries(150, 1, 126).map((d) => ({ ticker: 'AAPL', ...d })),
+      ...weeklySeries(300, 2, 126).map((d) => ({ ticker: 'MSFT', ...d }))
+    ];
+    mockedGetHistory.mockImplementation(({ interval }: { interval?: string } = {}) =>
+      Promise.resolve(interval === 'weekly' ? weekly : daily)
+    );
+
+    render(<PortfolioPlanner />);
+    await screen.findByText('Efficient Frontier');
+    await userEvent.click(screen.getByText(/how these numbers are calculated/i));
+
+    expect(await screen.findAllByText(/weekly returns/)).not.toHaveLength(0);
+  });
+
+  it('keeps daily closes when weekly reaches only a little further', async () => {
+    const daily = [
+      ...series(150, 1, 700).map((d) => ({ ticker: 'AAPL', ...d })),
+      ...series(300, 2, 700).map((d) => ({ ticker: 'MSFT', ...d }))
+    ];
+    const weekly = [
+      ...weeklySeries(150, 1, 110).map((d) => ({ ticker: 'AAPL', ...d })),
+      ...weeklySeries(300, 2, 110).map((d) => ({ ticker: 'MSFT', ...d }))
+    ];
+    mockedGetHistory.mockImplementation(({ interval }: { interval?: string } = {}) =>
+      Promise.resolve(interval === 'weekly' ? weekly : daily)
+    );
+
+    render(<PortfolioPlanner />);
+    await screen.findByText('Efficient Frontier');
+    await userEvent.click(screen.getByText(/how these numbers are calculated/i));
+
+    expect(await screen.findAllByText(/daily returns/)).not.toHaveLength(0);
+  });
+
   it('stays on daily closes when they are the deeper series', async () => {
     render(<PortfolioPlanner />);
     await screen.findByText('Efficient Frontier');
@@ -482,5 +550,55 @@ describe('choosing the estimation basis', () => {
 
     expect(await screen.findAllByText(/daily returns/)).not.toHaveLength(0);
     expect(screen.getByText(/Σ wᵢ·μᵢ × 252/)).toBeInTheDocument();
+  });
+});
+
+describe('a young holding capping the history', () => {
+  const four = [
+    { _id: 'h1', ticker: 'AAPL', quantity: 10, avgBuyPrice: 100 },
+    { _id: 'h2', ticker: 'MSFT', quantity: 5, avgBuyPrice: 200 },
+    { _id: 'h3', ticker: 'NVDA', quantity: 4, avgBuyPrice: 120 },
+    { _id: 'h4', ticker: 'NEWF', quantity: 8, avgBuyPrice: 50 }
+  ];
+  const histories = [
+    ...series(150, 1).map((d) => ({ ticker: 'AAPL', ...d })),
+    ...series(300, 2).map((d) => ({ ticker: 'MSFT', ...d })),
+    ...series(80, 3).map((d) => ({ ticker: 'NVDA', ...d })),
+    // listed much later than the rest, so it caps everyone's history
+    ...series(50, 4).slice(-260).map((d) => ({ ticker: 'NEWF', ...d }))
+  ];
+
+  beforeEach(() => {
+    mockedUseHoldings.mockReturnValue({ data: four, isLoading: false });
+    mockedGetHistory.mockImplementation(({ interval }: { interval?: string } = {}) =>
+      Promise.resolve(interval === 'weekly' ? [] : histories)
+    );
+  });
+
+  it('names it and offers to leave it out', async () => {
+    render(<PortfolioPlanner />);
+    await screen.findByRole('tab', { name: 'Frontier' });
+    await switchTab('Frontier');
+
+    expect(await screen.findByRole('button', { name: 'Leave out NEWF' }, FIND)).toBeInTheDocument();
+    expect(screen.getByText(/because NEWF only has prices since/)).toBeInTheDocument();
+  });
+
+  it('leaves it out on request, lengthens the history, and lets it back in', async () => {
+    render(<PortfolioPlanner />);
+    await screen.findByRole('tab', { name: 'Frontier' });
+    await switchTab('Frontier');
+    await userEvent.click(await screen.findByRole('button', { name: 'Leave out NEWF' }, FIND));
+
+    expect(await screen.findByText(/Left out, so their money is not in the plan below/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Leave out NEWF' })).not.toBeInTheDocument();
+    // not a "no price history" warning: it was left out on purpose
+    expect(screen.queryByText(/No price history for: NEWF/)).not.toBeInTheDocument();
+    expect(localStorage.getItem('finance-planner-excluded')).toBe('["NEWF"]');
+
+    await userEvent.click(screen.getByTestId('CancelIcon'));
+
+    expect(await screen.findByRole('button', { name: 'Leave out NEWF' })).toBeInTheDocument();
+    expect(screen.queryByText(/Left out, so their money/)).not.toBeInTheDocument();
   });
 });

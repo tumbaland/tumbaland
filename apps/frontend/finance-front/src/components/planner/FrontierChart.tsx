@@ -48,8 +48,11 @@ const FrontierChart: React.FC<FrontierChartProps> = ({ sim, targetPortfolio }) =
   const innerW = chartWidth - MARGIN.left - MARGIN.right;
   const innerH = CHART_HEIGHT - MARGIN.top - MARGIN.bottom;
 
-  const vols = sim.points.map(p => p.vol);
-  const rets = sim.points.map(p => p.ret);
+  // The solved frontier reaches further than the random cloud does, so the axes
+  // must cover both.
+  const plotted = [...sim.points, ...sim.frontier];
+  const vols = plotted.map(p => p.vol);
+  const rets = plotted.map(p => p.ret);
   // tight padding so the data fills the plot area
   const volSpan = Math.max(...vols) - Math.min(...vols);
   const retSpan = Math.max(...rets) - Math.min(...rets);
@@ -59,7 +62,7 @@ const FrontierChart: React.FC<FrontierChartProps> = ({ sim, targetPortfolio }) =
   const maxRet = Math.max(...rets) + retSpan * 0.05;
   const toX = (v: number) => ((v - minVol) / (maxVol - minVol)) * innerW;
   const toY = (r: number) => innerH - ((r - minRet) / (maxRet - minRet)) * innerH;
-  const sharpes = sim.points.map(p => p.sharpe);
+  const sharpes = sim.points.length > 0 ? sim.points.map(p => p.sharpe) : [0, 1];
   const minSharpe = Math.min(...sharpes);
   const maxSharpeVal = Math.max(...sharpes);
   const sharpeColor = (s: number) => {
@@ -104,12 +107,23 @@ const FrontierChart: React.FC<FrontierChartProps> = ({ sim, targetPortfolio }) =
             </g>
           ))}
           <text x={innerW / 2} y={innerH + 38} textAnchor="middle" fontSize={12} fill={tickColor}>Annualised Volatility (%)</text>
-          <text transform={`rotate(-90) translate(${-innerH / 2}, ${-40})`} textAnchor="middle" fontSize={12} fill={tickColor}>Annualised Return (%)</text>
+          <text transform={`rotate(-90) translate(${-innerH / 2}, ${-40})`} textAnchor="middle" fontSize={12} fill={tickColor}>Expected return (%)</text>
           {sim.points.map((p, i) => (
             <circle key={i} cx={toX(p.vol)} cy={toY(p.ret)} r={2.5} fill={sharpeColor(p.sharpe)} opacity={0.55}>
               <title>Vol {p.vol.toFixed(1)}% · Ret {p.ret.toFixed(1)}% · Sharpe {p.sharpe.toFixed(2)}</title>
             </circle>
           ))}
+          {sim.frontier.length > 1 && (
+            <polyline
+              points={sim.frontier.map(p => `${toX(p.vol)},${toY(p.ret)}`).join(' ')}
+              fill="none"
+              stroke={palette.text.primary}
+              strokeWidth={2.5}
+              strokeLinejoin="round"
+            >
+              <title>Efficient frontier: the most each level of risk can earn</title>
+            </polyline>
+          )}
           <circle cx={toX(sim.minVol.vol)} cy={toY(sim.minVol.ret)} r={7} fill="#1976d2" stroke="#fff" strokeWidth={2}>
             <title>Min Risk — Vol {sim.minVol.vol.toFixed(1)}% · Ret {sim.minVol.ret.toFixed(1)}% · Sharpe {sim.minVol.sharpe.toFixed(2)}</title>
           </circle>
