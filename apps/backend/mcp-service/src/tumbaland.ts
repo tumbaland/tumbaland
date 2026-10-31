@@ -1,3 +1,4 @@
+import { PERSONAL_TENANT } from '@tumbaland/backend-core';
 import { callService, serviceUrl, TumbalandError } from './http';
 import {
   activitiesResponseSchema,
@@ -48,7 +49,9 @@ export interface ActivityType {
  * Shadowing rather than showing both is also what the model needs: a list with
  * "Together" in it twice is a list it cannot choose from.
  */
-export function preferTenant(types: ActivityType[], groupId?: string): ActivityType[] {
+export function preferTenant(types: ActivityType[], tenant?: string): ActivityType[] {
+  // Personal arrives as the literal `personal`; its types carry no group.
+  const groupId = tenant === PERSONAL_TENANT ? undefined : tenant;
   const byName = new Map<string, ActivityType>();
 
   for (const type of types) {

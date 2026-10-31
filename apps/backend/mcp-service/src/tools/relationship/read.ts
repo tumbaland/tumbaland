@@ -6,10 +6,9 @@ import {
   ToolModule,
   dateSchema,
   explain,
-  groupIdFor,
   journalSchema,
   ok,
-  resolveJournal
+  tenantFor
 } from '../module';
 import { count, describeActivity, describePlan, tallinnToday } from './format';
 
@@ -36,7 +35,7 @@ export function registerReadTools(server: McpServer, caller: Caller): void {
     },
     async ({ journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const types = await tumbaland.listActivityTypes(apiKey, groupId);
         if (types.length === 0) {
           return ok('No activity types are defined yet. The user needs to create some in Tumbaland first.');
@@ -70,7 +69,7 @@ export function registerReadTools(server: McpServer, caller: Caller): void {
     },
     async ({ date, journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const [types, entries] = await Promise.all([
           tumbaland.listActivityTypes(apiKey, groupId),
           tumbaland.getDay(apiKey, date, groupId)
@@ -107,7 +106,7 @@ export function registerReadTools(server: McpServer, caller: Caller): void {
     },
     async ({ from, to, type, limit, journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const types = await tumbaland.listActivityTypes(apiKey, groupId);
         // Filtered by slug, not id — the controller reads `activityType`.
         const activityType = type ? resolveType(types, type).slug : undefined;
@@ -150,7 +149,7 @@ export function registerReadTools(server: McpServer, caller: Caller): void {
     },
     async ({ from, to, today, journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const upcoming = !from && !to;
         const plans = await tumbaland.listPlans(apiKey, {
           startDate: upcoming ? (today ?? tallinnToday()) : from,
@@ -190,7 +189,7 @@ export function registerReadTools(server: McpServer, caller: Caller): void {
     },
     async ({ timeframe, trendWindowDays, journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const [statistics, trends] = await Promise.all([
           tumbaland.getStatistics(apiKey, timeframe ?? 'all', groupId),
           tumbaland.getTrends(apiKey, trendWindowDays, groupId)

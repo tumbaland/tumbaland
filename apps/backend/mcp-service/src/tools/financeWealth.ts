@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { finance } from '../finance';
-import { Caller, explain, groupIdFor, journalSchema, ok, resolveJournal } from './module';
+import { Caller, explain, journalSchema, ok, tenantFor } from './module';
 import { describeGrowth, describePeriod, money, moved, total } from './financeFormat';
 
 /** What everything is worth: net worth, allocation, and the investment positions. */
@@ -19,7 +19,7 @@ export function registerWealthTools(server: McpServer, caller: Caller): void {
     },
     async ({ journal }) => {
       try {
-        const dashboard = await finance.getDashboard(apiKey, groupIdFor(resolveJournal(caller, journal)));
+        const dashboard = await finance.getDashboard(apiKey, tenantFor(caller, journal));
         const { kpis } = dashboard;
         const currency = dashboard.currency ?? '';
 
@@ -114,7 +114,7 @@ export function registerWealthTools(server: McpServer, caller: Caller): void {
     },
     async ({ journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const [holdings, trades] = await Promise.all([
           finance.listHoldings(apiKey, groupId),
           finance.listTrades(apiKey, groupId)

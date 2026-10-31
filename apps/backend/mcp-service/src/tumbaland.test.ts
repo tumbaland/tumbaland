@@ -1,4 +1,6 @@
 jest.mock('@tumbaland/backend-core', () => ({
+  // Tenant constants come from the real module; see the note in relationship.test.ts.
+  ...jest.requireActual('@tumbaland/backend-core/dist/apiKeys/types'),
   requireEnv: (name: string) => process.env[name] ?? 'http://relationship-service:4001'
 }));
 
@@ -251,6 +253,16 @@ describe('preferTenant', () => {
 
     expect(kept).toHaveLength(1);
     expect(kept[0]._id).toBe('group');
+  });
+
+  it('reads the literal personal tenant as no group, so the personal type wins', () => {
+    const kept = preferTenant(
+      [type({ _id: 'group', groupId: 'g1' }), type({ _id: 'personal' })],
+      'personal'
+    );
+
+    expect(kept).toHaveLength(1);
+    expect(kept[0]._id).toBe('personal');
   });
 
   it('keeps it whichever order the API returned them in', () => {

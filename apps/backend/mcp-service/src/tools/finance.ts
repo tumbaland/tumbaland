@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { finance } from '../finance';
-import { Caller, ToolModule, dateSchema, explain, groupIdFor, journalSchema, ok, resolveJournal } from './module';
+import { Caller, ToolModule, dateSchema, explain, journalSchema, ok, tenantFor } from './module';
 import { money } from './financeFormat';
 import { registerSpendingTools } from './financeSpending';
 import { registerWealthTools } from './financeWealth';
@@ -49,7 +49,7 @@ function registerWriteTools(server: McpServer, caller: Caller): void {
     },
     async ({ ticker, type, date, quantity, price, amount, fees, notes, journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         await finance.createTrade(
           apiKey,
           { ticker, type, date, quantity, price, amount, fees, notes },
@@ -87,7 +87,7 @@ function registerWriteTools(server: McpServer, caller: Caller): void {
     },
     async ({ fromCategory, toCategory, search, journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const { updated } = await finance.recategorise(
           apiKey,
           { fromCategory, toCategory, search },

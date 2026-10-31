@@ -6,10 +6,9 @@ import {
   dateSchema,
   explain,
   fail,
-  groupIdFor,
   journalSchema,
   ok,
-  resolveJournal
+  tenantFor
 } from '../module';
 import { describePlan, timeSchema, remindSchema } from './format';
 
@@ -37,7 +36,7 @@ export function registerPlanWriteTools(server: McpServer, caller: Caller): void 
     },
     async ({ title, date, endDate, time, remindBefore, type, notes, timeZone, journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const typeId = type ? resolveType(await tumbaland.listActivityTypes(apiKey, groupId), type)._id : undefined;
         const input: PlanInput = { title, date, endDate, time, remindBefore, typeId, notes, timeZone };
         const plan = await tumbaland.createPlan(apiKey, input, groupId);
@@ -73,7 +72,7 @@ export function registerPlanWriteTools(server: McpServer, caller: Caller): void 
         if (Object.values(patch).every((value) => value === undefined) && type === undefined) {
           return fail('Nothing to change. Pass at least one field to change.');
         }
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         if (type) patch.typeId = resolveType(await tumbaland.listActivityTypes(apiKey, groupId), type)._id;
 
         // Read first, so a wrong id fails before anything changes and the answer names the plan.
@@ -99,7 +98,7 @@ export function registerPlanWriteTools(server: McpServer, caller: Caller): void 
     },
     async ({ id, journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const plan = await tumbaland.getPlan(apiKey, id, groupId);
         await tumbaland.deletePlan(apiKey, id, groupId);
         return ok(`Deleted\n  ${describePlan(plan)}`);

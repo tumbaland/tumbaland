@@ -209,7 +209,7 @@ describe('log_trade', () => {
     expect(api.createTrade).toHaveBeenCalledWith(
       KEY,
       expect.objectContaining({ ticker: 'VWCE.DEX', type: 'buy', quantity: 10, price: 105.5 }),
-      undefined
+      'personal'
     );
     expect(text).toContain('Recorded buy VWCE.DEX on 2026-09-05: 10 at 105.50');
   });
@@ -257,7 +257,7 @@ describe('recategorise_transactions', () => {
     expect(api.recategorise).toHaveBeenCalledWith(
       KEY,
       { fromCategory: 'Uncategorised', toCategory: 'Transport', search: 'Bolt' },
-      undefined
+      'personal'
     );
     expect(text).toBe('Moved 23 transactions from Uncategorised to Transport.');
   });
@@ -285,6 +285,24 @@ describe('recategorise_transactions', () => {
  */
 describe('get_net_worth', () => {
   beforeEach(() => api.getDashboard.mockResolvedValue(fixtures.dashboard as never));
+
+  it('reads the journal it was asked for, even when the connection defaults to a shared one', async () => {
+    mockedVerify.mockResolvedValue({
+      ok: true,
+      userId: 'u1',
+      keyId: 'k1',
+      scopes: ['finance:read'],
+      tenants: { allowed: ['personal', 'g1'], default: 'g1' },
+      tenantNames: { personal: 'My own data', g1: 'Irja & Tom' }
+    });
+
+    await callTool('get_net_worth', { journal: 'My own data' });
+    await callTool('get_net_worth', { journal: 'Irja & Tom' });
+
+    // An absent group would read as the default, the shared journal, for both.
+    expect(api.getDashboard).toHaveBeenNthCalledWith(1, KEY, 'personal');
+    expect(api.getDashboard).toHaveBeenNthCalledWith(2, KEY, 'g1');
+  });
 
   it('leads with what it is worth, and when that was true', async () => {
     const { text } = await callTool('get_net_worth');
@@ -366,7 +384,7 @@ describe('get_spending', () => {
 
     expect(text).toContain('Month by month:');
     expect(text).toContain('- 2025-10: in 4,994, out 1,606, saved 3,388 (68%)');
-    expect(api.getSummary).toHaveBeenCalledWith(KEY, 12, undefined);
+    expect(api.getSummary).toHaveBeenCalledWith(KEY, 12, 'personal');
   });
 
   it('says the category figures are per month, since they are an average', async () => {
@@ -402,7 +420,7 @@ describe('get_spending_trends', () => {
     // last year" actually needs.
     const { text } = await callTool('get_spending_trends');
 
-    expect(api.getAnalytics).toHaveBeenCalledWith(KEY, undefined);
+    expect(api.getAnalytics).toHaveBeenCalledWith(KEY, 'personal');
     expect(text).toContain('Income and spending by year (EUR):');
     expect(text).toContain('- 2025: in 63,001, out 64,735');
   });
@@ -454,7 +472,7 @@ describe('list_recurring_payments', () => {
 
     expect(text).toContain('877 a month, 10,519 a year');
     expect(text).toContain('have stopped arriving');
-    expect(api.getRecurring).toHaveBeenCalledWith(KEY, 12, undefined);
+    expect(api.getRecurring).toHaveBeenCalledWith(KEY, 12, 'personal');
   });
 
   it('names each payment with its charge, cadence and state', async () => {

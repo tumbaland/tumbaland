@@ -111,22 +111,12 @@ export function resolveJournal(caller: Caller, journal?: string): Tenant {
 }
 
 /**
- * The `groupId` a resolved tenant means, with personal as nothing.
- *
- * For reasoning about a tenant, such as which activity types apply. Not for
- * putting on a request: a service reads an omitted `groupId` as "the
- * connection's default", which is a shared journal on a connection set up that
- * way, so asking for personal by leaving it out lands in the group. A request
- * names its tenant with `tenantFor`.
- */
-export const groupIdFor = (tenant: Tenant): string | undefined =>
-  tenant === PERSONAL_TENANT ? undefined : tenant;
-
-/**
  * The tenant a request is to act in, as it travels: a group id, or the literal
  * `personal`. Always present, so the choice the model made is the one that is
- * used, whatever the connection's default is. The service's own middleware
- * turns `personal` back into "no group" before any handler sees it.
+ * used, whatever the connection's default is. Personal is sent as `personal`,
+ * never as an absent `groupId`: a service reads an absent one as the
+ * connection's default, which can be a shared journal. The service's own
+ * middleware turns `personal` back into "no group" before any handler sees it.
  */
 export const tenantFor = (caller: Caller, journal?: string): Tenant => resolveJournal(caller, journal);
 

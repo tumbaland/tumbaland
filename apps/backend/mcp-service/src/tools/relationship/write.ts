@@ -7,10 +7,9 @@ import {
   entrySchema,
   explain,
   fail,
-  groupIdFor,
   journalSchema,
   ok,
-  resolveJournal
+  tenantFor
 } from '../module';
 import { describeActivity } from './format';
 
@@ -37,7 +36,7 @@ export function registerWriteTools(server: McpServer, caller: Caller): void {
     },
     async ({ date, entries, replace, journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const types = await tumbaland.listActivityTypes(apiKey, groupId);
 
         // Names resolve to ids here so the model never sees an ObjectId, and an
@@ -97,7 +96,7 @@ export function registerWriteTools(server: McpServer, caller: Caller): void {
     },
     async ({ date, type, description, hours, journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const types = await tumbaland.listActivityTypes(apiKey, groupId);
         const activityType = resolveType(types, type);
 
@@ -141,7 +140,7 @@ export function registerWriteTools(server: McpServer, caller: Caller): void {
           return fail('Nothing to change. Pass at least one of date, type, description or hours.');
         }
 
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const types = await tumbaland.listActivityTypes(apiKey, groupId);
         const nameById = new Map(types.map((entry) => [entry._id, entry.name]));
 
@@ -181,7 +180,7 @@ export function registerWriteTools(server: McpServer, caller: Caller): void {
     },
     async ({ id, journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const types = await tumbaland.listActivityTypes(apiKey, groupId);
         const nameById = new Map(types.map((entry) => [entry._id, entry.name]));
 

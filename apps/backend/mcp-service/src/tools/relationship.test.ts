@@ -184,7 +184,7 @@ describe('log_activity', () => {
     expect(api.createActivity).toHaveBeenCalledWith(
       KEY,
       { date: '2026-09-04', typeId: 't2', description: undefined, hours: 4 },
-      undefined
+      'personal'
     );
     expect(text).toContain('Together');
   });
@@ -239,7 +239,8 @@ describe('search_activities', () => {
       startDate: '2026-09-01',
       endDate: '2026-09-04',
       activityType: 'dining',
-      limit: 20
+      limit: 20,
+      groupId: 'personal'
     });
   });
 
@@ -284,7 +285,7 @@ describe('get_stats', () => {
 
     expect(text).toContain('12 entries over the last month since 2024-01-18 (961 days), 40 hours logged.');
     expect(text).toContain('- Together: 7 entries on 7 days, 40h');
-    expect(api.getStatistics).toHaveBeenCalledWith(KEY, 'month', undefined);
+    expect(api.getStatistics).toHaveBeenCalledWith(KEY, 'month', 'personal');
   });
 
   it('leaves the hours off a type that is not measured in them', async () => {
@@ -432,7 +433,7 @@ describe('edit_activity', () => {
       KEY,
       'a1',
       { date: undefined, typeId: undefined, description: 'Sushi House, terrace', hours: undefined },
-      undefined
+      'personal'
     );
   });
 
@@ -443,7 +444,7 @@ describe('edit_activity', () => {
       KEY,
       'a1',
       expect.objectContaining({ typeId: 't2' }),
-      undefined
+      'personal'
     );
   });
 
@@ -492,7 +493,7 @@ describe('delete_activity', () => {
 
     expect(text).toContain('Deleted');
     expect(text).toContain('2026-09-04: Dining (2h) — Sushi House');
-    expect(api.deleteActivity).toHaveBeenCalledWith(KEY, 'a1', undefined);
+    expect(api.deleteActivity).toHaveBeenCalledWith(KEY, 'a1', 'personal');
   });
 
   it('deletes nothing when the entry could not be read first', async () => {
@@ -577,9 +578,9 @@ describe('choosing a journal', () => {
 
     await callTool('search_activities', { journal: 'My own data' });
 
-    // Personal travels as no group at all, which is how every handler has
-    // always read it.
-    expect(api.listActivities).toHaveBeenCalledWith(KEY, expect.objectContaining({ groupId: undefined }));
+    // Personal travels as the literal `personal`, never as an absent group: an
+    // absent one reads as the connection's default, which can be the shared journal.
+    expect(api.listActivities).toHaveBeenCalledWith(KEY, expect.objectContaining({ groupId: 'personal' }));
   });
 
   it('carries the choice into a write, not only a read', async () => {
@@ -638,7 +639,7 @@ describe('plans', () => {
       endDate: undefined,
       upcoming: true,
       limit: 50,
-      groupId: undefined
+      groupId: 'personal'
     });
     expect(text).toContain('- 2026-10-16 19:00: Concert at Saku Arena (reminder 1 hour before)  [id p1]');
     expect(text).toContain('- 2026-10-16 to 2026-10-18: Rome (reminder the day before at 09:00)  [id p2]');
@@ -671,7 +672,7 @@ describe('plans', () => {
     expect(api.createPlan).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ title: 'Concert', date: '2026-10-16', typeId: 't1', remindBefore: null }),
-      undefined
+      'personal'
     );
     expect(text).toContain('Planned');
     expect(text).toContain('(all day): Concert at Saku Arena (no reminder)');
@@ -692,7 +693,7 @@ describe('plans', () => {
       expect.any(String),
       'p1',
       expect.objectContaining({ date: '2026-10-17', remindBefore: 180, typeId: 't2' }),
-      undefined
+      'personal'
     );
     expect(text).toContain('from - 2026-10-16 19:00');
     expect(text).toContain('to   - 2026-10-17 19:00: Concert at Saku Arena (reminder 3 hours before, logged in the journal)');
@@ -708,7 +709,7 @@ describe('plans', () => {
     api.getPlan.mockResolvedValue({ ...concert, remindBefore: 30, time: '18:30' });
     api.deletePlan.mockResolvedValue(undefined);
     const { text } = await callTool('delete_plan', { id: 'p1' });
-    expect(api.deletePlan).toHaveBeenCalledWith(expect.any(String), 'p1', undefined);
+    expect(api.deletePlan).toHaveBeenCalledWith(expect.any(String), 'p1', 'personal');
     expect(text).toContain('Deleted');
     expect(text).toContain('(reminder 30 minutes before)');
   });

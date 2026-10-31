@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { finance } from '../finance';
-import { Caller, dateSchema, explain, groupIdFor, journalSchema, ok, resolveJournal } from './module';
+import { Caller, dateSchema, explain, journalSchema, ok, tenantFor } from './module';
 import { count, describeGrowth, describePeriod, describeTransaction, money, moved, signed, total } from './financeFormat';
 
 /** Where the money went: by month, by year, by payment, and on a schedule. */
@@ -29,7 +29,7 @@ export function registerSpendingTools(server: McpServer, caller: Caller): void {
     },
     async ({ months, journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const summary = await finance.getSummary(apiKey, months, groupId);
         const lines: string[] = [];
 
@@ -101,7 +101,7 @@ export function registerSpendingTools(server: McpServer, caller: Caller): void {
     },
     async ({ from, to, category, type, search, limit, journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const page = await finance.listTransactions(apiKey, {
           from,
           to,
@@ -141,10 +141,7 @@ export function registerSpendingTools(server: McpServer, caller: Caller): void {
     },
     async ({ journal }) => {
       try {
-        const analytics = await finance.getAnalytics(
-          apiKey,
-          groupIdFor(resolveJournal(caller, journal))
-        );
+        const analytics = await finance.getAnalytics(apiKey, tenantFor(caller, journal));
         const currency = analytics.currency ? ` (${analytics.currency})` : '';
         const lines: string[] = [];
 
@@ -255,7 +252,7 @@ export function registerSpendingTools(server: McpServer, caller: Caller): void {
     },
     async ({ months, journal }) => {
       try {
-        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const groupId = tenantFor(caller, journal);
         const recurring = await finance.getRecurring(apiKey, months, groupId);
 
         if (recurring.payments.length === 0) {
