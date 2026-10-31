@@ -1,4 +1,15 @@
 # Tumbalog
+## [0.0.559](https://github.com/tumbaland/tumbaland/compare/app-v0.0.558...app-v0.0.559) (2026-10-31)
+
+### Features
+
+* improve chat performance ([e6bc701](https://github.com/tumbaland/tumbaland/commit/e6bc7013bc5b9c07c728c35a59676dc86f5529f3))
+* improve portfolio planner ([19dffea](https://github.com/tumbaland/tumbaland/commit/19dffeae1b5a026806a5afc333262d4a52df23ec))
+
+### Chores
+
+* **release:** @tumbaland/backend-core 1.53.0 ([04ee357](https://github.com/tumbaland/tumbaland/commit/04ee3577903bcd66d98782396677ba632dcba896))
+
 ## [0.0.558](https://github.com/tumbaland/tumbaland/compare/app-v0.0.557...app-v0.0.558) (2026-10-31)
 
 ### Features
