@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.558](https://github.com/tumbaland/tumbaland/compare/app-v0.0.557...app-v0.0.558) (2026-10-31)
+
+### Features
+
+* rework financial dashboard ([f2dbc49](https://github.com/tumbaland/tumbaland/commit/f2dbc49e8c4953e3612d0169bb5e23ca03fa0611))
+
 ## [0.0.557](https://github.com/tumbaland/tumbaland/compare/app-v0.0.556...app-v0.0.557) (2026-10-31)
 
 ### Features
