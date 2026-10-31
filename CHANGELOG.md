@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.555](https://github.com/tumbaland/tumbaland/compare/app-v0.0.554...app-v0.0.555) (2026-10-31)
+
+### Bug Fixes
+
+* add mcp service access to agents for personal tenant ([5336e2d](https://github.com/tumbaland/tumbaland/commit/5336e2d9d58e8a87de29ac46bcfac6612dc415df))
+
 ## [0.0.554](https://github.com/tumbaland/tumbaland/compare/app-v0.0.553...app-v0.0.554) (2026-10-30)
 
 ### Features
