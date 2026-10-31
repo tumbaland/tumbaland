@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.556](https://github.com/tumbaland/tumbaland/compare/app-v0.0.555...app-v0.0.556) (2026-10-31)
+
+### Bug Fixes
+
+* add dividend imports ([3dbfaaf](https://github.com/tumbaland/tumbaland/commit/3dbfaafe158e87d93310af8ae69bc6590e44d33e))
+
 ## [0.0.555](https://github.com/tumbaland/tumbaland/compare/app-v0.0.554...app-v0.0.555) (2026-10-31)
 
 ### Bug Fixes
