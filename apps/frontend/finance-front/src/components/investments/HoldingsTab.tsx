@@ -135,9 +135,10 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
         if (h.currentValue !== undefined) acc.value += h.currentValue;
         if (h.valueIncrease !== undefined) acc.pl += h.valueIncrease;
         acc.realized += h.realizedGain ?? 0;
+        acc.dividends += h.dividends ?? 0;
         return acc;
       },
-      { cost: 0, value: 0, pl: 0, realized: 0 }
+      { cost: 0, value: 0, pl: 0, realized: 0, dividends: 0 }
     );
 
   /** Per-share amounts stay in the instrument's own currency. */
@@ -274,6 +275,7 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
                 <TableCell align="right">P/L ({baseCurrency})</TableCell>
                 <TableCell align="right">P/L %</TableCell>
                 <TableCell align="right">Realized</TableCell>
+                <TableCell align="right">Dividends</TableCell>
                 <TableCell align="right" sx={{ width: 165 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -313,14 +315,15 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
                   </TableCell>
                   <TableCell align="right" sx={{ color: plColor(h.realizedGain) }}>
                     {h.tradeCount ? (
-                      <Tooltip
-                        title={`${h.tradeCount} trade${h.tradeCount === 1 ? '' : 's'}${h.dividends ? ` · ${formatCurrency(h.dividends, baseCurrency)} dividends` : ''}`}
-                      >
+                      <Tooltip title={`${h.tradeCount} trade${h.tradeCount === 1 ? '' : 's'}`}>
                         <span>
                           {(h.realizedGain ?? 0) >= 0 ? '+' : ''}{formatCurrency(h.realizedGain ?? 0, baseCurrency)}
                         </span>
                       </Tooltip>
                     ) : '—'}
+                  </TableCell>
+                  <TableCell align="right" sx={{ color: h.dividends ? 'success.main' : undefined }}>
+                    {h.dividends ? formatPrice(h.dividends, baseCurrency) : '—'}
                   </TableCell>
                   <TableCell align="right">
                     {rowActions(h)}
@@ -329,7 +332,7 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
               ))}
               {holdings.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={11} sx={{ textAlign: 'center', py: 6 }}>
+                  <TableCell colSpan={12} sx={{ textAlign: 'center', py: 6 }}>
                     <Typography variant="body1" sx={{ color: 'text.secondary' }}>
                       No holdings yet — add your first ETF or stock position.
                     </Typography>
@@ -352,6 +355,9 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
                   </TableCell>
                   <TableCell align="right" sx={{ fontWeight: 700, color: plColor(totals.realized) }}>
                     {totals.realized ? `${totals.realized >= 0 ? '+' : ''}${formatCurrency(totals.realized, baseCurrency)}` : '—'}
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: totals.dividends ? 'success.main' : undefined }}>
+                    {totals.dividends ? formatPrice(totals.dividends, baseCurrency) : '—'}
                   </TableCell>
                   <TableCell />
                 </TableRow>

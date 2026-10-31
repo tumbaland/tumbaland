@@ -210,6 +210,7 @@ it('creates a tracked ticker, including a group id when tenant-scoped', async ()
     displayName: 'Microsoft',
     // Taken from the search result, so prices convert correctly
     currency: 'USD',
+    isin: '',
     description: '',
     isActive: true,
     groupId: 'g1'
@@ -276,10 +277,25 @@ it('edits an existing ticker, pre-filling the form and toggling the active switc
 
   expect(mockedUpdateMutateAsync).toHaveBeenCalledWith({
     id: 't1',
-    data: { ticker: 'AAPL', displayName: 'Apple', currency: 'USD', description: '', isActive: false }
+    data: { ticker: 'AAPL', displayName: 'Apple', currency: 'USD', isin: '', description: '', isActive: false }
   });
   expect(notify).toHaveBeenCalledWith('Ticker updated', 'success');
   expect(screen.queryByText(/will move to/)).not.toBeInTheDocument();
+});
+
+it('saves the ISIN a bank names the fund by, uppercased and without spaces', async () => {
+  mockedUpdateMutateAsync.mockResolvedValue({});
+  render(<TickersTab tickers={tickers} notify={vi.fn()} />);
+
+  const editButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="EditIcon"]'));
+  await userEvent.click(editButtons[0]);
+  await userEvent.type(screen.getByLabelText('ISIN'), 'ie00b3 xxrp09');
+  await userEvent.click(screen.getByRole('button', { name: 'Update' }));
+
+  expect(mockedUpdateMutateAsync).toHaveBeenCalledWith({
+    id: 't1',
+    data: expect.objectContaining({ isin: 'IE00B3XXRP09' })
+  });
 });
 
 it('says what a symbol change carries over, and reports the rename', async () => {

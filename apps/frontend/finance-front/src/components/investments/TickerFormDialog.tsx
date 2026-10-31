@@ -16,11 +16,12 @@ export interface TickerForm {
   ticker: string;
   displayName: string;
   currency: string;
+  isin: string;
   description: string;
   isActive: boolean;
 }
 
-export const emptyTickerForm: TickerForm = { ticker: '', displayName: '', currency: '', description: '', isActive: true };
+export const emptyTickerForm: TickerForm = { ticker: '', displayName: '', currency: '', isin: '', description: '', isActive: true };
 
 interface TickerFormDialogProps {
   open: boolean;
@@ -88,6 +89,16 @@ const TickerFormDialog: React.FC<TickerFormDialogProps> = ({
         onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase().slice(0, 3) }))}
         placeholder="EUR"
         helperText="Currency this instrument is quoted in — used to convert its prices into your base currency."
+        slotProps={{ inputLabel: { shrink: true } }}
+      />
+      <TextField
+        margin="dense"
+        label="ISIN"
+        fullWidth
+        value={form.isin}
+        onChange={(e) => setForm((f) => ({ ...f, isin: e.target.value.toUpperCase().replace(/\s/g, '').slice(0, 12) }))}
+        placeholder="IE00B3XXRP09"
+        helperText="Optional. Your bank names a fund's dividends by ISIN, so this is how an imported payout finds this ticker."
         slotProps={{ inputLabel: { shrink: true } }}
       />
       <TextField

@@ -199,12 +199,15 @@ export const importTransactions = async (req: Request, res: Response): Promise<v
 
   const result = await importStatement(csv, options);
 
+  const recorded = result.trades.imported > 0
+    ? `; ${result.trades.imported} trade${result.trades.imported === 1 ? '' : 's'} added to the trade log`
+    : '';
   sendSuccess(
     res,
     result,
-    result.duplicates > 0
+    (result.duplicates > 0
       ? `Imported ${result.imported}; ${result.duplicates} already present`
-      : `Imported ${result.imported} transactions`
+      : `Imported ${result.imported} transactions`) + recorded
   );
 };
 

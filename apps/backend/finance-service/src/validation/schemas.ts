@@ -7,6 +7,12 @@ const currencySchema = z
   .toUpperCase()
   .regex(/^[A-Z]{3}$/, 'currency must be a 3-letter ISO code');
 
+/** ISO 6166: two letters, nine letters or digits, a check digit. Empty clears it. */
+const isinSchema = z.union([
+  z.literal(''),
+  z.string().trim().toUpperCase().regex(/^[A-Z]{2}[A-Z0-9]{9}[0-9]$/, 'isin must be a 12-character ISIN')
+]);
+
 export const createHoldingSchema = z.object({
   ticker: z.string().min(1),
   displayName: z.string().optional(),
@@ -25,6 +31,7 @@ export const createTrackedTickerSchema = z.object({
   displayName: z.string().min(1),
   description: z.string().optional(),
   currency: currencySchema.optional(),
+  isin: isinSchema.optional(),
   isActive: z.boolean().optional(),
   groupId: z.string().optional()
 });

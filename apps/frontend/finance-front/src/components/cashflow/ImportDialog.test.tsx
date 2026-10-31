@@ -88,7 +88,7 @@ it('uses the singular for one duplicate', async () => {
 
 it('lists what was deliberately left out', async () => {
   mockedImport.mockResolvedValue(
-    result({ skipped: { 'Transfer between your own accounts': 8, 'Dividend (belongs in the trade log)': 2 } })
+    result({ skipped: { 'Transfer between your own accounts': 8, 'Not in EUR (USD)': 2 } })
   );
   renderDialog();
 
@@ -96,6 +96,38 @@ it('lists what was deliberately left out', async () => {
 
   expect(await screen.findByText('Transfer between your own accounts')).toBeInTheDocument();
   expect(screen.getByText('8')).toBeInTheDocument();
+});
+
+it('says what went into the trade log and what it could not place', async () => {
+  mockedImport.mockResolvedValue(
+    result({
+      trades: {
+        imported: 2,
+        alreadyRecorded: 5,
+        unmatched: [{ what: 'Dividend for IE00B3XXRP09: no ticker has that ISIN', count: 3 }],
+        holdingsLeftAlone: ['VWCE.DEX']
+      }
+    })
+  );
+  renderDialog();
+
+  await upload();
+
+  expect(await screen.findByText(/2 added to the trade log, 5 already there/)).toBeInTheDocument();
+  expect(screen.getByText('Dividend for IE00B3XXRP09: no ticker has that ISIN (3)')).toBeInTheDocument();
+  expect(screen.getByText(/Holding left as you entered it.*VWCE\.DEX/)).toBeInTheDocument();
+});
+
+it('shows no trade section when the file had no securities rows', async () => {
+  mockedImport.mockResolvedValue(
+    result({ trades: { imported: 0, alreadyRecorded: 0, unmatched: [], holdingsLeftAlone: [] } })
+  );
+  renderDialog();
+
+  await upload();
+
+  await screen.findByText(/What came in/);
+  expect(screen.queryByText('Trades and dividends')).not.toBeInTheDocument();
 });
 
 it('surfaces a rejection from the server', async () => {

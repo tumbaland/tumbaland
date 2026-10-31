@@ -21,6 +21,12 @@ export interface ITrade extends Document {
   amount: number; // cash total, dividend/fee only
   fees: number; // transaction costs on a buy/sell
   notes?: string;
+  /**
+   * The bank's archive reference for the statement row this trade came from, so
+   * importing the same statement twice records it once. Hand-entered trades
+   * carry none.
+   */
+  externalId?: string;
   userId: string;
   groupId?: string;
   createdAt: Date;
@@ -37,6 +43,7 @@ const TradeSchema: Schema = new Schema(
     amount: { type: Number, default: 0, min: 0 },
     fees: { type: Number, default: 0, min: 0 },
     notes: { type: String },
+    externalId: { type: String },
     userId: { type: String, required: true },
     groupId: { type: String }
   },
@@ -47,6 +54,11 @@ const TradeSchema: Schema = new Schema(
 // order the position replay needs — so the index leads with tenancy.
 TradeSchema.index({ userId: 1, ticker: 1, date: 1 });
 TradeSchema.index({ groupId: 1, ticker: 1, date: 1 });
+// Partial, so the uniqueness applies only to imported trades.
+TradeSchema.index(
+  { userId: 1, externalId: 1 },
+  { unique: true, partialFilterExpression: { externalId: { $type: 'string' } } }
+);
 
 // Attribution and a change trail; see auditPlugin.
 TradeSchema.plugin(auditPlugin, { resource: 'trade' });

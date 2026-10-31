@@ -322,6 +322,38 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, tenantGroupI
               </Box>
             )}
 
+            {statement.trades && (statement.trades.imported > 0 || statement.trades.alreadyRecorded > 0 || statement.trades.unmatched.length > 0) && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  Trades and dividends
+                </Typography>
+                <Typography variant="body2">
+                  {statement.trades.imported} added to the trade log
+                  {statement.trades.alreadyRecorded > 0 && `, ${statement.trades.alreadyRecorded} already there`}.
+                </Typography>
+                {statement.trades.unmatched.length > 0 && (
+                  <Alert severity="warning" sx={{ mt: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      Not recorded, because the ticker could not be found:
+                    </Typography>
+                    {statement.trades.unmatched.map((u) => (
+                      <Typography key={u.what} variant="body2">
+                        {u.what} ({u.count})
+                      </Typography>
+                    ))}
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      Add the missing ISIN or ticker under Tickers, then import the file again.
+                    </Typography>
+                  </Alert>
+                )}
+                {statement.trades.holdingsLeftAlone.length > 0 && (
+                  <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+                    Holding left as you entered it, since it has no earlier trades: {statement.trades.holdingsLeftAlone.join(', ')}.
+                  </Typography>
+                )}
+              </Box>
+            )}
+
             {skippedEntries.length > 0 && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="subtitle2" sx={{ mb: 1 }}>

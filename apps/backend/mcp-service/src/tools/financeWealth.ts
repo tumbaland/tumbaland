@@ -138,10 +138,11 @@ export function registerWealthTools(server: McpServer, caller: Caller): void {
           }
           const change = holding.valueIncrease ?? 0;
           const pct = holding.percentIncrease ?? 0;
+          const paid = holding.dividends ? `, dividends received ${money(holding.dividends)}` : '';
           return (
             `- ${holding.ticker}${name}: ${holding.quantity} units, worth ${money(holding.currentValue)}, ` +
             `cost ${money(holding.costBasis ?? 0)}, ${change >= 0 ? 'up' : 'down'} ${money(Math.abs(change))} ` +
-            `(${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)`
+            `(${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)${paid}`
           );
         });
 
@@ -157,9 +158,12 @@ export function registerWealthTools(server: McpServer, caller: Caller): void {
 
         const recent = trades.slice(0, 10).map((trade) => {
           const day = trade.date.slice(0, 10);
+          // By type, not by which fields are present: the API sends quantity and
+          // price as 0 on a dividend or fee, so a presence check printed every
+          // payout as "0 at 0.00" and hid the amount.
           const size =
-            trade.quantity !== undefined && trade.price !== undefined
-              ? `${trade.quantity} at ${money(trade.price)}`
+            trade.type === 'buy' || trade.type === 'sell'
+              ? `${trade.quantity ?? 0} at ${money(trade.price ?? 0)}`
               : money(trade.amount ?? 0);
           return `- ${day}: ${trade.type} ${trade.ticker}, ${size}  [id ${trade._id}]`;
         });

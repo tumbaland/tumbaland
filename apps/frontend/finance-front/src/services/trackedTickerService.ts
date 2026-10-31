@@ -8,6 +8,8 @@ export interface TrackedTicker {
   description?: string;
   /** ISO code this instrument is quoted in; unset on tickers added before the field existed. */
   currency?: string;
+  /** The ISIN a bank names this instrument's dividends by; lets an import find the ticker. */
+  isin?: string;
   dateAdded?: string;
   isActive: boolean;
   groupId?: string;

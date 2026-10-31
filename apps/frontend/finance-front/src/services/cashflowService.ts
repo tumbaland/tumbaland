@@ -176,6 +176,13 @@ export interface ImportResult {
   period: { from: string; to: string } | null;
   rows: number;
   categories: Array<{ category: string; count: number; amount: number }>;
+  /** What the securities rows did to the trade log. */
+  trades?: {
+    imported: number;
+    alreadyRecorded: number;
+    unmatched: Array<{ what: string; count: number }>;
+    holdingsLeftAlone: string[];
+  };
 }
 
 export interface PensionImportResult {

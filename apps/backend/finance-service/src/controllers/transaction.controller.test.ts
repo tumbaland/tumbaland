@@ -59,6 +59,7 @@ const mockedSummary = getCashflowSummary as unknown as jest.Mock;
 const mockedAnalytics = getAnalytics as unknown as jest.Mock;
 const mockedRecurring = getRecurringPayments as unknown as jest.Mock;
 const mockedImport = importStatement as unknown as jest.Mock;
+const NO_TRADES = { imported: 0, alreadyRecorded: 0, unmatched: [], holdingsLeftAlone: [] };
 const mockedImportCategories = importCategories as unknown as jest.Mock;
 const mockedImportPension = importPensionStatement as unknown as jest.Mock;
 const mockedDetect = detectFormat as unknown as jest.Mock;
@@ -215,7 +216,7 @@ describe('importTransactions', () => {
   beforeEach(() => mockedDetect.mockReturnValue('seb'));
 
   it('passes the raw CSV body through with the caller context', async () => {
-    mockedImport.mockResolvedValue({ imported: 3, duplicates: 0, skipped: {}, period: null, rows: 3, categories: [] });
+    mockedImport.mockResolvedValue({ imported: 3, duplicates: 0, skipped: {}, period: null, rows: 3, categories: [], trades: NO_TRADES });
 
     await importTransactions(
       req({ body: 'csv-text', query: { groupId: 'g1' }, userGroups: ['g1'] } as Partial<Request>),
@@ -229,8 +230,22 @@ describe('importTransactions', () => {
     });
   });
 
+  it('says how many trades the securities rows added to the trade log', async () => {
+    mockedImport.mockResolvedValue({
+      imported: 4, duplicates: 0, skipped: {}, period: null, rows: 5, categories: [],
+      trades: { ...NO_TRADES, imported: 2 }
+    });
+    const res = mockRes();
+
+    await importTransactions(req({ body: 'csv' } as Partial<Request>), res);
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Imported 4 transactions; 2 trades added to the trade log' })
+    );
+  });
+
   it('reports how many rows were already present', async () => {
-    mockedImport.mockResolvedValue({ imported: 2, duplicates: 5, skipped: {}, period: null, rows: 7, categories: [] });
+    mockedImport.mockResolvedValue({ imported: 2, duplicates: 5, skipped: {}, period: null, rows: 7, categories: [], trades: NO_TRADES });
     const res = mockRes();
 
     await importTransactions(req({ body: 'csv' } as Partial<Request>), res);
@@ -311,7 +326,7 @@ describe('importTransactions', () => {
 
   it('decodes a Latin-1 body rather than handing through mojibake', async () => {
     mockedDetect.mockReturnValue('seb');
-    mockedImport.mockResolvedValue({ imported: 1, duplicates: 0, skipped: {}, period: null, rows: 1, categories: [] });
+    mockedImport.mockResolvedValue({ imported: 1, duplicates: 0, skipped: {}, period: null, rows: 1, categories: [], trades: NO_TRADES });
 
     await importTransactions(req({ body: Buffer.from('csv-text', 'utf8') } as Partial<Request>), mockRes());
 

@@ -90,6 +90,7 @@ const TickersTab: React.FC<TickersTabProps> = ({
       ticker: t.ticker,
       displayName: t.displayName,
       currency: t.currency || '',
+      isin: t.isin || '',
       description: t.description || '',
       isActive: t.isActive
     });

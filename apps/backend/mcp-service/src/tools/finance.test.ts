@@ -169,6 +169,19 @@ describe('get_portfolio', () => {
     expect(text).toContain('against 75,963.00 invested');
   });
 
+  it('shows what a dividend paid, not the zero quantity and price the API sends with it', async () => {
+    api.listTrades.mockResolvedValue([
+      { _id: 't1', ticker: 'VUSA.DEX', type: 'dividend', date: '2026-07-01T00:00:00.000Z', quantity: 0, price: 0, amount: 18.4, fees: 0 },
+      { _id: 't2', ticker: 'EXUS.DEX', type: 'buy', date: '2026-06-01T00:00:00.000Z', quantity: 100, price: 40, amount: 0, fees: 0 }
+    ] as never);
+
+    const { text } = await callTool('get_portfolio');
+
+    expect(text).toContain('2026-07-01: dividend VUSA.DEX, 18.40');
+    expect(text).not.toContain('0 at 0.00');
+    expect(text).toContain('2026-06-01: buy EXUS.DEX, 100 at 40.00');
+  });
+
   it('names the instrument, not only its ticker', async () => {
     const { text } = await callTool('get_portfolio');
     expect(text).toContain('Vanguard FTSE All-World');

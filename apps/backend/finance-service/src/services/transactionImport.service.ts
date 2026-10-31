@@ -13,6 +13,7 @@ import { getOwnerNameTest } from './statementSettings.service';
 import { isPensionStatement } from './pensionStatement.service';
 import { isCategoryFile } from './categoryImport.service';
 import type { TransactionFileFormat, ImportOptions } from './importTypes';
+import { importTrades, TradeImportResult, TradeRow, EMPTY_TRADE_IMPORT } from './tradeImport.service';
 
 // The three importers each live in their own file; this module is the one place
 // the controller reads them from, and the home of the bank statement import.
@@ -40,12 +41,11 @@ export interface ImportResult {
   rows: number;
   /** Categories the new rows landed in, largest first. */
   categories: Array<{ category: string; count: number; amount: number }>;
+  /** What the securities rows of the file did to the trade log. */
+  trades: TradeImportResult;
 }
 
-const SKIP_REASONS: Record<'transfer' | 'dividend', string> = {
-  transfer: 'Transfer between your own accounts',
-  dividend: 'Dividend (belongs in the trade log)'
-};
+const TRANSFER_REASON = 'Transfer between your own accounts';
 
 /**
  * Rows that become transactions. Securities settlements and pension
@@ -104,12 +104,18 @@ export const importStatement = async (
   const rules = await getCompiledRules(options.userId, userGroups);
 
   const candidates = [];
+  // Settlements and dividends are also trade-log events; collected here and
+  // handed over once the cash side is written.
+  const tradeRows: TradeRow[] = [];
   for (const row of rows) {
     const classified = classifyRow(row, ownAccounts, rules, isOwner);
-    if (!IMPORTED_KINDS.includes(classified.kind)) {
-      note(SKIP_REASONS[classified.kind as 'transfer' | 'dividend']);
-      continue;
+    if (classified.kind === 'security' || classified.kind === 'dividend') {
+      tradeRows.push({ row, kind: classified.kind });
     }
+    if (classified.kind === 'transfer') { note(TRANSFER_REASON); continue; }
+    // A dividend is no cash-flow row: it is income of the position, and lives
+    // in the trade log rather than among the transactions.
+    if (!IMPORTED_KINDS.includes(classified.kind)) continue;
     if (!row.externalId) { note('No archive reference — cannot be de-duplicated'); continue; }
     if (!row.date) { note(`Unreadable date "${row.dateText}"`); continue; }
     if (!Number.isFinite(row.amount) || row.amount <= 0) { note('Unreadable or zero amount'); continue; }
@@ -133,7 +139,8 @@ export const importStatement = async (
     : null;
 
   if (candidates.length === 0) {
-    return { format: 'seb', imported: 0, duplicates: 0, skipped, period, rows: rows.length, categories: [] };
+    const trades = await importTrades(tradeRows, options);
+    return { format: 'seb', imported: 0, duplicates: 0, skipped, period, rows: rows.length, categories: [], trades };
   }
 
   // One query rather than one per row: which references are already held,
@@ -192,6 +199,8 @@ export const importStatement = async (
     byCategory.set(t.category, bucket);
   }
 
+  const trades = tradeRows.length > 0 ? await importTrades(tradeRows, options) : { ...EMPTY_TRADE_IMPORT };
+
   return {
     format: 'seb',
     imported: fresh.length,
@@ -201,6 +210,7 @@ export const importStatement = async (
     rows: rows.length,
     categories: [...byCategory.entries()]
       .map(([category, b]) => ({ category, ...b }))
-      .sort((a, b) => b.amount - a.amount)
+      .sort((a, b) => b.amount - a.amount),
+    trades
   };
 };

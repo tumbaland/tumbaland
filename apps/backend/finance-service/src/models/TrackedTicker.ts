@@ -13,6 +13,12 @@ export interface ITrackedTicker extends Document {
    * as already being in the base currency rather than guessed at.
    */
   currency?: string;
+  /**
+   * The instrument's ISIN. A bank names a fund's dividend by ISIN alone, so this
+   * is the only way an imported payout finds its ticker; unset means such rows
+   * are listed as unmatched rather than guessed at.
+   */
+  isin?: string;
   dateAdded: Date;
   isActive: boolean;
   userId: string; // User ID who created the ticker
@@ -24,6 +30,7 @@ const TrackedTickerSchema: Schema = new Schema({
   displayName: { type: String, required: true },
   description: { type: String },
   currency: { type: String, uppercase: true, trim: true },
+  isin: { type: String, uppercase: true, trim: true },
   dateAdded: { type: Date, default: Date.now },
   isActive: { type: Boolean, default: true },
   userId: {

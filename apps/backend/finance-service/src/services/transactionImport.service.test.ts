@@ -13,7 +13,13 @@ jest.mock('../models/StatementSettings', () => ({
   default: { findOne: jest.fn() }
 }));
 
+jest.mock('./tradeImport.service', () => ({
+  importTrades: jest.fn().mockResolvedValue({ imported: 0, alreadyRecorded: 0, unmatched: [], holdingsLeftAlone: [] }),
+  EMPTY_TRADE_IMPORT: { imported: 0, alreadyRecorded: 0, unmatched: [], holdingsLeftAlone: [] }
+}));
+
 import Transaction from '../models/Transaction';
+import { importTrades } from './tradeImport.service';
 import CategoryRule from '../models/CategoryRule';
 import StatementSettings from '../models/StatementSettings';
 import { importStatement, detectFormat } from './transactionImport.service';
@@ -324,13 +330,28 @@ describe('rows left out', () => {
     expect(result.categories).toEqual([{ category: 'Investments', count: 1, amount: 2548 }]);
   });
 
-  it('skips a dividend', async () => {
+  it('hands a dividend to the trade log instead of the transactions', async () => {
     const result = await importStatement(
-      statement(line({ desc: 'Vanguard,IE00B3XXRP09,dividendimakse,.28,15.12.23,IE' })),
+      statement(line({ dc: 'C', amount: '0,28', desc: 'Vanguard,IE00B3XXRP09,dividendimakse,.28,15.12.23,IE' })),
       { userId: 'u1' }
     );
 
-    expect(result.skipped['Dividend (belongs in the trade log)']).toBe(1);
+    expect(result.imported).toBe(0);
+    expect(Object.keys(result.skipped)).toEqual([]);
+    expect(importTrades).toHaveBeenCalledWith(
+      [expect.objectContaining({ kind: 'dividend', row: expect.objectContaining({ amount: 0.28 }) })],
+      { userId: 'u1' }
+    );
+  });
+
+  it('hands a settlement to the trade log as well as keeping its cash row', async () => {
+    const result = await importStatement(
+      statement(line({ desc: 'DLA1164839/EXUS GY/100/39.7/Ost/ Saksamaa', amount: '3970,00' })),
+      { userId: 'u1' }
+    );
+
+    expect(result.imported).toBe(1);
+    expect(importTrades).toHaveBeenCalledWith([expect.objectContaining({ kind: 'security' })], { userId: 'u1' });
   });
 
   it('imports a pension contribution as capital, not as spending', async () => {
@@ -340,7 +361,7 @@ describe('rows left out', () => {
     expect(result.categories[0].category).toBe('Pension');
   });
 
-  it('still keeps dividends and own-account transfers out', async () => {
+  it('keeps dividends and own-account transfers out of the transactions', async () => {
     const result = await importStatement(
       statement(
         line({ cp: 'ALEX SMITH' }),
@@ -351,7 +372,7 @@ describe('rows left out', () => {
 
     expect(result.imported).toBe(0);
     expect(result.skipped['Transfer between your own accounts']).toBe(1);
-    expect(result.skipped['Dividend (belongs in the trade log)']).toBe(1);
+    expect(Object.keys(result.skipped)).toEqual(['Transfer between your own accounts']);
   });
 
   it('skips a row with no archive reference, which could not be de-duplicated', async () => {

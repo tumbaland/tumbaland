@@ -38,6 +38,7 @@ export const createTrackedTicker = async (
     displayName: string;
     description?: string;
     currency?: string;
+    isin?: string;
     isActive?: boolean;
     groupId?: string;
   },
@@ -63,6 +64,7 @@ export const updateTrackedTicker = async (
     displayName?: string;
     description?: string;
     currency?: string;
+    isin?: string;
     isActive?: boolean;
     groupId?: string;
   },

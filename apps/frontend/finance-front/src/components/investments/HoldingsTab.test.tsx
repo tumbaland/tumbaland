@@ -108,6 +108,21 @@ it('renders holding rows with totals, defaulting missing fields to em dashes', (
   expect(screen.getByText('1400 €')).toBeInTheDocument();
 });
 
+it('shows the dividends each holding has paid, with a total', () => {
+  const paying = [
+    { ...holdings[0], dividends: 42.5, tradeCount: 2 },
+    { ...holdings[1], dividends: 7.25, tradeCount: 1 },
+    { ...holdings[1], _id: 'h3', ticker: 'GLD', dividends: 0 }
+  ];
+  render(<HoldingsTab holdings={paying} notify={vi.fn()} />);
+
+  expect(screen.getByRole('columnheader', { name: 'Dividends' })).toBeInTheDocument();
+  expect(screen.getByText('42,50 €')).toBeInTheDocument();
+  expect(screen.getByText('7,25 €')).toBeInTheDocument();
+  // 42.5 + 7.25 + 0, in the totals row
+  expect(screen.getByText('49,75 €')).toBeInTheDocument();
+});
+
 it('validates required fields before submitting a new holding', async () => {
   const notify = vi.fn();
   render(<HoldingsTab holdings={[]} notify={notify} />);
