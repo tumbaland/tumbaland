@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import { correlationMiddleware } from '../utils/correlation';
 import { tracingMiddleware } from '../tracing';
 import { requestLogger, requestLoggerWithMetrics } from '../middleware/requestLogger';
+import { slowRequestLogger } from '../middleware/serverTiming';
 import { createCorsMiddleware, CorsMiddlewareOptions } from '../middleware/corsMiddleware';
 import { securityHeaders, standardRateLimiter } from '../middleware/security';
 import { healthLive } from '../health/healthController';
@@ -94,6 +95,7 @@ export function createBaseApp(options: CreateBaseAppOptions = {}): Express {
   app.use(correlationMiddleware);
   if (tracing) app.use(tracingMiddleware);
   app.use(metrics ? requestLoggerWithMetrics : requestLogger);
+  app.use(slowRequestLogger());
   app.use(createCorsMiddleware(corsOptions));
   if (parseCookies) app.use(cookieParser());
   if (parseJson) app.use(express.json());

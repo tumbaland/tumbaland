@@ -56,6 +56,11 @@ export function createCorsMiddleware(options: CorsMiddlewareOptions = {}): Reque
     // network tab and no failing request to point at.
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id'],
+    // How long a browser may keep the answer to a preflight. Without it Chrome
+    // keeps it for five seconds, so nearly every POST, PUT and DELETE (a read
+    // marker, a typing notice, a send) was preceded by an extra OPTIONS round
+    // trip through Cloudflare and the tunnel. Chrome caps this at two hours.
+    maxAge: 7200,
     exposedHeaders: options.exposedHeaders
   });
 

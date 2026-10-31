@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { renderHook, act } from '@testing-library/react';
-import { FAILURES_BEFORE_POLLING, POLL_INTERVAL_MS, useChatStream } from './useChatStream';
+import { FAILURES_BEFORE_POLLING, POLL_INTERVAL_MS, RESYNC_COALESCE_MS, useChatStream } from './useChatStream';
 
 vi.mock('../services/chatApi', () => ({
   chatApi: { streamUrl: () => 'https://chat-api.test/api/chat/stream' }
@@ -371,5 +371,61 @@ describe('coming back online', () => {
     void act(() => window.dispatchEvent(new Event('online')));
 
     expect(FakeEventSource.instances.length).toBe(before + 1);
+  });
+});
+
+describe('coming back to the app', () => {
+  const away = () => {
+    visibility = 'hidden';
+    act(() => document.dispatchEvent(new Event('visibilitychange')));
+  };
+  const back = () => {
+    visibility = 'visible';
+    act(() => document.dispatchEvent(new Event('visibilitychange')));
+  };
+
+  it('refetches once, not once for the tab and again for the reopened stream', () => {
+    const onResync = vi.fn();
+    renderHook(() => useChatStream({ onEvent: vi.fn(), onResync }));
+    act(() => latest().open());
+    act(() => latest().emit('conversation.updated', ready));
+    away();
+    back();
+    // the reopened stream says it replaced one that dropped
+    act(() => latest().open());
+    act(() => latest().emit('conversation.updated', ready));
+
+    expect(onResync).toHaveBeenCalledTimes(1);
+  });
+
+  it('refetches again on a later return, once the earlier one is well past', () => {
+    const onResync = vi.fn();
+    renderHook(() => useChatStream({ onEvent: vi.fn(), onResync }));
+    act(() => latest().open());
+    act(() => latest().emit('conversation.updated', ready));
+    away();
+    back();
+    act(() => latest().open());
+    act(() => latest().emit('conversation.updated', ready));
+    act(() => {
+      vi.advanceTimersByTime(RESYNC_COALESCE_MS + 1);
+    });
+    away();
+    back();
+
+    expect(onResync).toHaveBeenCalledTimes(2);
+  });
+
+  it('refetches once when the network comes back, not twice', () => {
+    const onResync = vi.fn();
+    renderHook(() => useChatStream({ onEvent: vi.fn(), onResync }));
+    act(() => latest().open());
+    act(() => latest().emit('conversation.updated', ready));
+
+    act(() => window.dispatchEvent(new Event('online')));
+    act(() => latest().open());
+    act(() => latest().emit('conversation.updated', ready));
+
+    expect(onResync).toHaveBeenCalledTimes(1);
   });
 });

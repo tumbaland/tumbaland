@@ -33,6 +33,15 @@ describe('createCorsMiddleware', () => {
     expect(res.headers['access-control-allow-credentials']).toBe('true');
   });
 
+  it('lets the browser keep a preflight answer, so a POST does not pay for a second request each time', async () => {
+    const res = await request(app)
+      .options('/ping')
+      .set('Origin', 'https://allowed.example')
+      .set('Access-Control-Request-Method', 'POST');
+
+    expect(res.headers['access-control-max-age']).toBe('7200');
+  });
+
   it('rejects an origin not on the whitelist', async () => {
     const res = await request(app).get('/ping').set('Origin', 'https://evil.example');
 

@@ -48,6 +48,18 @@ describe('authenticateToken', () => {
     expect(req.user).toMatchObject({ id: '1', email: 'user@example.com' });
   });
 
+  it('tells the browser how long the session check and the group lookup took', async () => {
+    const token = jwt.sign(payload, 'test-secret');
+    const req = mockReq({ cookies: { access_token: token } });
+    const res = mockRes() as Response & { setHeader: jest.Mock; headersSent: boolean };
+    res.setHeader = jest.fn();
+    res.headersSent = false;
+
+    await authenticateToken(req, res, next);
+
+    expect(res.setHeader).toHaveBeenLastCalledWith('Server-Timing', expect.stringMatching(/^session;dur=[\d.]+, groups;dur=[\d.]+$/));
+  });
+
   it('attaches an empty userGroups array when the token has no groups claim', async () => {
     const token = jwt.sign(payload, 'test-secret');
     const req = mockReq({ cookies: { access_token: token } });

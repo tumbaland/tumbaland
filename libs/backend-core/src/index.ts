@@ -61,6 +61,7 @@ export {
 export { createCorsMiddleware } from './middleware/corsMiddleware';
 export { errorHandler } from './middleware/errorHandler';
 export { requestLogger, requestLoggerWithMetrics, simpleRequestLogger } from './middleware/requestLogger';
+export { recordTiming, slowRequestLogger } from './middleware/serverTiming';
 export { securityHeaders, createRateLimiter, standardRateLimiter, strictRateLimiter } from './middleware/security';
 export { validate } from './middleware/validate';
 

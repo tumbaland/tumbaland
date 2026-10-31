@@ -37,12 +37,19 @@ function writeLastOpen(id: string | null): void {
  * router cannot be nested inside the shell's, so which conversation is open is
  * plain state here. Most people have one conversation, so the panel goes
  * straight into it; with several it starts on the list.
+ *
+ * **The conversation last open is shown without waiting for the list.** Asking
+ * for the list first put a full round trip, and the server's writes and counts
+ * behind it, ahead of the thread's own requests, which need only the id. The
+ * list is fetched alongside, and settles two things when it arrives: whether
+ * there is anywhere to go back to, and whether the remembered conversation
+ * still exists.
  */
 function Panel() {
   const { user } = useCurrentUser();
   const [conversations, setConversations] = useState<Conversation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(readLastOpen);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -56,6 +63,11 @@ function Panel() {
         const remembered = list.find((conversation) => conversation.id === last);
         if (remembered) setOpenId(remembered.id);
         else if (list.length === 1) setOpenId(list[0]!.id);
+        else {
+          // What was remembered is gone, or never was: the list, not an error page.
+          writeLastOpen(null);
+          setOpenId(null);
+        }
       })
       .catch((cause: Error) => active && setError(cause.message));
     return () => {
@@ -68,7 +80,8 @@ function Panel() {
     writeLastOpen(id);
   };
 
-  if (error)
+  // A list that cannot be loaded costs the way back, not the thread already open.
+  if (error && !openId)
     return (
       <Alert
         severity="error"
@@ -87,6 +100,18 @@ function Panel() {
       </Alert>
     );
 
+  if (openId) {
+    return (
+      // Keyed so switching conversations starts a clean thread. The thread's own
+      // header carries the way back when there is a list to go back to.
+      <ThreadPage
+        key={openId}
+        conversationId={openId}
+        onBack={conversations && conversations.length > 1 ? () => open(null) : undefined}
+      />
+    );
+  }
+
   if (!conversations || !user) {
     return (
       <Box sx={{ display: 'grid', placeItems: 'center', height: '100%' }}>
@@ -95,18 +120,10 @@ function Panel() {
     );
   }
 
-  if (!openId) {
-    return (
-      <Box sx={{ height: '100%', overflowY: 'auto' }}>
-        <ConversationsPage currentUserId={user.id} onOpen={open} />
-      </Box>
-    );
-  }
-
   return (
-    // Keyed so switching conversations starts a clean thread. The thread's own
-    // header carries the way back when there is a list to go back to.
-    <ThreadPage key={openId} conversationId={openId} onBack={conversations.length > 1 ? () => open(null) : undefined} />
+    <Box sx={{ height: '100%', overflowY: 'auto' }}>
+      <ConversationsPage currentUserId={user.id} onOpen={open} initial={conversations} />
+    </Box>
   );
 }
 

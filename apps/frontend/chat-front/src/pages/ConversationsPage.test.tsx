@@ -70,6 +70,17 @@ describe('opening chat', () => {
     await waitFor(() => expect(ensureMyConversations).toHaveBeenCalled());
   });
 
+  it('does not ask for the list again when it is handed one', async () => {
+    render(
+      <MemoryRouter>
+        <ConversationsPage currentUserId="u-tom" initial={[conversation(), conversation({ id: 'c2', title: 'Plans' })]} />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Plans')).toBeInTheDocument();
+    expect(ensureMyConversations).not.toHaveBeenCalled();
+  });
+
   it('shows the list even when there is only one conversation', async () => {
     ensureMyConversations.mockResolvedValue([conversation()]);
 

@@ -63,6 +63,83 @@ beforeEach(() => {
   getAssistants.mockReset().mockResolvedValue(null);
 });
 
+describe('opening a thread', () => {
+  const detail = {
+    id: 'c1',
+    title: '',
+    members: [],
+    reads: [
+      { userId: 'u-tom', lastReadMessageId: 'm2', lastReadAt: '2026-01-01T00:02:00Z' },
+      { userId: 'u-irja', lastReadMessageId: 'm1', lastReadAt: '2026-01-01T00:01:00Z' }
+    ]
+  };
+
+  it('loads once, not again when the signed-in user becomes known a moment later', async () => {
+    listMessages.mockResolvedValue(page(2, 1, null));
+    getConversation.mockReset().mockResolvedValue(detail);
+    // The user id is empty on the first render and filled in after the check-in resolves
+    const hook = renderHook(({ userId }) => useChatThread('c1', userId), { initialProps: { userId: '' } });
+    await waitFor(() => expect(hook.result.current.loading).toBe(false));
+
+    hook.rerender({ userId: 'u-tom' });
+    await act(async () => undefined);
+
+    expect(listMessages).toHaveBeenCalledTimes(1);
+    expect(getConversation).toHaveBeenCalledTimes(1);
+    expect(getAssistants).toHaveBeenCalledTimes(1);
+    expect(listLive).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the caller out of the read markers, whichever arrives first', async () => {
+    listMessages.mockResolvedValue(page(2, 1, null));
+    getConversation.mockReset().mockResolvedValue(detail);
+    const hook = renderHook(({ userId }) => useChatThread('c1', userId), { initialProps: { userId: '' } });
+    await waitFor(() => expect(hook.result.current.loading).toBe(false));
+    await waitFor(() => expect(Object.keys(hook.result.current.reads).length).toBeGreaterThan(0));
+
+    hook.rerender({ userId: 'u-tom' });
+
+    expect(Object.keys(hook.result.current.reads)).toEqual(['u-irja']);
+  });
+
+  it('asks for the assistants and the live shares only once the messages are in', async () => {
+    let deliver: (value: ReturnType<typeof page>) => void = () => {};
+    listMessages.mockReturnValue(new Promise((resolve) => (deliver = resolve)));
+    getConversation.mockReset().mockResolvedValue(detail);
+    const hook = renderHook(() => useChatThread('c1', 'u-tom'));
+    await act(async () => undefined);
+
+    // the messages are still on their way: nothing else competes with them
+    expect(getAssistants).not.toHaveBeenCalled();
+    expect(listLive).not.toHaveBeenCalled();
+
+    await act(async () => deliver(page(2, 1, null)));
+    await waitFor(() => expect(hook.result.current.loading).toBe(false));
+
+    expect(getAssistants).toHaveBeenCalledTimes(1);
+    expect(listLive).toHaveBeenCalledTimes(1);
+  });
+
+  it('still asks for them when the messages could not be loaded, so a retry is not half a thread', async () => {
+    listMessages.mockRejectedValue(new Error('offline'));
+    getConversation.mockReset().mockResolvedValue(detail);
+    renderHook(() => useChatThread('c1', 'u-tom'));
+
+    await waitFor(() => expect(getAssistants).toHaveBeenCalledTimes(1));
+    expect(listLive).toHaveBeenCalledTimes(1);
+  });
+
+  it('still loads again for a different conversation', async () => {
+    listMessages.mockResolvedValue(page(2, 1, null));
+    getConversation.mockReset().mockResolvedValue(detail);
+    const hook = renderHook(({ id }) => useChatThread(id, 'u-tom'), { initialProps: { id: 'c1' } });
+    await waitFor(() => expect(hook.result.current.loading).toBe(false));
+
+    hook.rerender({ id: 'c2' });
+    await waitFor(() => expect(listMessages).toHaveBeenCalledTimes(2));
+  });
+});
+
 describe('member renames', () => {
   it("shows someone's new name as soon as the stream says they changed it", async () => {
     listMessages.mockResolvedValueOnce(page(2, 1, null));

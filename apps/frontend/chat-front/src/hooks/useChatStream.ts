@@ -30,6 +30,14 @@ const MISSED_HEARTBEATS = 2;
 /** Assumed until the server's `ready` frame says otherwise. */
 const DEFAULT_HEARTBEAT_MS = 25_000;
 
+/**
+ * Resyncs this close together are one. Coming back to a hidden tab asks twice:
+ * once because the tab became visible, and again when the reopened stream's
+ * `ready` frame says it replaced one that dropped. Each is a full reload of the
+ * thread, so the second only repeated the first.
+ */
+export const RESYNC_COALESCE_MS = 3000;
+
 /** Consecutive failures before giving up on SSE and polling instead. */
 export const FAILURES_BEFORE_POLLING = 3;
 
@@ -108,6 +116,15 @@ export function useChatStream({
      * refetch never ran, which is the one case it exists for.
      */
     let reconnecting = false;
+    let lastResyncAt = 0;
+
+    /** Asks the caller to refetch, unless it was asked a moment ago. */
+    const resync = () => {
+      const now = Date.now();
+      if (now - lastResyncAt < RESYNC_COALESCE_MS) return;
+      lastResyncAt = now;
+      onResyncRef.current();
+    };
 
     /** Hidden, and nothing asking to stay connected through it. */
     const away = () => document.visibilityState === 'hidden' && !keepOpenRef.current;
@@ -231,7 +248,7 @@ export function useChatStream({
           // window, so the caller refetches rather than trusting the backfill.
           if (reconnecting) {
             reconnecting = false;
-            onResyncRef.current();
+            resync();
           }
           return;
         }
@@ -284,7 +301,7 @@ export function useChatStream({
         // Whatever arrived while the app was away is fetched rather than
         // waited for: push may have been dropped, and the replay window is
         // five minutes.
-        onResyncRef.current();
+        resync();
       }
     };
 
@@ -295,7 +312,7 @@ export function useChatStream({
         closeStream();
         failures = 0;
         connect();
-        onResyncRef.current();
+        resync();
       }
     };
 

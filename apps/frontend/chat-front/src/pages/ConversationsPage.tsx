@@ -54,12 +54,19 @@ export interface ConversationsPageProps {
   currentUserId: string;
   /** Opens a conversation in place, for the side panel. Without it a row navigates. */
   onOpen?: (conversationId: string) => void;
+  /**
+   * The list, when the caller has just fetched it. Shown at once and not fetched
+   * again: the side panel asks before it knows whether to show the list or a
+   * thread, and asking a second time on mount repeated the server's writes and
+   * counts for nothing. Later refreshes still come from the stream.
+   */
+  initial?: Conversation[];
 }
 
-export default function ConversationsPage({ currentUserId, onOpen }: ConversationsPageProps) {
+export default function ConversationsPage({ currentUserId, onOpen, initial }: ConversationsPageProps) {
   const navigate = useNavigate();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [conversations, setConversations] = useState<Conversation[]>(initial ?? []);
+  const [loading, setLoading] = useState(!initial);
   const [error, setError] = useState<string | null>(null);
   const { typing, note: noteTyping, clear: clearTyping } = useTypingTracker();
 
@@ -69,7 +76,7 @@ export default function ConversationsPage({ currentUserId, onOpen }: Conversatio
   //
   // The list is always shown, even with a single conversation: it is what
   // the header's Chat button promises, and the way back out of a thread.
-  const loaded = useRef(false);
+  const loaded = useRef(Boolean(initial));
   const load = useCallback(async () => {
     try {
       setConversations(await chatApi.ensureMyConversations());
@@ -85,7 +92,9 @@ export default function ConversationsPage({ currentUserId, onOpen }: Conversatio
   }, []);
 
   useEffect(() => {
-    void load();
+    if (!initial) void load();
+    // Only the first render's list is a starting point; the stream keeps it current after that.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
 
   /** Keeps the list live: new messages, who is typing, who is online. */

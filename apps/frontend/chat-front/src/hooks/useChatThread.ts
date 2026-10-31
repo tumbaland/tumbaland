@@ -93,7 +93,11 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   const [connection, setConnection] = useState<ConnectionState>('connecting');
   const { typing, note: noteTyping, clear: clearTyping } = useTypingTracker();
   const [members, setMembers] = useState<ConversationMember[]>([]);
-  const [reads, setReads] = useState<Record<string, ReadReceipt>>({});
+  // Everyone's read position as the server reported it. The caller's own is
+  // filtered out where it is read (below), not where it is stored: filtering at
+  // load time put the caller's id in the load's dependencies, and the id arrives
+  // a moment after the thread opens, so every thread loaded twice.
+  const [allReads, setReads] = useState<Record<string, ReadReceipt>>({});
   const [presence, setPresence] = useState<Record<string, Presence>>({});
   const [title, setTitle] = useState('');
   const [photoAlbum, setPhotoAlbumState] = useState<PhotoAlbum>(UNSET_ALBUM);
@@ -127,16 +131,9 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
         setPhotoAlbumState(detail.photoAlbum ?? UNSET_ALBUM);
         setAppearanceState(detail.appearance ?? DEFAULT_APPEARANCE);
         setPresence(Object.fromEntries((detail.presence ?? []).map((entry) => [entry.userId, entry])));
-        setReads(
-          Object.fromEntries(
-            detail.reads.filter((read) => read.userId !== currentUserId).map((read) => [read.userId, read])
-          )
-        );
+        setReads(Object.fromEntries(detail.reads.map((read) => [read.userId, read])));
       })
       .catch((error: Error) => logger.warn('Could not load conversation details', { error: error.message }));
-
-    refreshLive();
-    refreshAssistants();
 
     try {
       const page = await chatApi.listMessages(conversationId, { limit: 50 });
@@ -144,7 +141,13 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     } catch (error) {
       dispatch({ type: 'failed', error: (error as Error).message });
     }
-  }, [conversationId, currentUserId, refreshLive, refreshAssistants]);
+
+    // After the messages, not beside them. Neither is needed to read the thread,
+    // and the assistants view asks two other services, so started together they
+    // took the server's attention from the one answer the screen is waiting for.
+    refreshLive();
+    refreshAssistants();
+  }, [conversationId, refreshLive, refreshAssistants]);
 
   // Another thread's markers and pictures must not show while this one loads.
   useEffect(() => {
@@ -203,6 +206,12 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     lastTypingSent.current = now;
     void chatApi.sendTyping(conversationId);
   }, [conversationId]);
+
+  /** How far each of the others has read: never includes the caller. */
+  const reads = useMemo(
+    () => Object.fromEntries(Object.entries(allReads).filter(([userId]) => userId !== currentUserId)),
+    [allReads, currentUserId]
+  );
 
   const typingNames = useMemo(() => namesTyping(typing, conversationId), [typing, conversationId]);
   const working = useMemo(() => assistantsWorking(typing, conversationId), [typing, conversationId]);

@@ -5,6 +5,7 @@ import { isAccessTokenClaims } from '../oauth/tokens';
 import { UserPayload } from '../types/auth';
 import { isCurrentSession } from '../auth/session';
 import { currentGroupsOf } from '../groups/membership';
+import { recordTiming } from './serverTiming';
 
 /**
  * JWT authentication middleware
@@ -40,13 +41,19 @@ export async function authenticateToken(req: Request, res: Response, next: NextF
 
     // A signed-out or revoked device keeps a validly signed token; only its
     // session record says it has ended.
-    if (!(await isCurrentSession(claims))) {
+    const sessionStarted = performance.now();
+    const current = await isCurrentSession(claims);
+    recordTiming(res, 'session', performance.now() - sessionStarted);
+    if (!current) {
       res.status(401).json({ success: false, message: 'Session has ended' });
       return;
     }
     // Membership is asked of group-service, not read from the token, so a
-    // change applies within seconds rather than at the next renewal.
+    // change applies within seconds rather than at the next renewal. Timed on
+    // its own: it is the one step that can wait on another service.
+    const groupsStarted = performance.now();
     const groups = await currentGroupsOf(claims as UserPayload);
+    recordTiming(res, 'groups', performance.now() - groupsStarted);
     req.user = { ...(claims as UserPayload), groups };
     req.userGroups = groups;
   } catch (error) {
