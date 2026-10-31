@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Box, Typography, Tabs, Tab, Snackbar, Alert, CircularProgress } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useTenantFilter } from '@tumbaland/frontend-core';
-import { useHoldings } from '../hooks/useHoldings';
+import { useHoldings, useClosedPositions } from '../hooks/useHoldings';
 import { useTrackedTickers } from '../hooks/useTrackedTicker';
 import { getMyEntitlements } from '../services/entitlementsService';
 import { getGlobalConfig } from '../config/ConfigProvider';
 import HoldingsTab from '../components/investments/HoldingsTab';
+import ClosedPositionsSection from '../components/investments/ClosedPositionsSection';
 import TickersTab from '../components/investments/TickersTab';
 
 /**
@@ -19,6 +20,7 @@ const InvestmentsPage: React.FC = () => {
   const [snackbar, setSnackbar] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
 
   const { data: holdings = [], isLoading: holdingsLoading } = useHoldings(tenantGroupId);
+  const { data: closedPositions = [] } = useClosedPositions(tenantGroupId);
   const { data: tickers = [], isLoading: tickersLoading } = useTrackedTickers(tenantGroupId);
 
   // Plan limits and live meter readings for the tracked-ticker bar. `retry:
@@ -72,7 +74,10 @@ const InvestmentsPage: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : tab === 0 ? (
-        <HoldingsTab holdings={holdings} tenantGroupId={tenantGroupId} notify={notify} />
+        <>
+          <HoldingsTab holdings={holdings} tenantGroupId={tenantGroupId} notify={notify} />
+          <ClosedPositionsSection positions={closedPositions} />
+        </>
       ) : (
         <TickersTab
           tickers={tickers}

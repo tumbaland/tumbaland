@@ -6,7 +6,7 @@ vi.mock('@tumbaland/frontend-core', () => ({
   useTenantFilter: () => 'g1'
 }));
 
-vi.mock('../hooks/useHoldings', () => ({ useHoldings: vi.fn() }));
+vi.mock('../hooks/useHoldings', () => ({ useHoldings: vi.fn(), useClosedPositions: vi.fn() }));
 vi.mock('../hooks/useTrackedTicker', () => ({ useTrackedTickers: vi.fn() }));
 
 // The plan's ticker allowance feeds the meter on the tickers tab. Stubbed at
@@ -25,6 +25,9 @@ vi.mock('../components/investments/HoldingsTab', () => ({
     </div>
   )
 }));
+vi.mock('../components/investments/ClosedPositionsSection', () => ({
+  default: ({ positions }: { positions: unknown[] }) => <div>sold positions {positions.length}</div>
+}));
 vi.mock('../components/investments/TickersTab', () => ({
   default: ({ tickerLimit, meteredTickers }: { tickerLimit?: number; meteredTickers?: number }) => (
     <div>
@@ -34,16 +37,18 @@ vi.mock('../components/investments/TickersTab', () => ({
 }));
 
 import { useQuery } from '@tanstack/react-query';
-import { useHoldings } from '../hooks/useHoldings';
+import { useHoldings, useClosedPositions } from '../hooks/useHoldings';
 import { useTrackedTickers } from '../hooks/useTrackedTicker';
 import InvestmentsPage from './InvestmentsPage';
 
 const mockedUseHoldings = useHoldings as unknown as ReturnType<typeof vi.fn>;
+const mockedUseClosedPositions = useClosedPositions as unknown as ReturnType<typeof vi.fn>;
 const mockedUseTrackedTickers = useTrackedTickers as unknown as ReturnType<typeof vi.fn>;
 const mockedUseQuery = useQuery as unknown as ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   mockedUseHoldings.mockReturnValue({ data: [{ _id: 'h1' }], isLoading: false });
+  mockedUseClosedPositions.mockReturnValue({ data: [{ ticker: 'ZPRR.DEX' }] });
   mockedUseTrackedTickers.mockReturnValue({ data: [{ _id: 't1' }, { _id: 't2' }], isLoading: false });
   mockedUseQuery.mockReturnValue({
     data: { limits: { meters: { trackedTickers: 3 } }, usage: { trackedTickers: 2 } }
@@ -61,6 +66,14 @@ it('renders the holdings tab by default with counts in the tab labels', () => {
   expect(screen.getByText('Holdings (1)')).toBeInTheDocument();
   expect(screen.getByText('Tracked tickers (2)')).toBeInTheDocument();
   expect(screen.getByText('holdings tab')).toBeInTheDocument();
+});
+
+it('shows the sold positions under the holdings, and not on the other tab', async () => {
+  render(<InvestmentsPage />);
+  expect(screen.getByText('sold positions 1')).toBeInTheDocument();
+
+  await userEvent.click(screen.getByText('Tracked tickers (2)'));
+  expect(screen.queryByText(/sold positions/)).not.toBeInTheDocument();
 });
 
 it('switches to the tracked tickers tab', async () => {

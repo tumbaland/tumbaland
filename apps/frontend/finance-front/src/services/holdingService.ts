@@ -32,7 +32,32 @@ export interface Holding {
   percentIncrease?: number;
 }
 
+/** A position bought and later sold out entirely; money fields are in `baseCurrency`. */
+export interface ClosedPosition {
+  ticker: string;
+  displayName?: string;
+  currency: string;
+  baseCurrency: string;
+  firstTradeDate: string;
+  closedDate: string;
+  bought?: number;
+  proceeds?: number;
+  realizedGain?: number;
+  dividends?: number;
+  totalReturn?: number;
+  fees?: number;
+  tradeCount: number;
+  /** True when no FX rate was available, so the money fields are omitted. */
+  missingFxRate: boolean;
+}
+
 const API_URL = '/holdings';
+
+export const getClosedPositions = async (groupId?: string): Promise<ClosedPosition[]> => {
+  const params = groupId ? { groupId } : undefined;
+  const res = await financeApi.get<ApiResponse<ClosedPosition[]>>(`${API_URL}/closed`, { params });
+  return res.data;
+};
 
 export const getHoldings = async (groupId?: string): Promise<Holding[]> => {
   const params = groupId ? { groupId } : undefined;

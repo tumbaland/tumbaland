@@ -77,6 +77,31 @@ export const holdingSchema = z
   })
   .loose();
 
+/**
+ * A position that was bought and then sold out entirely. The money figures are
+ * absent when the instrument's currency has no exchange rate yet, which the
+ * service says with `missingFxRate` rather than passing a foreign amount off as
+ * base currency.
+ */
+export const closedPositionSchema = z
+  .object({
+    ticker: z.string(),
+    displayName: z.string().optional(),
+    currency: z.string().optional(),
+    baseCurrency: z.string().optional(),
+    firstTradeDate: z.string(),
+    closedDate: z.string(),
+    bought: z.number().optional(),
+    proceeds: z.number().optional(),
+    realizedGain: z.number().optional(),
+    dividends: z.number().optional(),
+    totalReturn: z.number().optional(),
+    fees: z.number().optional(),
+    tradeCount: z.number().optional(),
+    missingFxRate: z.boolean().optional()
+  })
+  .loose();
+
 export const tradeSchema = z
   .object({
     _id: z.string(),
@@ -325,6 +350,7 @@ export const summarySchema = z
 export type Transaction = z.infer<typeof transactionSchema>;
 export type Holding = z.infer<typeof holdingSchema>;
 export type Trade = z.infer<typeof tradeSchema>;
+export type ClosedPosition = z.infer<typeof closedPositionSchema>;
 export type Dashboard = z.infer<typeof dashboardSchema>;
 export type Analytics = z.infer<typeof analyticsSchema>;
 export type Recurring = z.infer<typeof recurringSchema>;

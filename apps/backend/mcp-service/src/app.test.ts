@@ -309,6 +309,7 @@ describe('tools are gated by the key’s scopes', () => {
       'get_spending',
       'get_spending_trends',
       'list_recurring_payments',
+      'list_trades',
       'search_transactions'
     ]);
   });

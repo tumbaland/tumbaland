@@ -1,4 +1,4 @@
-import { Growth, PeriodTotals, Transaction } from '../finance';
+import { Growth, PeriodTotals, Trade, Transaction } from '../finance';
 
 /** Shared wording for the finance tools: every figure a model reads is formatted here. */
 
@@ -18,6 +18,21 @@ export const count = (value: number): string => value.toLocaleString('en-US');
  * a net worth built from a daily price job is not accurate to the cent.
  */
 export const total = (value: number): string => Math.round(value).toLocaleString('en-US');
+
+/**
+ * One trade as a line, by what kind of trade it is.
+ *
+ * Not by which fields are present: the API sends quantity and price as 0 on a
+ * dividend or a fee, so a presence check printed every payout as "0 at 0.00"
+ * and hid the amount it paid.
+ */
+export const describeTrade = (trade: Trade): string => {
+  const size =
+    trade.type === 'buy' || trade.type === 'sell'
+      ? `${trade.quantity ?? 0} at ${money(trade.price ?? 0)}`
+      : money(trade.amount ?? 0);
+  return `- ${trade.date.slice(0, 10)}: ${trade.type} ${trade.ticker}, ${size}  [id ${trade._id}]`;
+};
 
 /** A percentage with its sign, or nothing when there was no base to compare against. */
 export const signed = (value: number | null | undefined): string =>

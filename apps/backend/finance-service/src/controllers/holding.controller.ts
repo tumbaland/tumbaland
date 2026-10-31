@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { sendSuccess, sendError, countRead } from '@tumbaland/backend-core';
 import * as holdingService from '../services/holding.service';
+import { getClosedPositions } from '../services/closedPosition.service';
 import { contextGroups } from '../utils/scope';
 import { tickerActor, withTickerSlot } from '../services/trackedTickerUsage';
 
@@ -14,6 +15,17 @@ export const getHoldings = async (req: Request, res: Response): Promise<void> =>
 
   countRead(res, holdings.length);
   sendSuccess(res, holdings);
+};
+
+/**
+ * Positions that were bought and sold out entirely, with what they made.
+ */
+export const getClosed = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const closed = await getClosedPositions(user.id, contextGroups(req));
+
+  countRead(res, closed.length);
+  sendSuccess(res, closed);
 };
 
 /**

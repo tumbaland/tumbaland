@@ -1,10 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getHoldings, addHolding, updateHolding, deleteHolding, Holding } from '../services/holdingService';
+import {
+  getHoldings,
+  getClosedPositions,
+  addHolding,
+  updateHolding,
+  deleteHolding,
+  Holding
+} from '../services/holdingService';
 
 export const useHoldings = (groupId?: string) => {
   return useQuery({
     queryKey: ['holdings', groupId],
     queryFn: () => getHoldings(groupId),
+  });
+};
+
+/**
+ * Keyed under `holdings`, so every change that refreshes the holdings (a trade,
+ * an import, an edit) refreshes what sold positions earned as well.
+ */
+export const useClosedPositions = (groupId?: string) => {
+  return useQuery({
+    queryKey: ['holdings', 'closed', groupId],
+    queryFn: () => getClosedPositions(groupId),
   });
 };
 

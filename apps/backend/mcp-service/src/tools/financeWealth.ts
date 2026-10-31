@@ -1,7 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import { finance } from '../finance';
-import { Caller, explain, journalSchema, ok, tenantFor } from './module';
-import { describeGrowth, describePeriod, money, moved, total } from './financeFormat';
+import { Caller, dateSchema, explain, journalSchema, ok, tenantFor } from './module';
+import { describeGrowth, describePeriod, describeTrade, money, moved, total } from './financeFormat';
 
 /** What everything is worth: net worth, allocation, and the investment positions. */
 export function registerWealthTools(server: McpServer, caller: Caller): void {
@@ -115,12 +116,17 @@ export function registerWealthTools(server: McpServer, caller: Caller): void {
     async ({ journal }) => {
       try {
         const groupId = tenantFor(caller, journal);
-        const [holdings, trades] = await Promise.all([
+        const [holdings, trades, closed] = await Promise.all([
           finance.listHoldings(apiKey, groupId),
-          finance.listTrades(apiKey, groupId)
+          finance.listTrades(apiKey, groupId),
+          // Sold positions are an addition to the answer, not the answer: a
+          // finance-service that predates the endpoint should cost this tool
+          // its extra section, not its portfolio. The holdings call beside it
+          // fails on anything that is genuinely wrong.
+          finance.listClosedPositions(apiKey, groupId).catch(() => [])
         ]);
 
-        if (holdings.length === 0) return ok('No positions are recorded.');
+        if (holdings.length === 0 && closed.length === 0) return ok('No positions are recorded.');
 
         // Only priced positions are summed. A ticker the price job has never
         // covered has no value, and counting it as zero would understate the
@@ -128,7 +134,7 @@ export function registerWealthTools(server: McpServer, caller: Caller): void {
         const priced = holdings.filter((holding) => holding.currentValue !== undefined);
         const value = priced.reduce((sum, holding) => sum + (holding.currentValue ?? 0), 0);
         const cost = priced.reduce((sum, holding) => sum + (holding.costBasis ?? 0), 0);
-        const currency = holdings[0].baseCurrency ?? '';
+        const currency = holdings[0]?.baseCurrency ?? closed[0]?.baseCurrency ?? '';
         const asOf = holdings.find((holding) => holding.latestPriceDate)?.latestPriceDate;
 
         const lines = holdings.map((holding) => {
@@ -149,28 +155,138 @@ export function registerWealthTools(server: McpServer, caller: Caller): void {
         const gain = value - cost;
         const gainPct = cost > 0 ? (gain / cost) * 100 : 0;
         const header =
-          `Portfolio worth ${money(value)} ${currency} against ${money(cost)} invested — ` +
+          holdings.length === 0
+            ? 'No positions are held at the moment.'
+            : `Portfolio worth ${money(value)} ${currency} against ${money(cost)} invested — ` +
           `${gain >= 0 ? 'up' : 'down'} ${money(Math.abs(gain))} (${gainPct >= 0 ? '+' : ''}${gainPct.toFixed(1)}%)` +
           // Prices come from a daily job, so the date matters: quoting a stale
           // figure as "now" is the one way this can mislead.
           (asOf ? `, at prices from ${asOf.slice(0, 10)}` : '') +
           '.';
 
-        const recent = trades.slice(0, 10).map((trade) => {
-          const day = trade.date.slice(0, 10);
-          // By type, not by which fields are present: the API sends quantity and
-          // price as 0 on a dividend or fee, so a presence check printed every
-          // payout as "0 at 0.00" and hid the amount.
-          const size =
-            trade.type === 'buy' || trade.type === 'sell'
-              ? `${trade.quantity ?? 0} at ${money(trade.price ?? 0)}`
-              : money(trade.amount ?? 0);
-          return `- ${day}: ${trade.type} ${trade.ticker}, ${size}  [id ${trade._id}]`;
-        });
+        const recent = trades.slice(0, 10).map(describeTrade);
 
-        return ok(
-          `${header}\n\nPositions:\n${lines.join('\n')}\n\nMost recent trades:\n${recent.join('\n') || '(none)'}`
-        );
+        // What the portfolio has paid and realised, counting the positions that
+        // are gone: selling the last unit removes a holding, and with it every
+        // figure it would have contributed here.
+        const counted = closed.filter((position) => !position.missingFxRate);
+        const sumOf = (pick: (position: (typeof closed)[number]) => number | undefined) =>
+          counted.reduce((sum, position) => sum + (pick(position) ?? 0), 0);
+        const openDividends = holdings.reduce((sum, holding) => sum + (holding.dividends ?? 0), 0);
+        const openRealized = holdings.reduce((sum, holding) => sum + (holding.realizedGain ?? 0), 0);
+        const soldDividends = sumOf((position) => position.dividends);
+        const soldRealized = sumOf((position) => position.realizedGain);
+
+        const sections = [header];
+        if (holdings.length > 0) sections.push(`Positions:\n${lines.join('\n')}`);
+
+        if (openDividends + soldDividends > 0 || openRealized + soldRealized !== 0) {
+          sections.push(
+            'Income and realised gains, all time:\n' +
+              `- Dividends received ${money(openDividends + soldDividends)} ` +
+              `(${money(openDividends)} from positions held, ${money(soldDividends)} from sold ones)\n` +
+              `- Gains realised by selling ${money(openRealized + soldRealized)} ` +
+              `(${money(openRealized)} from positions held, ${money(soldRealized)} from sold ones)`
+          );
+        }
+
+        if (closed.length > 0) {
+          sections.push(
+            'Sold positions (held and sold out of):\n' +
+              closed
+                .map((position) => {
+                  const name = position.displayName ? ` (${position.displayName})` : '';
+                  const held = `held ${position.firstTradeDate} to ${position.closedDate}`;
+                  if (position.missingFxRate) {
+                    return `- ${position.ticker}${name}: ${held} — no exchange rate for ${position.currency ?? 'its currency'}, so no figures`;
+                  }
+                  const made = position.totalReturn ?? 0;
+                  return (
+                    `- ${position.ticker}${name}: ${held}, bought for ${money(position.bought ?? 0)}, ` +
+                    `sold for ${money(position.proceeds ?? 0)}, realised ${money(position.realizedGain ?? 0)}, ` +
+                    `dividends ${money(position.dividends ?? 0)}, made ${made >= 0 ? '' : '-'}${money(Math.abs(made))} in all`
+                  );
+                })
+                .join('\n')
+          );
+        }
+
+        sections.push(`Most recent trades:\n${recent.join('\n') || '(none)'}`);
+        return ok(sections.join('\n\n'));
+      } catch (error) {
+        return explain(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    'list_trades',
+    {
+      title: 'Trades, dividends and fees in the trade log',
+      description:
+        'The trade log itself: every buy, sell, dividend and fee, newest first, with totals for what ' +
+        'matched. get_portfolio only shows the ten latest, so use this for "what dividends did VUSA ' +
+        'pay", "what did we buy this year", "show every sale", "how much did we put into VWCE". ' +
+        'Dividends are listed with the amount they paid.',
+      inputSchema: {
+        ticker: z
+          .string()
+          .optional()
+          .describe('One instrument, as "VUSA.DEX" or just "VUSA". Leave out for all of them.'),
+        type: z.enum(['buy', 'sell', 'dividend', 'fee']).optional().describe('Only this kind of entry'),
+        from: dateSchema.optional().describe('First day to include, YYYY-MM-DD'),
+        to: dateSchema.optional().describe('Last day to include, YYYY-MM-DD'),
+        limit: z.number().int().min(1).max(200).optional().describe('How many to list (default 40)'),
+        ...journalSchema(caller)
+      }
+    },
+    async ({ ticker, type, from, to, limit, journal }) => {
+      try {
+        const trades = await finance.listTrades(apiKey, tenantFor(caller, journal));
+
+        const wanted = ticker?.trim().toUpperCase();
+        const matching = trades
+          .filter((trade) => {
+            const held = trade.ticker.toUpperCase();
+            if (wanted && held !== wanted && !held.startsWith(`${wanted}.`)) return false;
+            if (type && trade.type !== type) return false;
+            const day = trade.date.slice(0, 10);
+            if (from && day < from) return false;
+            if (to && day > to) return false;
+            return true;
+          })
+          .sort((a, b) => b.date.localeCompare(a.date));
+
+        if (matching.length === 0) return ok('No trades match that.');
+
+        // Totals over everything that matched, not over the page shown: a
+        // question about how much was paid out is about all of it.
+        const sum = (kind: string, amount: (trade: (typeof matching)[number]) => number) =>
+          matching.filter((trade) => trade.type === kind).reduce((acc, trade) => acc + amount(trade), 0);
+        const countOf = (kind: string) => matching.filter((trade) => trade.type === kind).length;
+        const parts: string[] = [];
+        if (countOf('buy') > 0) {
+          parts.push(
+            `${countOf('buy')} buys for ${money(sum('buy', (t) => (t.quantity ?? 0) * (t.price ?? 0)))}`
+          );
+        }
+        if (countOf('sell') > 0) {
+          parts.push(
+            `${countOf('sell')} sales for ${money(sum('sell', (t) => (t.quantity ?? 0) * (t.price ?? 0)))}`
+          );
+        }
+        if (countOf('dividend') > 0) {
+          parts.push(`${countOf('dividend')} dividends paying ${money(sum('dividend', (t) => t.amount ?? 0))}`);
+        }
+        if (countOf('fee') > 0) {
+          parts.push(`${countOf('fee')} fees of ${money(sum('fee', (t) => t.amount ?? 0))}`);
+        }
+
+        const shown = matching.slice(0, limit ?? 40);
+        const header =
+          `${matching.length} matching: ${parts.join(', ')}.` +
+          (shown.length < matching.length ? ` Showing the ${shown.length} most recent.` : '');
+        return ok(`${header}\n${shown.map(describeTrade).join('\n')}`);
       } catch (error) {
         return explain(error);
       }

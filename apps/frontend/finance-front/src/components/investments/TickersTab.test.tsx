@@ -283,6 +283,18 @@ it('edits an existing ticker, pre-filling the form and toggling the active switc
   expect(screen.queryByText(/will move to/)).not.toBeInTheDocument();
 });
 
+it('shows the ISIN of each ticker, with a dash where none is set', () => {
+  render(
+    <TickersTab
+      tickers={[{ ...tickers[0], isin: 'IE00B3XXRP09' }, { ...tickers[1], isin: undefined }]}
+      notify={vi.fn()}
+    />
+  );
+
+  expect(screen.getByRole('columnheader', { name: 'ISIN' })).toBeInTheDocument();
+  expect(screen.getByText('IE00B3XXRP09')).toBeInTheDocument();
+});
+
 it('saves the ISIN a bank names the fund by, uppercased and without spaces', async () => {
   mockedUpdateMutateAsync.mockResolvedValue({});
   render(<TickersTab tickers={tickers} notify={vi.fn()} />);

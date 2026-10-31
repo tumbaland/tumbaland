@@ -19,6 +19,7 @@ jest.mock('../finance', () => {
       getDashboard: jest.fn(),
       listHoldings: jest.fn(),
       listTrades: jest.fn(),
+      listClosedPositions: jest.fn(),
       createTrade: jest.fn(),
       recategorise: jest.fn(),
       getAnalytics: jest.fn(),
@@ -80,6 +81,7 @@ beforeEach(() => {
   api.listTransactions.mockResolvedValue(fixtures.transactions as never);
   api.listHoldings.mockResolvedValue(fixtures.holdings as never);
   api.listTrades.mockResolvedValue(fixtures.trades as never);
+  api.listClosedPositions.mockResolvedValue([]);
 });
 
 describe('search_transactions', () => {
@@ -135,6 +137,54 @@ describe('search_transactions', () => {
   });
 });
 
+describe('list_trades', () => {
+  const log = [
+    { _id: 'a', ticker: 'VUSA.DEX', type: 'dividend', date: '2026-07-01T00:00:00.000Z', quantity: 0, price: 0, amount: 140.94 },
+    { _id: 'b', ticker: 'VUSA.DEX', type: 'dividend', date: '2026-04-01T00:00:00.000Z', quantity: 0, price: 0, amount: 140.79 },
+    { _id: 'c', ticker: 'VUSA.DEX', type: 'buy', date: '2026-03-01T00:00:00.000Z', quantity: 10, price: 70, amount: 0 },
+    { _id: 'd', ticker: 'H410.DEX', type: 'dividend', date: '2026-05-15T00:00:00.000Z', quantity: 0, price: 0, amount: 41.82 },
+    { _id: 'e', ticker: 'VGWD.DEX', type: 'sell', date: '2023-07-14T00:00:00.000Z', quantity: 200, price: 54.36, amount: 0 }
+  ];
+  beforeEach(() => api.listTrades.mockResolvedValue(log as never));
+
+  it('totals what a ticker paid out, and lists each payout with its amount', async () => {
+    const { text } = await callTool('list_trades', { ticker: 'VUSA', type: 'dividend' });
+
+    expect(text).toContain('2 matching: 2 dividends paying 281.73.');
+    expect(text).toContain('- 2026-07-01: dividend VUSA.DEX, 140.94  [id a]');
+    expect(text).not.toContain('H410');
+    expect(text).not.toContain('0 at 0.00');
+  });
+
+  it('takes the symbol with or without its exchange suffix', async () => {
+    const bare = await callTool('list_trades', { ticker: 'vusa' });
+    const full = await callTool('list_trades', { ticker: 'VUSA.DEX' });
+
+    expect(bare.text).toBe(full.text);
+    expect(bare.text).toContain('3 matching');
+  });
+
+  it('limits to a window of dates and says how a sale and a buy were valued', async () => {
+    const { text } = await callTool('list_trades', { from: '2026-01-01', to: '2026-04-30' });
+
+    expect(text).toContain('1 buys for 700.00');
+    expect(text).toContain('1 dividends paying 140.79');
+    expect(text).not.toContain('2026-07-01');
+  });
+
+  it('totals everything that matched, even when only the newest are shown', async () => {
+    const { text } = await callTool('list_trades', { type: 'dividend', limit: 1 });
+
+    expect(text).toContain('3 matching: 3 dividends paying 323.55. Showing the 1 most recent.');
+    expect(text.split('\n').filter((line: string) => line.startsWith('- '))).toHaveLength(1);
+  });
+
+  it('says so when nothing matches', async () => {
+    const { text } = await callTool('list_trades', { ticker: 'NOPE' });
+    expect(text).toBe('No trades match that.');
+  });
+});
+
 describe('get_portfolio', () => {
   it('says what each position is worth now, not just what it cost', async () => {
     const { text } = await callTool('get_portfolio');
@@ -180,6 +230,47 @@ describe('get_portfolio', () => {
     expect(text).toContain('2026-07-01: dividend VUSA.DEX, 18.40');
     expect(text).not.toContain('0 at 0.00');
     expect(text).toContain('2026-06-01: buy EXUS.DEX, 100 at 40.00');
+  });
+
+  it('keeps what sold positions earned, since selling out removes the holding', async () => {
+    api.listClosedPositions.mockResolvedValue([
+      {
+        ticker: 'ZPRR.DEX', displayName: 'SPDR Russell 2000', currency: 'EUR', baseCurrency: 'EUR',
+        firstTradeDate: '2023-07-14', closedDate: '2025-01-02', bought: 9978, proceeds: 12380,
+        realizedGain: 2402, dividends: 30, totalReturn: 2432, tradeCount: 3, missingFxRate: false
+      }
+    ] as never);
+
+    const { text } = await callTool('get_portfolio');
+
+    expect(text).toContain('Sold positions (held and sold out of):');
+    expect(text).toContain(
+      '- ZPRR.DEX (SPDR Russell 2000): held 2023-07-14 to 2025-01-02, bought for 9,978.00, sold for 12,380.00, ' +
+        'realised 2,402.00, dividends 30.00, made 2,432.00 in all'
+    );
+    // Held and sold positions together, so the total is the whole story.
+    expect(text).toContain('Gains realised by selling 2,402.00');
+    expect(text).toContain('from sold ones)');
+  });
+
+  it('shows no figures for a sold position whose currency has no rate', async () => {
+    api.listClosedPositions.mockResolvedValue([
+      { ticker: 'US.DEX', currency: 'USD', firstTradeDate: '2023-01-01', closedDate: '2023-06-01', missingFxRate: true }
+    ] as never);
+
+    const { text } = await callTool('get_portfolio');
+
+    expect(text).toContain('no exchange rate for USD, so no figures');
+  });
+
+  it('still answers when the service has no sold-positions endpoint yet', async () => {
+    api.listClosedPositions.mockRejectedValue(new TumbalandError('Not found', 404));
+
+    const { isError, text } = await callTool('get_portfolio');
+
+    expect(isError).toBe(false);
+    expect(text).toContain('Portfolio worth');
+    expect(text).not.toContain('Sold positions');
   });
 
   it('names the instrument, not only its ticker', async () => {

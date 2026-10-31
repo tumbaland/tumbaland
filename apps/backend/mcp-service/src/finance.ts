@@ -3,12 +3,14 @@ import { callService, serviceUrl } from './http';
 import { parseResponse } from './schemas';
 import {
   type Analytics,
+  type ClosedPosition,
   type Dashboard,
   type Holding,
   type Recurring,
   type Summary,
   type Trade,
   analyticsSchema,
+  closedPositionSchema,
   dashboardSchema,
   holdingSchema,
   recurringSchema,
@@ -105,6 +107,12 @@ export const finance = {
   listHoldings: async (apiKey: string, groupId?: string): Promise<Holding[]> => {
     const body = await call<unknown>(apiKey, 'GET', '/holdings', undefined, { groupId });
     return parseResponse(z.array(holdingSchema), '/holdings', body);
+  },
+
+  /** Positions bought and sold out entirely, with what they made. */
+  listClosedPositions: async (apiKey: string, groupId?: string): Promise<ClosedPosition[]> => {
+    const body = await call<unknown>(apiKey, 'GET', '/holdings/closed', undefined, { groupId });
+    return parseResponse(z.array(closedPositionSchema), '/holdings/closed', body);
   },
 
   listTrades: async (apiKey: string, groupId?: string): Promise<Trade[]> => {

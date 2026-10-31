@@ -256,6 +256,7 @@ const TickersTab: React.FC<TickersTabProps> = ({
                 <TableCell>Ticker</TableCell>
                 <TableCell>Name</TableCell>
                 <TableCell>Currency</TableCell>
+                <TableCell>ISIN</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Last fetch</TableCell>
                 <TableCell>Latest close</TableCell>
@@ -269,6 +270,7 @@ const TickersTab: React.FC<TickersTabProps> = ({
                   <TableCell sx={{ fontWeight: 600 }}>{t.ticker}</TableCell>
                   <TableCell>{t.displayName}</TableCell>
                   <TableCell>{t.currency || '—'}</TableCell>
+                  <TableCell sx={{ fontFamily: 'monospace' }}>{t.isin || '—'}</TableCell>
                   <TableCell>
                     <Chip size="small" label={t.isActive ? 'Active' : 'Paused'} color={t.isActive ? 'success' : 'default'} />
                   </TableCell>
@@ -318,7 +320,7 @@ const TickersTab: React.FC<TickersTabProps> = ({
               ))}
               {tickers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
+                  <TableCell colSpan={8} sx={{ textAlign: 'center', py: 6 }}>
                     <Typography variant="body1" sx={{ color: 'text.secondary' }}>
                       No tracked tickers — add a holding or track a ticker to start collecting prices.
                     </Typography>

@@ -27,6 +27,9 @@ const invalidateCashflow = (queryClient: ReturnType<typeof useQueryClient>) => {
   void queryClient.invalidateQueries({ queryKey: ['cashflowRecurring'] });
   void queryClient.invalidateQueries({ queryKey: ['transactionCategories'] });
   void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  // An import also records trades and dividends, which change the holdings and
+  // what sold positions earned.
+  void queryClient.invalidateQueries({ queryKey: ['holdings'] });
 };
 
 export const useImportStatement = () => {

@@ -254,6 +254,33 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /api/holdings/closed:
+    get:
+      summary: Positions that were bought and sold out entirely
+      description: >
+        Selling the last unit deletes a holding, so this is where what the position made
+        stays readable: realised gain, dividends received and the dates it was held.
+        Money fields are in the base currency and omitted when the instrument's currency
+        has no exchange rate yet (missingFxRate is then true).
+      tags: [Holdings]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: Closed positions, most recently sold first
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ClosedPosition'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /api/holdings/{id}:
     put:
       summary: Update holding
@@ -1610,6 +1637,23 @@ components:
           type: string
           format: date-time
 
+    ClosedPosition:
+      type: object
+      properties:
+        ticker: { type: string }
+        displayName: { type: string }
+        currency: { type: string }
+        baseCurrency: { type: string }
+        firstTradeDate: { type: string, format: date }
+        closedDate: { type: string, format: date }
+        bought: { type: number, description: Paid in buying including fees }
+        proceeds: { type: number, description: Received in selling after fees }
+        realizedGain: { type: number }
+        dividends: { type: number }
+        totalReturn: { type: number, description: Realised gain plus dividends }
+        fees: { type: number }
+        tradeCount: { type: integer }
+        missingFxRate: { type: boolean }
     Holding:
       type: object
       properties:
