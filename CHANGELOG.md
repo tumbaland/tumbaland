@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.557](https://github.com/tumbaland/tumbaland/compare/app-v0.0.556...app-v0.0.557) (2026-10-31)
+
+### Features
+
+* add sold positions ([d431c4a](https://github.com/tumbaland/tumbaland/commit/d431c4a9fe4b9d0ae8622b1a7833fd6e8676458e))
+
 ## [0.0.556](https://github.com/tumbaland/tumbaland/compare/app-v0.0.555...app-v0.0.556) (2026-10-31)
 
 ### Bug Fixes
