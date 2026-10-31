@@ -1,4 +1,14 @@
 # Tumbalog
+## [0.0.560](https://github.com/tumbaland/tumbaland/compare/app-v0.0.559...app-v0.0.560) (2026-10-31)
+
+### Features
+
+* measure connection times ([51aa320](https://github.com/tumbaland/tumbaland/commit/51aa32017586de90e2cbc4733998b81b069e25d2))
+
+### Chores
+
+* **release:** @tumbaland/backend-core 1.54.0 ([490e2ab](https://github.com/tumbaland/tumbaland/commit/490e2ab4ccb85c9fbb598a0852cb4cc253677872))
+
 ## [0.0.559](https://github.com/tumbaland/tumbaland/compare/app-v0.0.558...app-v0.0.559) (2026-10-31)
 
 ### Features
