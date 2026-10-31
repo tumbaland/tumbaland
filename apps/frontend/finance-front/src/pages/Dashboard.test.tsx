@@ -130,3 +130,42 @@ it('omits the holdings card when holdings is null', () => {
 
   expect(screen.queryByText(/Investments ·/)).not.toBeInTheDocument();
 });
+
+const withData = (over = {}) => ({
+  isLoading: false,
+  error: null,
+  data: {
+    netWorthHistory: [{ date: '2024-01-01', total: 1000, byClass: {} }],
+    kpis: {
+      netWorth: 1000, assets: 1000, liabilities: 0, asOf: '2024-01-01T00:00:00.000Z',
+      monthChange: 0, monthChangePct: 0, yearChange: 0, yearChangePct: 0, totalGain: 0, totalGainPct: 0
+    },
+    allocation: [],
+    assetColors: {},
+    holdings: null,
+    ...over
+  }
+});
+
+it('opens with the net worth, then how long the money would last', () => {
+  mockedUseDashboard.mockReturnValue(
+    withData({
+      safety: {
+        cash: 9000, market: 260000, locked: 97000, unsorted: 0,
+        monthlySpending: 2300, cashMonths: 3.9, reachableMonths: 117
+      }
+    })
+  );
+  renderPage();
+
+  expect(screen.getByText('Net worth · 2024-01')).toBeInTheDocument();
+  expect(screen.getByText('Safety net')).toBeInTheDocument();
+  expect(screen.getByText('3.9 months')).toBeInTheDocument();
+});
+
+it('leaves the safety card out when there is nothing to measure it from', () => {
+  mockedUseDashboard.mockReturnValue(withData({ safety: null }));
+  renderPage();
+
+  expect(screen.queryByText('Safety net')).not.toBeInTheDocument();
+});

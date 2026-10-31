@@ -38,9 +38,9 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
   const theme = useTheme();
   const { colorScheme } = useColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [timePeriod, setTimePeriod] = useState<string>('2');
+  const [timePeriod, setTimePeriod] = useState<string>('5');
   const [useLogScale, setUseLogScale] = useState<boolean>(false);
-  const chartHeight = isMobile ? 260 : 350;
+  const chartHeight = isMobile ? 260 : 430;
 
   // Filter records based on selected time period
   const filteredRecords = React.useMemo(() => {

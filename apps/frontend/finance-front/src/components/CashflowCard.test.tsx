@@ -56,6 +56,38 @@ it('shows income, spending, kept and the rate', () => {
   expect(screen.getByText('+60.0%')).toBeInTheDocument();
 });
 
+it('splits income into salary, what the assets paid and other', () => {
+  renderCard({
+    ...base,
+    trailing: totals({ income: 40000, incomeBy: { salary: 37000, dividends: 1200, interest: 60, other: 1740 } })
+  });
+
+  expect(screen.getByText('Salary')).toBeInTheDocument();
+  expect(screen.getByText('37 000 €')).toBeInTheDocument();
+  expect(screen.getByText('From assets')).toBeInTheDocument();
+  // dividends and interest together
+  expect(screen.getByText('1260 €')).toBeInTheDocument();
+  expect(screen.getByText('Other')).toBeInTheDocument();
+  expect(screen.getByText('1740 €')).toBeInTheDocument();
+});
+
+it('leaves out the other line when nothing else came in', () => {
+  renderCard({
+    ...base,
+    trailing: totals({ income: 40000, incomeBy: { salary: 39000, dividends: 1000, interest: 0, other: 0 } })
+  });
+
+  expect(screen.getByText('From assets')).toBeInTheDocument();
+  expect(screen.queryByText('Other')).not.toBeInTheDocument();
+});
+
+it('shows no split against a service that does not send one', () => {
+  renderCard();
+
+  expect(screen.queryByText('Salary')).not.toBeInTheDocument();
+  expect(screen.queryByText('From assets')).not.toBeInTheDocument();
+});
+
 it('compares what was kept against the prior year', () => {
   // 16 000 → 24 000
   renderCard();
@@ -87,6 +119,22 @@ it('splits the net-worth change into contributions and market movement', () => {
   expect(screen.getByText(/Net worth moved 2000 € from Jul 2026 to Aug 2026/)).toBeInTheDocument();
   expect(screen.getByText('You contributed')).toBeInTheDocument();
   expect(screen.getByText('+500 €')).toBeInTheDocument();
+});
+
+it('gives the market a colour of its own instead of leaving it as the empty part of the bar', () => {
+  renderCard();
+
+  // The track behind the contributed share is the market's share: indigo
+  expect(getComputedStyle(screen.getByRole('progressbar')).backgroundColor).toBe('rgb(102, 126, 234)');
+});
+
+it('shows a market loss in red', () => {
+  renderCard({
+    ...base,
+    growth: { from: '2026-07', to: '2026-08', netWorthChange: 1000, contributions: 1500, marketGrowth: -500, complete: true }
+  } as Cashflow);
+
+  expect(getComputedStyle(screen.getByRole('progressbar')).backgroundColor).toBe('rgb(239, 68, 68)');
 });
 
 it('shows no split at all when the server withheld one', () => {

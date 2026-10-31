@@ -12,7 +12,7 @@ import {
   ToggleButtonGroup
 } from '@mui/material';
 import { TrendingUp, CreditCard } from '@mui/icons-material';
-import { AssetClassKind } from '../types';
+import { AssetClassKind, AssetClassLiquidity } from '../types';
 import { GroupSelector } from '@tumbaland/frontend-core';
 import { getUserGroups } from '../services/groupService';
 
@@ -34,6 +34,7 @@ export interface AssetClassFormValues {
   description: string;
   color: string;
   kind: AssetClassKind;
+  liquidity?: AssetClassLiquidity;
   groupId?: string;
 }
 
@@ -113,6 +114,37 @@ const AssetClassModal: React.FC<{
             : 'Adds to net worth.'}
         </Typography>
       </Box>
+
+      {form.kind !== 'liability' && (
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            How easily can you reach it?
+          </Typography>
+          <ToggleButtonGroup
+            exclusive
+            fullWidth
+            size="small"
+            aria-label="How easily can you reach it?"
+            value={form.liquidity ?? null}
+            onChange={(_, liquidity: AssetClassLiquidity | null) =>
+              liquidity && setForm((f) => ({ ...f, liquidity }))
+            }
+          >
+            <ToggleButton value="cash">Cash</ToggleButton>
+            <ToggleButton value="market">Sellable</ToggleButton>
+            <ToggleButton value="locked">Locked</ToggleButton>
+          </ToggleButtonGroup>
+          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
+            {form.liquidity === 'cash'
+              ? 'Spendable now. This is what covers a gap in income.'
+              : form.liquidity === 'market'
+                ? 'Funds and shares you could sell within days.'
+                : form.liquidity === 'locked'
+                  ? 'Takes years or a penalty to reach: pensions, property.'
+                  : 'Not set yet. The dashboard uses this to show how long your money would last.'}
+          </Typography>
+        </Box>
+      )}
 
       <Box sx={{ mt: 2 }}>
         <Typography variant="subtitle2" sx={{ mb: 1 }}>

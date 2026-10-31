@@ -198,6 +198,15 @@ export function findOwnAccounts(
 export const INVESTMENT_CATEGORIES = new Set(['Investments', 'Savings', 'Pension']);
 
 /**
+ * Income the money itself earns, as opposed to what is earned by working:
+ * payouts from funds and interest on deposits. Kept apart so the dashboard can
+ * say how much of what comes in no longer depends on a salary.
+ */
+export const DIVIDEND_CATEGORY = 'Dividends';
+export const ASSET_INCOME_CATEGORIES = new Set([DIVIDEND_CATEGORY, 'Interest']);
+export const SALARY_CATEGORY = 'Salary';
+
+/**
  * Everything kept out of the income figure: capital returning is the same money
  * coming back, not earnings.
  */
@@ -332,7 +341,7 @@ export type RowKind = 'cashflow' | 'transfer' | 'security' | 'dividend' | 'pensi
  *
  *   transfer  — between the owner's own accounts; neutral, never imported
  *   security  — a buy or sell settlement; belongs in the trade log
- *   dividend  — fund income; belongs in the trade log
+ *   dividend  — fund income; income here and an event in the trade log
  *   pension   — buys a fund unit, so an asset purchase rather than spending
  *   cashflow  — ordinary income or expense
  */
@@ -351,7 +360,10 @@ export function classifyRow(
   if (ownAccounts.has(row.counterpartyAccount) || isOwner?.(row.counterparty)) {
     return { kind: 'transfer' };
   }
-  if (DIVIDEND.test(row.description)) return { kind: 'dividend' };
+  // A payout is income as well as a trade-log event: the money really did land
+  // in the account, and leaving it out of the cash flow understated both income
+  // and what was kept. The trade importer reads the same row for the position.
+  if (DIVIDEND.test(row.description)) return { kind: 'dividend', category: DIVIDEND_CATEGORY };
 
   // A securities settlement and a pension contribution are cash movements as
   // well as position changes: the money really did leave the account, and

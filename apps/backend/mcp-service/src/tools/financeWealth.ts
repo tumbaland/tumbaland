@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { finance } from '../finance';
 import { Caller, dateSchema, explain, journalSchema, ok, tenantFor } from './module';
-import { describeGrowth, describePeriod, describeTrade, money, moved, total } from './financeFormat';
+import { describeGrowth, describePeriod, describeTrade, money, monthsOf, moved, total } from './financeFormat';
 
 /** What everything is worth: net worth, allocation, and the investment positions. */
 export function registerWealthTools(server: McpServer, caller: Caller): void {
@@ -72,6 +72,35 @@ export function registerWealthTools(server: McpServer, caller: Caller): void {
                 ? ` ${holdings.unconverted} left out of the totals for want of an exchange rate.`
                 : '')
           );
+          if (holdings.dividends || holdings.realizedGain) {
+            lines.push(
+              `Dividends received ${money(holdings.dividends ?? 0)} and gains realised by selling ` +
+                `${money(holdings.realizedGain ?? 0)}, counting positions since sold.`
+            );
+          }
+        }
+
+        const safety = dashboard.safety;
+        if (safety && (safety.cash ?? 0) + (safety.market ?? 0) + (safety.locked ?? 0) > 0) {
+          const parts = [
+            `cash ${total(safety.cash ?? 0)}`,
+            `sellable within days ${total(safety.market ?? 0)}`,
+            `locked ${total(safety.locked ?? 0)}`
+          ];
+          if (safety.unsorted) parts.push(`not yet sorted ${total(safety.unsorted)}`);
+          lines.push('', `How reachable it is: ${parts.join(', ')}.`);
+
+          // Against what was consumed over the year, so buying funds is not
+          // counted as spending it, and before the tax a sale would cost.
+          if (safety.cashMonths !== null && safety.cashMonths !== undefined && safety.monthlySpending) {
+            lines.push(
+              `Cash covers ${monthsOf(safety.cashMonths)} of spending, at ${total(safety.monthlySpending)} a month` +
+                (safety.reachableMonths
+                  ? `; with what could be sold as well, ${monthsOf(safety.reachableMonths)}, before tax`
+                  : '') +
+                '.'
+            );
+          }
         }
 
         const cashflow = dashboard.cashflow;

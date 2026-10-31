@@ -284,6 +284,62 @@ describe('income sources', () => {
   });
 });
 
+describe('where income came from', () => {
+  beforeEach(() => jest.useFakeTimers().setSystemTime(new Date('2026-08-07T10:00:00Z')));
+  afterEach(() => jest.useRealTimers());
+
+  const lastYear = (category: string, perMonth: number) =>
+    // Aug 2025 to Jul 2026: the twelve complete months before the one in progress
+    Array.from({ length: 12 }, (_, i) => {
+      const month = ((7 + i) % 12) + 1;
+      return row(month >= 8 ? 2025 : 2026, month, category, 'income', perMonth);
+    });
+
+  it('splits the year into salary, what the money paid, and everything else', async () => {
+    withRows(
+      ...lastYear('Salary', 4000),
+      ...lastYear('Dividends', 100),
+      ...lastYear('Interest', 5),
+      ...lastYear('Tax refund', 50)
+    );
+
+    const { trailing } = await getAnalytics('u1');
+
+    expect(trailing.current.incomeBy).toEqual({ salary: 48000, dividends: 1200, interest: 60, other: 600 });
+  });
+
+  it('adds up to the income the same window reports', async () => {
+    withRows(...lastYear('Salary', 4000), ...lastYear('Dividends', 100), ...lastYear('Refund', 20));
+
+    const { trailing } = await getAnalytics('u1');
+    const { salary, dividends, interest, other } = trailing.current.incomeBy!;
+
+    expect(salary + dividends + interest + other).toBe(trailing.current.income);
+  });
+
+  it('leaves capital coming back out, since a sale is not earnings', async () => {
+    withRows(...lastYear('Salary', 4000), ...lastYear('Investments', 1000));
+
+    const { trailing } = await getAnalytics('u1');
+
+    expect(trailing.current.incomeBy).toEqual({ salary: 48000, dividends: 0, interest: 0, other: 0 });
+  });
+
+  it('is worked out for the year before as well, so the two can be compared', async () => {
+    withRows(
+      ...lastYear('Dividends', 100),
+      ...Array.from({ length: 12 }, (_, i) =>
+        row(i + 1 >= 8 ? 2024 : 2025, i + 1, 'Dividends', 'income', 50)
+      )
+    );
+
+    const { trailing } = await getAnalytics('u1');
+
+    expect(trailing.current.incomeBy!.dividends).toBe(1200);
+    expect(trailing.previous!.incomeBy!.dividends).toBe(600);
+  });
+});
+
 describe('month series', () => {
   it('pairs income and expense per month', async () => {
     withRows(row(2026, 3, 'Salary', 'income', 3000), row(2026, 3, 'Groceries', 'expense', 1200));

@@ -126,6 +126,29 @@ it('switches the class between asset and liability', async () => {
   expect(results.at(-1)?.kind).toBe('liability');
 });
 
+it('lets an asset class be marked as cash, sellable or locked', async () => {
+  const { results } = renderModal();
+
+  await userEvent.click(screen.getByRole('button', { name: 'Locked' }));
+
+  expect(results.at(-1)?.liquidity).toBe('locked');
+});
+
+it('says what the chosen reachability means, and what an unset one is for', () => {
+  renderModal({ form: { liquidity: 'cash' } });
+  expect(screen.getByText(/spendable now/i)).toBeInTheDocument();
+});
+
+it('explains why to set it when it has not been', () => {
+  renderModal();
+  expect(screen.getByText(/how long your money would last/i)).toBeInTheDocument();
+});
+
+it('does not ask how reachable a debt is', () => {
+  renderModal({ form: { kind: 'liability' } });
+  expect(screen.queryByText('How easily can you reach it?')).not.toBeInTheDocument();
+});
+
 it('explains what a liability does to net worth', () => {
   renderModal({ form: { kind: 'liability' } });
 

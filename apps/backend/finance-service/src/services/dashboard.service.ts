@@ -1,6 +1,7 @@
 import Snapshot, { ISnapshot } from '../models/Snapshot';
-import AssetClass, { AssetClassKind } from '../models/AssetClass';
+import AssetClass, { AssetClassKind, AssetClassLiquidity } from '../models/AssetClass';
 import { getAllHoldings } from './holding.service';
+import { getClosedPositions } from './closedPosition.service';
 import { BASE_CURRENCY } from './fxRate.service';
 import { getCashflowSummary, GrowthBreakdown } from './cashflow.service';
 import { getAnalytics, PeriodTotals } from './analytics.service';
@@ -39,6 +40,8 @@ export interface DashboardData {
     assetClassId: string;
     name: string;
     color: string;
+    /** How reachable it is; absent on classes that have not been sorted yet. */
+    liquidity?: AssetClassLiquidity;
     value: number;
     gain: number;
     percentage: number;
@@ -65,12 +68,35 @@ export interface DashboardData {
     previous: PeriodTotals | null;
     growth: GrowthBreakdown | null;
   } | null;
+  /**
+   * Can the money be reached, and for how long would it last. Null until there
+   * is a check-in to read it from.
+   *
+   * Spending is what was consumed over the trailing year, so buying funds does
+   * not count as spending it. Runway is in months of that spending, before any
+   * tax a sale would cost.
+   */
+  safety: {
+    cash: number;
+    market: number;
+    locked: number;
+    /** Assets in classes not yet marked as cash, market or locked. */
+    unsorted: number;
+    monthlySpending: number | null;
+    cashMonths: number | null;
+    /** Cash plus what can be sold within days. */
+    reachableMonths: number | null;
+  } | null;
   holdings: {
     count: number;
     totalValue: number;
     totalCost: number;
     gain: number;
     gainPct: number;
+    /** Dividends received, from positions held and from ones since sold. */
+    dividends: number;
+    /** Gains crystallised by selling, held and sold positions together. */
+    realizedGain: number;
     /** Holdings left out of the totals because no FX rate was available. */
     unconverted: number;
   } | null;
@@ -80,6 +106,7 @@ interface ClassMeta {
   name: string;
   color: string;
   kind: AssetClassKind;
+  liquidity?: AssetClassLiquidity;
 }
 
 const UNKNOWN_CLASS: ClassMeta = { name: 'Unknown', color: '#667eea', kind: 'asset' };
@@ -102,7 +129,7 @@ export const getDashboardData = async (userId: string, groupId?: string): Promis
   const classMap = new Map<string, ClassMeta>(
     assetClasses.map((ac) => [
       String(ac._id),
-      { name: ac.name, color: ac.color || '#667eea', kind: ac.kind || 'asset' }
+      { name: ac.name, color: ac.color || '#667eea', kind: ac.kind || 'asset', liquidity: ac.liquidity }
     ])
   );
   const classOf = (id: string): ClassMeta => classMap.get(id) || UNKNOWN_CLASS;
@@ -194,11 +221,12 @@ export const getDashboardData = async (userId: string, groupId?: string): Promis
 
     allocation = entriesOfKind('asset')
       .map((e) => {
-        const { name, color } = classOf(e.assetClassId);
+        const { name, color, liquidity } = classOf(e.assetClassId);
         return {
           assetClassId: e.assetClassId,
           name,
           color,
+          ...(liquidity ? { liquidity } : {}),
           value: e.value,
           gain: e.gain,
           // Share of gross assets: a share of net worth would exceed 100% as
@@ -218,7 +246,11 @@ export const getDashboardData = async (userId: string, groupId?: string): Promis
 
   // Live holdings summary (ETF/stock positions with latest prices), already
   // converted to the base currency by the holding service.
-  const holdingsList = await getAllHoldings(userId, groupId ? [groupId] : []);
+  const [holdingsList, closedPositions, cashflow] = await Promise.all([
+    getAllHoldings(userId, groupId ? [groupId] : []),
+    getClosedPositions(userId, groupId ? [groupId] : []),
+    getCashflowKpis(userId, groupId)
+  ]);
   let holdings: DashboardData['holdings'] = null;
   if (holdingsList.length > 0) {
     const convertible = holdingsList.filter((h) => !h.missingFxRate);
@@ -226,12 +258,21 @@ export const getDashboardData = async (userId: string, groupId?: string): Promis
     const totalValue = priced.reduce((sum, h) => sum + (h.currentValue || 0), 0);
     const totalCost = convertible.reduce((sum, h) => sum + (h.costBasis || 0), 0);
     const gain = priced.reduce((sum, h) => sum + (h.valueIncrease || 0), 0);
+    // What positions earned beyond their price: income and realised gains,
+    // counting those since sold out of, whose holdings no longer exist.
+    const sold = closedPositions.filter((p) => !p.missingFxRate);
     holdings = {
       count: holdingsList.length,
       totalValue,
       totalCost,
       gain,
       gainPct: totalCost > 0 ? (gain / totalCost) * 100 : 0,
+      dividends:
+        convertible.reduce((sum, h) => sum + (h.dividends || 0), 0) +
+        sold.reduce((sum, p) => sum + (p.dividends || 0), 0),
+      realizedGain:
+        convertible.reduce((sum, h) => sum + (h.realizedGain || 0), 0) +
+        sold.reduce((sum, p) => sum + (p.realizedGain || 0), 0),
       unconverted: holdingsList.length - convertible.length
     };
   }
@@ -243,8 +284,9 @@ export const getDashboardData = async (userId: string, groupId?: string): Promis
     liabilities,
     assetColors,
     currency: BASE_CURRENCY,
+    safety: latest ? getSafety(allocation, cashflow) : null,
     holdings,
-    cashflow: await getCashflowKpis(userId, groupId)
+    cashflow
   };
 };
 
@@ -263,8 +305,44 @@ async function getCashflowKpis(userId: string, groupId?: string): Promise<Dashbo
   return {
     trailing: analytics.trailing.current,
     previous: analytics.trailing.previous,
-    // Only when it can actually be explained; the UI has nothing useful to say
-    // about a split covering a month with no transactions.
-    growth: summary.growth?.complete ? summary.growth : null
+    // The past year, which is what the headline figures are on and what is worth
+    // judging: a single month of market movement is noise, and a month of
+    // contributions is whatever the salary date landed on. Falls back to the
+    // month while there is not yet a year of check-ins. Only when it can actually
+    // be explained; the UI has nothing useful to say about a split covering a
+    // month with no transactions.
+    growth: summary.growthTrailing?.complete
+      ? summary.growthTrailing
+      : summary.growth?.complete
+        ? summary.growth
+        : null
+  };
+}
+
+/**
+ * How much of the money can be reached, and how many months of spending the
+ * reachable part covers.
+ */
+function getSafety(
+  allocation: DashboardData['allocation'],
+  cashflow: DashboardData['cashflow']
+): NonNullable<DashboardData['safety']> {
+  const sum = (liquidity: AssetClassLiquidity | undefined) =>
+    allocation.filter((a) => a.liquidity === liquidity).reduce((total, a) => total + a.value, 0);
+
+  const cash = sum('cash');
+  const market = sum('market');
+  const trailing = cashflow?.trailing;
+  const monthlySpending = trailing && trailing.months > 0 ? trailing.consumption / trailing.months : null;
+  const monthsOf = (amount: number) => (monthlySpending && monthlySpending > 0 ? amount / monthlySpending : null);
+
+  return {
+    cash,
+    market,
+    locked: sum('locked'),
+    unsorted: sum(undefined),
+    monthlySpending,
+    cashMonths: monthsOf(cash),
+    reachableMonths: monthsOf(cash + market)
   };
 }

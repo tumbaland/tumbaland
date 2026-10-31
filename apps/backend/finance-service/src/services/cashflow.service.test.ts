@@ -40,10 +40,10 @@ const thisMonth = () => new Date().toISOString().slice(0, 7);
 const dayIn = (month: string) => `${month}-05T00:00:00.000Z`;
 
 /** One row of the by-month savings aggregation the trailing split runs. */
-const savedIn = (month: string, income: number, expense: number) => ({
+const savedIn = (month: string, earned: number, consumed: number) => ({
   _id: month,
-  income,
-  expense
+  earned,
+  consumed
 });
 
 beforeEach(() => {
@@ -74,6 +74,36 @@ describe('getCashflowSummary', () => {
     expect(summary.months).toHaveLength(1);
     expect(summary.months[0]).toMatchObject({ month, income: 3000, expense: 1500, savings: 1500 });
     expect(summary.months[0].savingsRate).toBeCloseTo(50, 6);
+  });
+
+  it('counts money moved into an asset as kept, not as spent', async () => {
+    const month = thisMonth();
+    mockedTransactionFind.mockReturnValue(
+      sorted([
+        income(dayIn(month), 5000),
+        expense(dayIn(month), 2000),
+        expense(dayIn(month), 4000, 'Investments'),
+        expense(dayIn(month), 600, 'Pension')
+      ])
+    );
+
+    const summary = await getCashflowSummary('u1');
+
+    // The flows still say what left the account; the savings say what was kept.
+    expect(summary.months[0]).toMatchObject({ income: 5000, expense: 6600, savings: 3000 });
+    expect(summary.months[0].savingsRate).toBeCloseTo(60, 6);
+  });
+
+  it('does not count an asset sold as earnings', async () => {
+    const month = thisMonth();
+    mockedTransactionFind.mockReturnValue(
+      sorted([income(dayIn(month), 5000), income(dayIn(month), 12_000, 'Investments'), expense(dayIn(month), 2000)])
+    );
+
+    const summary = await getCashflowSummary('u1');
+
+    expect(summary.months[0]).toMatchObject({ income: 17_000, savings: 3000 });
+    expect(summary.months[0].savingsRate).toBeCloseTo(60, 6);
   });
 
   it('reports the savings rate as unknown when nothing came in', async () => {
@@ -270,6 +300,22 @@ describe('trailing growth breakdown', () => {
       marketGrowth: 18_000,
       complete: true
     });
+  });
+
+  it('leaves money moved into assets out of the contributions, which would hand it to the market', async () => {
+    mockedSnapshotFind.mockReturnValue(
+      history(checkIn(monthsAgo(0), 60_000), checkIn(monthsAgo(12), 30_000))
+    );
+
+    await getCashflowSummary('u1');
+
+    const [, group] = mockedTransactionAggregate.mock.calls[0][0];
+    const json = JSON.stringify(group.$group);
+    // Both sides are filtered on the capital categories the analytics use.
+    expect(json).toContain('Investments');
+    expect(json).toContain('Savings');
+    expect(json).toContain('Pension');
+    expect(Object.keys(group.$group)).toEqual(['_id', 'earned', 'consumed']);
   });
 
   it('reads the contributions from the span itself, not from the summary window', async () => {

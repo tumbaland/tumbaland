@@ -2,14 +2,20 @@ import Transaction from '../models/Transaction';
 import Snapshot, { ISnapshot } from '../models/Snapshot';
 import AssetClass from '../models/AssetClass';
 import { scopeFor } from '../utils/scope';
+import { INVESTMENT_CATEGORIES, NON_EARNING_CATEGORIES } from './bankStatement.service';
 
 export interface MonthSummary {
   month: string; // YYYY-MM
   income: number;
   expense: number;
-  /** income − expense: what was actually put aside that month. */
+  /**
+   * What was actually kept: earned income less what was consumed. Money moved
+   * into an asset counts as kept, not as spent, and an asset sold or a deposit
+   * maturing is not earnings — the same definition the analytics use, so a
+   * month of buying funds does not read as a month of losing money.
+   */
   savings: number;
-  /** Savings as a share of income. Null when nothing came in to save from. */
+  /** Savings as a share of earned income. Null when nothing was earned to save from. */
   savingsRate: number | null;
 }
 
@@ -22,6 +28,11 @@ export interface CategorySummary {
 /**
  * Why net worth moved: the part explained by money put aside, and the part left
  * over, which is market movement (and anything not captured as a transaction).
+ *
+ * "Put aside" is earned income less consumption. Buying a fund moves cash into
+ * an asset and changes net worth by nothing, so it is neither spending nor a
+ * contribution; counting it as spending made every purchase read as a loss of
+ * savings and handed the same amount to "market growth".
  */
 export interface GrowthBreakdown {
   from: string; // YYYY-MM
@@ -81,14 +92,29 @@ function monthsBetween(from: Date, to: Date): string[] {
   return Array.from({ length: span }, (_, i) => monthKey(shiftMonths(to, span - i)));
 }
 
-function summarize(month: string, income: number, expense: number): MonthSummary {
+/** Earned income and consumption: what is left once money moving into or out of assets is set aside. */
+interface Flows {
+  income: number;
+  expense: number;
+  earned: number;
+  consumed: number;
+}
+
+const flowOf = (type: string, category: string, amount: number): Flows => ({
+  income: type === 'income' ? amount : 0,
+  expense: type === 'income' ? 0 : amount,
+  earned: type === 'income' && !NON_EARNING_CATEGORIES.has(category) ? amount : 0,
+  consumed: type !== 'income' && !INVESTMENT_CATEGORIES.has(category) ? amount : 0
+});
+
+function summarize(month: string, { income, expense, earned, consumed }: Flows): MonthSummary {
   return {
     month,
     income,
     expense,
-    savings: income - expense,
+    savings: earned - consumed,
     // A rate against zero income is not 0% or 100%, it is undefined.
-    savingsRate: income > 0 ? ((income - expense) / income) * 100 : null
+    savingsRate: earned > 0 ? ((earned - consumed) / earned) * 100 : null
   };
 }
 
@@ -111,32 +137,35 @@ export const getCashflowSummary = async (
 
   const transactions = await Transaction.find({ ...scope, date: { $gte: from } }).sort({ date: 1 });
 
-  const byMonth = new Map<string, { income: number; expense: number }>();
+  const empty = (): Flows => ({ income: 0, expense: 0, earned: 0, consumed: 0 });
+  const add = (into: Flows, from: Flows) => {
+    into.income += from.income;
+    into.expense += from.expense;
+    into.earned += from.earned;
+    into.consumed += from.consumed;
+  };
+
+  const byMonth = new Map<string, Flows>();
   const byCategory = new Map<string, number>();
-  let income = 0;
-  let expense = 0;
+  const all = empty();
 
   for (const transaction of transactions) {
     const key = monthKey(transaction.date);
-    const bucket = byMonth.get(key) || { income: 0, expense: 0 };
+    const flow = flowOf(transaction.type, transaction.category, transaction.amount);
+    const bucket = byMonth.get(key) || empty();
 
-    if (transaction.type === 'income') {
-      bucket.income += transaction.amount;
-      income += transaction.amount;
-    } else {
-      bucket.expense += transaction.amount;
-      expense += transaction.amount;
+    add(bucket, flow);
+    add(all, flow);
+    byMonth.set(key, bucket);
+
+    if (transaction.type !== 'income') {
       byCategory.set(transaction.category, (byCategory.get(transaction.category) || 0) + transaction.amount);
     }
-
-    byMonth.set(key, bucket);
   }
 
   const monthSummaries = [...byMonth.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, { income: monthIncome, expense: monthExpense }]) =>
-      summarize(month, monthIncome, monthExpense)
-    );
+    .map(([month, flows]) => summarize(month, flows));
 
   // A monthly average over the months that actually have data — not the whole
   // window — is what makes categories comparable across periods.
@@ -151,7 +180,7 @@ export const getCashflowSummary = async (
   return {
     months: monthSummaries,
     categories,
-    totals: summarize('all', income, expense),
+    totals: summarize('all', all),
     growth: growth.monthly,
     growthTrailing: growth.trailing
   };
@@ -173,18 +202,29 @@ const savingsByMonth = async (
   from: Date,
   to: Date
 ): Promise<Map<string, number>> => {
-  const rows: Array<{ _id: string; income: number; expense: number }> = await Transaction.aggregate([
+  const isIncome = { $eq: ['$type', 'income'] };
+  // Months are grouped from every row, so a month with nothing but money moved
+  // into assets still counts as covered; only what is earned and consumed is summed.
+  const rows: Array<{ _id: string; earned: number; consumed: number }> = await Transaction.aggregate([
     { $match: { ...scope, date: { $gte: from, $lt: to } } },
     {
       $group: {
         _id: { $dateToString: { format: '%Y-%m', date: '$date', timezone: 'UTC' } },
-        income: { $sum: { $cond: [{ $eq: ['$type', 'income'] }, '$amount', 0] } },
-        expense: { $sum: { $cond: [{ $eq: ['$type', 'income'] }, 0, '$amount'] } }
+        earned: {
+          $sum: {
+            $cond: [{ $and: [isIncome, { $not: [{ $in: ['$category', [...NON_EARNING_CATEGORIES]] }] }] }, '$amount', 0]
+          }
+        },
+        consumed: {
+          $sum: {
+            $cond: [{ $and: [{ $not: [isIncome] }, { $not: [{ $in: ['$category', [...INVESTMENT_CATEGORIES]] }] }] }, '$amount', 0]
+          }
+        }
       }
     }
   ]);
 
-  return new Map(rows.map((row) => [row._id, row.income - row.expense]));
+  return new Map(rows.map((row) => [row._id, row.earned - row.consumed]));
 };
 
 /**

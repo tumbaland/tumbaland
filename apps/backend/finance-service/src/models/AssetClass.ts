@@ -3,6 +3,16 @@ import { auditPlugin } from '@tumbaland/backend-core';
 
 export type AssetClassKind = 'asset' | 'liability';
 
+/**
+ * How reachable the money in a class is:
+ *   cash    — spendable now, what a gap in income is covered from
+ *   market  — can be sold within days, at whatever the market pays that week
+ *   locked  — takes years or a penalty to reach: pensions, property
+ * Unset on classes created before the field existed, which are shown as
+ * unsorted rather than guessed at from their names.
+ */
+export type AssetClassLiquidity = 'cash' | 'market' | 'locked';
+
 export interface IAssetClass extends Document {
   name: string;
   description?: string;
@@ -14,6 +24,7 @@ export interface IAssetClass extends Document {
    * keeps the allocation breakdown and the percentage bars meaningful.
    */
   kind: AssetClassKind;
+  liquidity?: AssetClassLiquidity;
   userId: string; // User ID who created the asset class
   groupId?: string; // Optional group association
   createdAt: Date;
@@ -35,6 +46,10 @@ const AssetClassSchema: Schema = new Schema({
     enum: ['asset', 'liability'],
     default: 'asset',
     required: true
+  },
+  liquidity: {
+    type: String,
+    enum: ['cash', 'market', 'locked']
   },
   color: {
     type: String,

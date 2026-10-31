@@ -20,6 +20,12 @@ export interface AuthResponse {
 // Asset Class types
 export type AssetClassKind = 'asset' | 'liability';
 
+/**
+ * How reachable the money in a class is: `cash` is spendable now, `market` can
+ * be sold within days, `locked` takes years or a penalty (pensions, property).
+ */
+export type AssetClassLiquidity = 'cash' | 'market' | 'locked';
+
 export interface AssetClass {
   _id: string;
   name: string;
@@ -31,6 +37,8 @@ export interface AssetClass {
    * stored — treat a missing kind as 'asset'.
    */
   kind?: AssetClassKind;
+  /** Unset on classes not yet sorted; the dashboard shows those as unsorted. */
+  liquidity?: AssetClassLiquidity;
   userId: string;
   groupId?: string;
   createdAt: string;

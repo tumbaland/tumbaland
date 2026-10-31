@@ -34,6 +34,10 @@ export const describeTrade = (trade: Trade): string => {
   return `- ${trade.date.slice(0, 10)}: ${trade.type} ${trade.ticker}, ${size}  [id ${trade._id}]`;
 };
 
+/** Months as months up to two years, then as years: "3.9 months", "9.8 years". */
+export const monthsOf = (months: number): string =>
+  months < 24 ? `${months.toFixed(1)} months` : `${(months / 12).toFixed(1)} years`;
+
 /** A percentage with its sign, or nothing when there was no base to compare against. */
 export const signed = (value: number | null | undefined): string =>
   value === null || value === undefined ? '' : `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
@@ -62,8 +66,15 @@ export const describePeriod = (period: PeriodTotals): string => {
   const rate = period.savingsRate === null || period.savingsRate === undefined
     ? ''
     : ` (${period.savingsRate.toFixed(0)}% of income)`;
+  // Salary against what the money itself paid: the part that carries on when
+  // the salary stops is the one worth knowing.
+  const by = period.incomeBy;
+  const sources = by
+    ? ` (salary ${total(by.salary)}, from assets ${total(by.dividends + by.interest)}` +
+      `${by.other > 0.5 ? `, other ${total(by.other)}` : ''})`
+    : '';
   return (
-    `${window}: income ${total(period.income)}, out ${total(period.expense)} — ` +
+    `${window}: income ${total(period.income)}${sources}, out ${total(period.expense)} — ` +
     `${total(period.consumption)} consumed, ${total(period.invested)} into assets. ` +
     `Saved ${total(period.savings)}${rate}.`
   );

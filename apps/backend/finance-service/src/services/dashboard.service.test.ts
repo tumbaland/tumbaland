@@ -16,12 +16,14 @@ jest.mock('./fxRate.service', () => ({
   BASE_CURRENCY: 'EUR'
 }));
 
+jest.mock('./closedPosition.service', () => ({ getClosedPositions: jest.fn() }));
 jest.mock('./cashflow.service', () => ({ getCashflowSummary: jest.fn() }));
 jest.mock('./analytics.service', () => ({ getAnalytics: jest.fn() }));
 
 import Snapshot from '../models/Snapshot';
 import AssetClass from '../models/AssetClass';
 import { getAllHoldings } from './holding.service';
+import { getClosedPositions } from './closedPosition.service';
 import { getCashflowSummary } from './cashflow.service';
 import { getAnalytics } from './analytics.service';
 import { getDashboardData } from './dashboard.service';
@@ -29,6 +31,7 @@ import { getDashboardData } from './dashboard.service';
 const mockedSnapshotFind = Snapshot.find as unknown as jest.Mock;
 const mockedAssetClassFind = AssetClass.find as unknown as jest.Mock;
 const mockedGetAllHoldings = getAllHoldings as unknown as jest.Mock;
+const mockedClosed = getClosedPositions as unknown as jest.Mock;
 const mockedCashflow = getCashflowSummary as unknown as jest.Mock;
 const mockedAnalytics = getAnalytics as unknown as jest.Mock;
 
@@ -52,6 +55,7 @@ describe('getDashboardData', () => {
   beforeEach(() => {
     mockedAssetClassFind.mockResolvedValue(assetClasses);
     mockedGetAllHoldings.mockResolvedValue([]);
+    mockedClosed.mockResolvedValue([]);
     mockedCashflow.mockResolvedValue({ months: [], categories: [], totals: {}, growth: null });
     mockedAnalytics.mockResolvedValue({ months: [], trailing: { current: {}, previous: null } });
   });
@@ -73,6 +77,7 @@ describe('getDashboardData', () => {
     expect(result.currency).toBe('EUR');
     expect(result.holdings).toBeNull();
     expect(result.cashflow).toBeNull();
+    expect(result.safety).toBeNull();
   });
 
   it('computes month, year, and total-gain KPIs across snapshots', async () => {
@@ -236,6 +241,23 @@ describe('getDashboardData', () => {
     expect(holdings!.unconverted).toBe(0);
   });
 
+  it('counts dividends and realised gains from positions since sold out of', async () => {
+    mockSnapshots([]);
+    mockedGetAllHoldings.mockResolvedValue([
+      { currentValue: 500, valueIncrease: 100, costBasis: 400, dividends: 40, realizedGain: 5 }
+    ]);
+    mockedClosed.mockResolvedValue([
+      { ticker: 'VGWD', dividends: 176.36, realizedGain: 25, missingFxRate: false },
+      { ticker: 'ZPRR', dividends: 0, realizedGain: 2402, missingFxRate: false },
+      { ticker: 'US', dividends: 9, realizedGain: 9, missingFxRate: true } // no rate: left out
+    ]);
+
+    const { holdings } = await getDashboardData('user-1');
+
+    expect(holdings!.dividends).toBeCloseTo(216.36, 6);
+    expect(holdings!.realizedGain).toBeCloseTo(2432, 6);
+  });
+
   it('excludes holdings with no exchange rate from the totals and counts them', async () => {
     mockSnapshots([]);
     mockedGetAllHoldings.mockResolvedValue([
@@ -271,6 +293,7 @@ describe('getDashboardData — liabilities', () => {
   beforeEach(() => {
     mockedAssetClassFind.mockResolvedValue(assetClasses);
     mockedGetAllHoldings.mockResolvedValue([]);
+    mockedClosed.mockResolvedValue([]);
     mockedCashflow.mockResolvedValue({ months: [], categories: [], totals: {}, growth: null });
     mockedAnalytics.mockResolvedValue({ months: [], trailing: { current: {}, previous: null } });
   });
@@ -348,5 +371,114 @@ describe('getDashboardData — liabilities', () => {
 
     expect(kpis.assets).toBe(40);
     expect(kpis.netWorth).toBe(40);
+  });
+});
+
+describe('getDashboardData — safety', () => {
+  const sorted = [
+    { _id: 'cash', name: 'Cash', color: '#1', kind: 'asset', liquidity: 'cash' },
+    { _id: 'fund', name: 'Funds', color: '#2', kind: 'asset', liquidity: 'market' },
+    { _id: 'pens', name: 'Pension', color: '#3', kind: 'asset', liquidity: 'locked' },
+    { _id: 'misc', name: 'Gold', color: '#4', kind: 'asset' }
+  ];
+  const entries = [
+    { assetClassId: 'cash', value: 9000, gain: 0 },
+    { assetClassId: 'fund', value: 260_000, gain: 0 },
+    { assetClassId: 'pens', value: 97_000, gain: 0 },
+    { assetClassId: 'misc', value: 4500, gain: 0 }
+  ];
+
+  beforeEach(() => {
+    mockedAssetClassFind.mockResolvedValue(sorted);
+    mockedGetAllHoldings.mockResolvedValue([]);
+    mockedClosed.mockResolvedValue([]);
+    mockedCashflow.mockResolvedValue({ months: [], categories: [], totals: {}, growth: null });
+    mockedAnalytics.mockResolvedValue({
+      months: [{}],
+      trailing: { current: { consumption: 27_600, months: 12 }, previous: null }
+    });
+    mockSnapshots([snap('2026-10-01T00:00:00Z', entries)]);
+  });
+
+  it('splits the money by how reachable it is, and says what is not sorted yet', async () => {
+    const { safety } = await getDashboardData('user-1');
+
+    expect(safety).toMatchObject({ cash: 9000, market: 260_000, locked: 97_000, unsorted: 4500 });
+  });
+
+  it('says how many months of spending each reachable part covers', async () => {
+    const { safety } = await getDashboardData('user-1');
+
+    expect(safety!.monthlySpending).toBe(2300); // 27,600 consumed over 12 months
+    expect(safety!.cashMonths).toBeCloseTo(9000 / 2300, 6);
+    expect(safety!.reachableMonths).toBeCloseTo(269_000 / 2300, 6);
+  });
+
+  it('gives no runway when there is no spending to measure it against', async () => {
+    mockedAnalytics.mockResolvedValue({ months: [], trailing: { current: {}, previous: null } });
+
+    const { safety } = await getDashboardData('user-1');
+
+    expect(safety).toMatchObject({ cash: 9000, monthlySpending: null, cashMonths: null, reachableMonths: null });
+  });
+
+  it('carries each class liquidity on the allocation', async () => {
+    const { allocation } = await getDashboardData('user-1');
+
+    expect(allocation.find((a) => a.name === 'Cash')?.liquidity).toBe('cash');
+    expect(allocation.find((a) => a.name === 'Gold')).not.toHaveProperty('liquidity');
+  });
+});
+
+describe('getDashboardData — growth split', () => {
+  const trailing = { from: '2025-11', to: '2026-11', months: 12, netWorthChange: 87844, contributions: 35871, marketGrowth: 51973, complete: true };
+  const monthly = { from: '2026-10', to: '2026-11', months: 1, netWorthChange: 5623, contributions: 3603, marketGrowth: 2020, complete: true };
+
+  beforeEach(() => {
+    mockedAssetClassFind.mockResolvedValue(assetClasses);
+    mockedGetAllHoldings.mockResolvedValue([]);
+    mockedClosed.mockResolvedValue([]);
+    mockSnapshots([]);
+    mockedAnalytics.mockResolvedValue({
+      months: [{}],
+      trailing: { current: { consumption: 27_600, months: 12 }, previous: null }
+    });
+  });
+
+  it('explains the past year, not only the last month', async () => {
+    mockedCashflow.mockResolvedValue({ months: [], categories: [], totals: {}, growth: monthly, growthTrailing: trailing });
+
+    const { cashflow } = await getDashboardData('user-1');
+
+    expect(cashflow!.growth).toEqual(trailing);
+  });
+
+  it('falls back to the month while there is not yet a year of check-ins', async () => {
+    mockedCashflow.mockResolvedValue({ months: [], categories: [], totals: {}, growth: monthly, growthTrailing: null });
+
+    const { cashflow } = await getDashboardData('user-1');
+
+    expect(cashflow!.growth).toEqual(monthly);
+  });
+
+  it('falls back to the month when a month of the year has no transactions', async () => {
+    mockedCashflow.mockResolvedValue({
+      months: [], categories: [], totals: {}, growth: monthly, growthTrailing: { ...trailing, complete: false }
+    });
+
+    const { cashflow } = await getDashboardData('user-1');
+
+    expect(cashflow!.growth).toEqual(monthly);
+  });
+
+  it('sends no split when neither can be explained', async () => {
+    mockedCashflow.mockResolvedValue({
+      months: [], categories: [], totals: {},
+      growth: { ...monthly, complete: false }, growthTrailing: { ...trailing, complete: false }
+    });
+
+    const { cashflow } = await getDashboardData('user-1');
+
+    expect(cashflow!.growth).toBeNull();
   });
 });

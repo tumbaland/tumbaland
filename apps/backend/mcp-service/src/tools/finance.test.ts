@@ -441,6 +441,64 @@ describe('get_net_worth', () => {
     expect(text).toContain('The 12 before');
   });
 
+  it('says how reachable the money is and how long the cash would last', async () => {
+    api.getDashboard.mockResolvedValue({
+      ...fixtures.dashboard,
+      safety: {
+        cash: 9039, market: 261928, locked: 143908, unsorted: 4564,
+        monthlySpending: 2300, cashMonths: 3.93, reachableMonths: 117.8
+      }
+    } as never);
+
+    const { text } = await callTool('get_net_worth');
+
+    expect(text).toContain(
+      'How reachable it is: cash 9,039, sellable within days 261,928, locked 143,908, not yet sorted 4,564.'
+    );
+    expect(text).toContain(
+      'Cash covers 3.9 months of spending, at 2,300 a month; with what could be sold as well, 9.8 years, before tax.'
+    );
+  });
+
+  it('says nothing about reachability when the classes have not been sorted', async () => {
+    api.getDashboard.mockResolvedValue({
+      ...fixtures.dashboard,
+      safety: { cash: 0, market: 0, locked: 0, unsorted: 500000, monthlySpending: 2300, cashMonths: 0, reachableMonths: 0 }
+    } as never);
+
+    const { text } = await callTool('get_net_worth');
+
+    expect(text).not.toContain('How reachable it is');
+  });
+
+  it('adds dividends and realised gains, counting positions since sold', async () => {
+    api.getDashboard.mockResolvedValue({
+      ...fixtures.dashboard,
+      holdings: { ...fixtures.dashboard.holdings, dividends: 2394.07, realizedGain: 2146.17 }
+    } as never);
+
+    const { text } = await callTool('get_net_worth');
+
+    expect(text).toContain('Dividends received 2,394.07 and gains realised by selling 2,146.17, counting positions since sold.');
+  });
+
+  it('says what the income was made of, salary against what the assets paid', async () => {
+    api.getDashboard.mockResolvedValue({
+      ...fixtures.dashboard,
+      cashflow: {
+        ...fixtures.dashboard.cashflow,
+        trailing: {
+          ...fixtures.dashboard.cashflow.trailing,
+          incomeBy: { salary: 60000, dividends: 1100, interest: 60, other: 2517 }
+        }
+      }
+    } as never);
+
+    const { text } = await callTool('get_net_worth');
+
+    expect(text).toContain('(salary 60,000, from assets 1,160, other 2,517)');
+  });
+
   it('says why net worth moved, not only that it did', async () => {
     const { text } = await callTool('get_net_worth');
 

@@ -70,6 +70,7 @@ const AssetClassManagerDialog: React.FC<AssetClassManagerDialogProps> = ({
       description: ac.description || '',
       color: ac.color || '#3b82f6',
       kind: ac.kind || 'asset',
+      liquidity: ac.liquidity,
       groupId: ac.groupId
     });
     setEditorOpen(true);
@@ -79,7 +80,13 @@ const AssetClassManagerDialog: React.FC<AssetClassManagerDialogProps> = ({
     if (editingId) {
       await updateMutation.mutateAsync({
         id: editingId,
-        data: { name: f.name, description: f.description, color: f.color, kind: f.kind }
+        data: {
+          name: f.name,
+          description: f.description,
+          color: f.color,
+          kind: f.kind,
+          ...(f.liquidity ? { liquidity: f.liquidity } : {})
+        }
       });
     } else {
       await createMutation.mutateAsync({ ...f, groupId: tenantGroupId });

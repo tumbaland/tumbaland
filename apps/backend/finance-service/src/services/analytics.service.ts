@@ -1,8 +1,28 @@
 import Transaction from '../models/Transaction';
 import { scopeFor } from '../utils/scope';
-import { INVESTMENT_CATEGORIES, NON_EARNING_CATEGORIES } from './bankStatement.service';
+import {
+  ASSET_INCOME_CATEGORIES,
+  DIVIDEND_CATEGORY,
+  INVESTMENT_CATEGORIES,
+  NON_EARNING_CATEGORIES,
+  SALARY_CATEGORY
+} from './bankStatement.service';
+
+/**
+ * Where a period's earned income came from. Salary is pay for working; the two
+ * asset lines are what the money itself paid; everything else (tax refunds,
+ * refunds, one-offs) is other. They add up to `income`.
+ */
+export interface IncomeBreakdown {
+  salary: number;
+  dividends: number;
+  interest: number;
+  other: number;
+}
 
 export interface PeriodTotals {
+  /** Present on the trailing windows; absent on calendar-year summaries. */
+  incomeBy?: IncomeBreakdown;
   /**
    * What was actually earned. Capital coming back — a deposit maturing, a
    * crypto withdrawal, the owner's own cash paid in — is excluded: it is the
@@ -237,6 +257,7 @@ export const getAnalytics = async (userId: string, groupId?: string): Promise<An
   const spendByCategoryMonth = new Map<string, Map<string, number>>();
   const spendByCategoryYear = new Map<string, Record<number, number>>();
   const incomeByCategoryYear = new Map<string, Record<number, number>>();
+  const incomeByMonthCategory = new Map<string, Map<string, number>>();
 
   for (const row of rows) {
     const { year, month, category, type } = row._id;
@@ -265,6 +286,10 @@ export const getAnalytics = async (userId: string, groupId?: string): Promise<An
       const perYear = incomeByCategoryYear.get(category) || {};
       perYear[year] = (perYear[year] || 0) + row.total;
       incomeByCategoryYear.set(category, perYear);
+
+      const perCategory = incomeByMonthCategory.get(key) || new Map<string, number>();
+      perCategory.set(category, (perCategory.get(category) || 0) + row.total);
+      incomeByMonthCategory.set(key, perCategory);
     }
   }
 
@@ -308,21 +333,41 @@ export const getAnalytics = async (userId: string, groupId?: string): Promise<An
       return acc;
     }, emptyBucket());
 
+  /** Earned income over a window, by where it came from. */
+  const breakdownOf = (window: string[]): IncomeBreakdown => {
+    const out: IncomeBreakdown = { salary: 0, dividends: 0, interest: 0, other: 0 };
+    for (const key of window) {
+      for (const [category, amount] of incomeByMonthCategory.get(key) || []) {
+        if (category === SALARY_CATEGORY) out.salary += amount;
+        else if (category === DIVIDEND_CATEGORY) out.dividends += amount;
+        else if (ASSET_INCOME_CATEGORIES.has(category)) out.interest += amount;
+        else out.other += amount;
+      }
+    }
+    return out;
+  };
+
   const trailing = {
-    current: summarize(
-      foldWindow(currentWindow),
-      currentWindow.length,
-      currentWindow[0],
-      currentWindow[currentWindow.length - 1]
-    ),
+    current: {
+      ...summarize(
+        foldWindow(currentWindow),
+        currentWindow.length,
+        currentWindow[0],
+        currentWindow[currentWindow.length - 1]
+      ),
+      incomeBy: breakdownOf(currentWindow)
+    },
     previous:
       previousWindow.length > 0
-        ? summarize(
-            foldWindow(previousWindow),
-            previousWindow.length,
-            previousWindow[0],
-            previousWindow[previousWindow.length - 1]
-          )
+        ? {
+            ...summarize(
+              foldWindow(previousWindow),
+              previousWindow.length,
+              previousWindow[0],
+              previousWindow[previousWindow.length - 1]
+            ),
+            incomeBy: breakdownOf(previousWindow)
+          }
         : null
   };
 

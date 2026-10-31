@@ -43,6 +43,7 @@ export const createAssetClassSchema = z.object({
   description: z.string().optional(),
   color: z.string().optional(),
   kind: z.enum(['asset', 'liability']).optional(),
+  liquidity: z.enum(['cash', 'market', 'locked']).optional(),
   groupId: z.string().optional()
 });
 

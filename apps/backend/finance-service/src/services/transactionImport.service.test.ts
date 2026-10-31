@@ -330,13 +330,14 @@ describe('rows left out', () => {
     expect(result.categories).toEqual([{ category: 'Investments', count: 1, amount: 2548 }]);
   });
 
-  it('hands a dividend to the trade log instead of the transactions', async () => {
+  it('records a dividend as income of its own, and hands it to the trade log as well', async () => {
     const result = await importStatement(
       statement(line({ dc: 'C', amount: '0,28', desc: 'Vanguard,IE00B3XXRP09,dividendimakse,.28,15.12.23,IE' })),
       { userId: 'u1' }
     );
 
-    expect(result.imported).toBe(0);
+    expect(result.imported).toBe(1);
+    expect(result.categories).toEqual([{ category: 'Dividends', count: 1, amount: 0.28 }]);
     expect(Object.keys(result.skipped)).toEqual([]);
     expect(importTrades).toHaveBeenCalledWith(
       [expect.objectContaining({ kind: 'dividend', row: expect.objectContaining({ amount: 0.28 }) })],
@@ -361,7 +362,7 @@ describe('rows left out', () => {
     expect(result.categories[0].category).toBe('Pension');
   });
 
-  it('keeps dividends and own-account transfers out of the transactions', async () => {
+  it('keeps own-account transfers out of the transactions but not dividends', async () => {
     const result = await importStatement(
       statement(
         line({ cp: 'ALEX SMITH' }),
@@ -370,7 +371,8 @@ describe('rows left out', () => {
       { userId: 'u1' }
     );
 
-    expect(result.imported).toBe(0);
+    expect(result.imported).toBe(1);
+    expect(result.categories[0].category).toBe('Dividends');
     expect(result.skipped['Transfer between your own accounts']).toBe(1);
     expect(Object.keys(result.skipped)).toEqual(['Transfer between your own accounts']);
   });

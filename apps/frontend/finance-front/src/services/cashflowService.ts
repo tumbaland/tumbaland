@@ -73,8 +73,22 @@ export interface TransactionPage {
   hasMore: boolean;
 }
 
+/**
+ * Where a period's earned income came from; the four add up to `income`.
+ * Salary is pay for working, the two asset lines are what the money itself
+ * paid, and other is tax refunds, refunds and one-offs.
+ */
+export interface IncomeBreakdown {
+  salary: number;
+  dividends: number;
+  interest: number;
+  other: number;
+}
+
 export interface PeriodTotals {
   income: number;
+  /** Present on the trailing windows, absent on calendar years and older services. */
+  incomeBy?: IncomeBreakdown;
   /** Everything that left the account, consumption and investing alike. */
   expense: number;
   /** What was actually consumed — `expense` less money moved into assets. */

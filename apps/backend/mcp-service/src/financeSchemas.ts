@@ -138,6 +138,15 @@ export const tradeSchema = z
 const periodTotalsSchema = z
   .object({
     income: z.number(),
+    /** where earned income came from; absent from a service that predates it */
+    incomeBy: z
+      .object({
+        salary: z.number(),
+        dividends: z.number(),
+        interest: z.number(),
+        other: z.number()
+      })
+      .optional(),
     expense: z.number(),
     /** what was spent and gone, as opposed to moved into an asset */
     consumption: z.number(),
@@ -219,7 +228,29 @@ export const dashboardSchema = z
         gain: z.number(),
         gainPct: z.number(),
         /** left out of the totals because no exchange rate was available */
-        unconverted: z.number().optional()
+        unconverted: z.number().optional(),
+        /** received, from positions held and from ones since sold */
+        dividends: z.number().optional(),
+        /** gains crystallised by selling, held and sold positions together */
+        realizedGain: z.number().optional()
+      })
+      .loose()
+      .nullable()
+      .optional(),
+    /**
+     * How reachable the money is, and how many months of spending it covers.
+     * Absent from a finance-service that predates it, and every figure in it is
+     * optional for the same reason: the tool says less, it does not fail.
+     */
+    safety: z
+      .object({
+        cash: z.number().optional(),
+        market: z.number().optional(),
+        locked: z.number().optional(),
+        unsorted: z.number().optional(),
+        monthlySpending: z.number().nullable().optional(),
+        cashMonths: z.number().nullable().optional(),
+        reachableMonths: z.number().nullable().optional()
       })
       .loose()
       .nullable()

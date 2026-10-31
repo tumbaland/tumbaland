@@ -1567,6 +1567,14 @@ components:
             Liability classes subtract from net worth. Their snapshot values are
             still stored as positive magnitudes. Absent on classes created
             before this field existed; treat a missing value as `asset`.
+        liquidity:
+          type: string
+          enum: [cash, market, locked]
+          description: >-
+            How reachable the money is: `cash` is spendable now, `market` can be
+            sold within days, `locked` takes years or a penalty (pensions,
+            property). Unset on older classes, which the dashboard shows as
+            unsorted rather than guessing from the name.
         userId:
           type: string
         groupId:
@@ -1592,6 +1600,9 @@ components:
           type: string
           enum: [asset, liability]
           default: asset
+        liquidity:
+          type: string
+          enum: [cash, market, locked]
         groupId:
           type: string
 
@@ -1866,6 +1877,22 @@ components:
       properties:
         income:
           type: number
+        incomeBy:
+          type: object
+          description: >-
+            Where earned income came from. Present on the trailing windows only. The four
+            add up to income.
+          properties:
+            salary:
+              type: number
+            dividends:
+              type: number
+              description: Payouts from funds, recorded from statement rows
+            interest:
+              type: number
+            other:
+              type: number
+              description: Tax refunds, refunds and one-offs
         expense:
           type: number
           description: Everything that left the account, consumption and investing alike
@@ -2126,6 +2153,10 @@ components:
                 type: string
               color:
                 type: string
+              liquidity:
+                type: string
+                enum: [cash, market, locked]
+                description: Absent on asset classes that have not been sorted yet
               value:
                 type: number
               gain:
@@ -2174,12 +2205,47 @@ components:
               type: object
               nullable: true
               description: See the growth block on /api/transactions/summary
+        safety:
+          type: object
+          nullable: true
+          description: >-
+            Null until there is a check-in. Splits assets by how reachable they are and
+            says how many months of spending the reachable part covers. Spending is what
+            was consumed over the trailing year, so buying funds is not counted as spending.
+          properties:
+            cash:
+              type: number
+            market:
+              type: number
+              description: Can be sold within days
+            locked:
+              type: number
+              description: Pensions, property
+            unsorted:
+              type: number
+              description: Assets in classes not yet marked cash, market or locked
+            monthlySpending:
+              type: number
+              nullable: true
+            cashMonths:
+              type: number
+              nullable: true
+            reachableMonths:
+              type: number
+              nullable: true
+              description: Cash plus what can be sold within days, before any tax a sale would cost
         holdings:
           type: object
           nullable: true
           properties:
             count:
               type: integer
+            dividends:
+              type: number
+              description: Received, from positions held and from ones since sold
+            realizedGain:
+              type: number
+              description: Gains crystallised by selling, held and sold positions together
             totalValue:
               type: number
             totalCost:

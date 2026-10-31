@@ -1,14 +1,15 @@
 import React from 'react';
 import { Box, Card, CardContent, Typography, CircularProgress, Alert, Button } from '@mui/material';
-import { AccountBalance, ArrowForward, ShowChart } from '@mui/icons-material';
+import { AccountBalance } from '@mui/icons-material';
 import { Link } from 'react-router';
 import { useTenantFilter } from '@tumbaland/frontend-core';
 import { useDashboard } from '../hooks/useDashboard';
-import FinancialKPIs from '../components/FinancialKPIs';
+import NetWorthHero from '../components/NetWorthHero';
+import SafetyCard from '../components/SafetyCard';
+import InvestmentsSummaryCard from '../components/InvestmentsSummaryCard';
 import PortfolioValueChart from '../components/PortfolioValueChart';
 import AllocationCard from '../components/AllocationCard';
 import CashflowCard from '../components/CashflowCard';
-import { formatCurrency, formatPct } from '../utils/numberUtils';
 import { appPath } from '../appBase';
 
 const Dashboard: React.FC = () => {
@@ -43,21 +44,39 @@ const Dashboard: React.FC = () => {
           Dashboard
         </Typography>
         <Typography variant="body1" sx={{ color: 'text.secondary', fontSize: { xs: '0.875rem', md: '1rem' } }}>
-          Your net worth, asset allocation and investments at a glance
+          What you are worth, whether it is growing, and how long it would last
         </Typography>
       </Box>
 
       {hasData && (
         <>
-          <FinancialKPIs kpis={data.kpis} currency={currency} />
+          {/* Read top to bottom as the questions it answers: what am I worth and
+              how did it get here, how long would it last, how has it moved,
+              where is it, what has investing made. The first two share a row so
+              nothing above the chart is mostly empty space. */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: data.safety ? '3fr 2fr' : 'minmax(0, 1fr)' },
+              gap: { xs: 2, md: 3 },
+              mb: { xs: 2, md: 3 },
+              alignItems: 'start'
+            }}
+          >
+            <Box sx={{ display: 'grid', gap: { xs: 2, md: 3 }, minWidth: 0 }}>
+              <NetWorthHero kpis={data.kpis} currency={currency} />
+              {data.cashflow && <CashflowCard cashflow={data.cashflow} currency={currency} />}
+            </Box>
+            {data.safety && <SafetyCard safety={data.safety} currency={currency} />}
+          </Box>
 
           <Box
             sx={{
               display: 'grid',
               gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '2fr 1fr' },
-              gap: { xs: 2, md: 4 },
-              mb: { xs: 2, md: 4 },
-              alignItems: 'start'
+              gap: { xs: 2, md: 3 },
+              mb: { xs: 2, md: 3 },
+              alignItems: 'stretch'
             }}
           >
             <PortfolioValueChart
@@ -75,88 +94,7 @@ const Dashboard: React.FC = () => {
             />
           </Box>
 
-          {data.cashflow && (
-            <Box sx={{ mb: { xs: 2, md: 4 } }}>
-              <CashflowCard cashflow={data.cashflow} currency={currency} />
-            </Box>
-          )}
-
-          {data.holdings && (
-            <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-              <CardContent sx={{ p: { xs: 1.5, md: 4 }, '&:last-child': { pb: { xs: 1.5, md: 4 } } }}>
-                {/* One grid, two arrangements: on a phone the title and the link
-                    share the first line and the two figures sit side by side
-                    under it; wider, everything is a single row. */}
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: 'minmax(0, 1fr) auto', md: 'minmax(0, 1fr) auto auto' },
-                    gridTemplateAreas: { xs: '"title link" "figures figures"', md: '"title figures link"' },
-                    alignItems: 'center',
-                    columnGap: { xs: 1.5, md: 4 },
-                    rowGap: 1.5
-                  }}
-                >
-                  <Box sx={{ gridArea: 'title', display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 }, minWidth: 0 }}>
-                    <ShowChart sx={{ color: '#667eea', fontSize: { xs: 20, md: 24 } }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600, fontSize: { xs: '1.05rem', md: '1.25rem' } }}>
-                      Investments · {data.holdings.count} holding{data.holdings.count === 1 ? '' : 's'}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ gridArea: 'figures', display: 'flex', gap: { xs: 2, md: 4 } }}>
-                    <Box sx={{ flex: { xs: 1, md: 'none' } }}>
-                      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Market value</Typography>
-                      <Typography variant="h6" sx={{ fontWeight: 700, fontSize: { xs: '1.05rem', md: '1.25rem' } }}>
-                        {formatCurrency(data.holdings.totalValue, currency)}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ flex: { xs: 1, md: 'none' } }}>
-                      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>Unrealized P/L</Typography>
-                      <Typography
-                        variant="h6"
-                        sx={{
-                          fontWeight: 700,
-                          fontSize: { xs: '1.05rem', md: '1.25rem' },
-                          color: data.holdings.gain >= 0 ? 'success.main' : 'error.main'
-                        }}
-                      >
-                        {data.holdings.gain >= 0 ? '+' : ''}{formatCurrency(data.holdings.gain, currency)}{' '}
-                        <Box component="span" sx={{ fontSize: '0.8em', whiteSpace: 'nowrap' }}>
-                          ({formatPct(data.holdings.gainPct)})
-                        </Box>
-                      </Typography>
-                    </Box>
-                  </Box>
-                  {/* Just the arrow on a phone, like the Cash Flow card's link:
-                      with the words the title no longer fit on its line. */}
-                  <Button
-                    component={Link}
-                    to={appPath('/investments')}
-                    size="small"
-                    aria-label="View holdings"
-                    endIcon={<ArrowForward />}
-                    sx={{
-                      gridArea: 'link',
-                      justifySelf: 'end',
-                      whiteSpace: 'nowrap',
-                      minWidth: 0,
-                      '& .MuiButton-endIcon': { ml: { xs: 0, md: 1 } }
-                    }}
-                  >
-                    <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
-                      View holdings
-                    </Box>
-                  </Button>
-                </Box>
-                {data.holdings.unconverted > 0 && (
-                  <Alert severity="warning" sx={{ mt: 2 }}>
-                    {data.holdings.unconverted} holding{data.holdings.unconverted === 1 ? ' is' : 's are'} quoted
-                    in a currency with no exchange rate yet, so they are not included in these totals.
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          {data.holdings && <InvestmentsSummaryCard holdings={data.holdings} currency={currency} />}
         </>
       )}
 

@@ -27,7 +27,7 @@ const AllocationCard: React.FC<AllocationCardProps> = ({
   // A smaller donut on a phone: the rows under it carry the exact figures, so
   // at full size it only pushed them a screen further down.
   const isPhone = useMediaQuery(useTheme().breakpoints.down('sm'));
-  const donutSize = isPhone ? 150 : 220;
+  const donutSize = isPhone ? 150 : 180;
 
   if (allocation.length === 0 && liabilities.length === 0) return null;
 
@@ -46,7 +46,7 @@ const AllocationCard: React.FC<AllocationCardProps> = ({
           <PieChart
             series={[{
               data: allocation.map((a) => ({ id: a.assetClassId, value: a.value, label: a.name, color: a.color })),
-              innerRadius: isPhone ? 42 : 60,
+              innerRadius: isPhone ? 42 : 52,
               paddingAngle: 1,
               cornerRadius: 3
             }]}
@@ -58,7 +58,7 @@ const AllocationCard: React.FC<AllocationCardProps> = ({
         )}
 
         {allocation.map((a) => (
-          <Box key={a.assetClassId} sx={{ mb: { xs: 1, md: 1.5 } }}>
+          <Box key={a.assetClassId} sx={{ mb: { xs: 1, md: 1.25 } }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, mb: 0.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
                 <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: a.color, flexShrink: 0 }} />

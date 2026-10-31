@@ -51,9 +51,10 @@ const TRANSFER_REASON = 'Transfer between your own accounts';
  * Rows that become transactions. Securities settlements and pension
  * contributions are included because the money genuinely left the account —
  * excluding them made the invested figure report a fraction of the truth — and
- * they carry a capital category, so they never read as spending.
+ * they carry a capital category, so they never read as spending. A dividend is
+ * included because it is income that arrived, in a category of its own.
  */
-const IMPORTED_KINDS: RowKind[] = ['cashflow', 'security', 'pension'];
+const IMPORTED_KINDS: RowKind[] = ['cashflow', 'security', 'pension', 'dividend'];
 
 /** Which shape a file is, or null when it is none of them. */
 export function detectFormat(text: string): TransactionFileFormat | null {
@@ -113,8 +114,6 @@ export const importStatement = async (
       tradeRows.push({ row, kind: classified.kind });
     }
     if (classified.kind === 'transfer') { note(TRANSFER_REASON); continue; }
-    // A dividend is no cash-flow row: it is income of the position, and lives
-    // in the trade log rather than among the transactions.
     if (!IMPORTED_KINDS.includes(classified.kind)) continue;
     if (!row.externalId) { note('No archive reference — cannot be de-duplicated'); continue; }
     if (!row.date) { note(`Unreadable date "${row.dateText}"`); continue; }

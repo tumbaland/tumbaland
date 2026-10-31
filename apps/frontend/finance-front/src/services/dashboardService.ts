@@ -29,6 +29,8 @@ export interface DashboardData {
     assetClassId: string;
     name: string;
     color: string;
+    /** How reachable it is; absent on classes not yet sorted. */
+    liquidity?: 'cash' | 'market' | 'locked';
     value: number;
     gain: number;
     percentage: number;
@@ -64,12 +66,32 @@ export interface DashboardData {
       complete: boolean;
     } | null;
   } | null;
+  /**
+   * Can the money be reached, and for how long would it last. Null until there
+   * is a check-in. Runway is in months of what was consumed over the trailing
+   * year, so buying funds is not counted as spending, and is before any tax a
+   * sale would cost.
+   */
+  safety: {
+    cash: number;
+    market: number;
+    locked: number;
+    /** Assets in classes not yet marked cash, sellable or locked. */
+    unsorted: number;
+    monthlySpending: number | null;
+    cashMonths: number | null;
+    reachableMonths: number | null;
+  } | null;
   holdings: {
     count: number;
     totalValue: number;
     totalCost: number;
     gain: number;
     gainPct: number;
+    /** Received, from positions held and from ones since sold. */
+    dividends: number;
+    /** Gains crystallised by selling, held and sold positions together. */
+    realizedGain: number;
     /** Holdings excluded from the totals for want of an FX rate. */
     unconverted: number;
   } | null;
