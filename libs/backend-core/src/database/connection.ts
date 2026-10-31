@@ -12,28 +12,39 @@ let listenersRegistered = false;
 /**
  * How the pool behaves toward a database that is across the internet.
  *
- * The driver's defaults assume a database next door: it opens connections when
- * a request needs one and keeps them until something closes them. From a home
- * connection to Atlas that goes wrong in two ways. A connection costs a TCP, TLS
- * and authentication handshake over the internet, which a request that arrives
- * when the pool is empty pays in full. And a router quietly forgets a connection
- * that has sat idle for a few minutes, so the next request is handed one that is
- * dead and waits on it until the operating system gives up. Both read as a
- * random multi-second stall on the first request after a quiet spell.
+ * Measured, not assumed: on the Pi a database lookup took about 17 ms on a warm
+ * connection and 850 to 1,370 ms on a cold one, so the distance to Atlas is not
+ * the cost. Opening a connection is. It is a TCP and TLS handshake and an
+ * authentication, from a small machine, and the driver defaults make a burst of
+ * requests pay for it badly:
  *
- *  - `minPoolSize` keeps a couple of connections open and warm.
- *  - `maxIdleTimeMS` retires one that has sat idle for a minute, well inside a
- *    router's memory, and the pool opens a fresh one in its place.
+ *  - It keeps no connections open, and an idle one is eventually dropped by
+ *    something between here and Atlas, so the first request after a quiet spell
+ *    starts from nothing.
+ *  - It opens at most two connections at a time. Opening a thread sends five or
+ *    six requests at once, so they queued behind each other, a second or so per
+ *    pair, and the thread took three to seven seconds.
  *
- * Both can be set per deployment, for a database that is somewhere else.
+ * So:
+ *  - `minPoolSize` keeps enough connections open to cover that burst.
+ *  - `maxConnecting` lets the pool open several at once when it does need more.
+ *  - `maxIdleTimeMS` retires a connection that has sat idle for a few minutes,
+ *    before something else kills it, and the pool opens a fresh one in its place.
+ *  - `family: 4` skips the IPv6 half of every hostname lookup. Atlas is IPv4, and
+ *    a resolver that is slow to answer for AAAA delays every new connection.
+ *
+ * Each can be set per deployment, for a database that is somewhere else.
  */
 export function poolOptions(env: NodeJS.ProcessEnv = process.env): ConnectOptions {
   const number = (value: string | undefined, fallback: number) =>
     value !== undefined && value.trim() !== '' && Number.isFinite(Number(value)) ? Number(value) : fallback;
+  const family = number(env.MONGODB_IP_FAMILY, 4);
 
   return {
-    minPoolSize: number(env.MONGODB_MIN_POOL_SIZE, 2),
-    maxIdleTimeMS: number(env.MONGODB_MAX_IDLE_MS, 60_000)
+    minPoolSize: number(env.MONGODB_MIN_POOL_SIZE, 5),
+    maxConnecting: number(env.MONGODB_MAX_CONNECTING, 5),
+    maxIdleTimeMS: number(env.MONGODB_MAX_IDLE_MS, 180_000),
+    family: family === 6 ? 6 : family === 0 ? 0 : 4
   };
 }
 

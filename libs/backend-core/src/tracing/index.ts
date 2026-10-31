@@ -16,12 +16,18 @@ import { resourceFromAttributes } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 
 // Initialize OpenTelemetry tracer provider, exporting via OTLP/HTTP.
-// Endpoint resolution: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT > JAEGER_ENDPOINT > in-cluster collector default.
+// Endpoint resolution: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT > JAEGER_ENDPOINT.
+//
+// With neither set there is no exporter at all. This used to fall back to an
+// in-cluster `jaeger-collector` host, which is only a good default where one is
+// running. Where it is not, every service tried to send its spans to a name that
+// does not exist every few seconds, resolving it again each time. A failed
+// lookup holds one of Node's few shared worker threads (the same ones that
+// resolve every other hostname the service calls) until the resolver gives up.
+// Spans are still created and passed along in a trace context; they simply have
+// nowhere to be sent until an endpoint is named.
 export const initTracer = (serviceName: string): Tracer => {
-  const url =
-    process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ||
-    process.env.JAEGER_ENDPOINT ||
-    'http://jaeger-collector:4318/v1/traces';
+  const url = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || process.env.JAEGER_ENDPOINT;
 
   const provider = new NodeTracerProvider({
     resource: resourceFromAttributes({
@@ -29,7 +35,7 @@ export const initTracer = (serviceName: string): Tracer => {
       [ATTR_SERVICE_VERSION]: process.env.npm_package_version || '1.0.0',
       'deployment.environment': process.env.NODE_ENV || 'development',
     }),
-    spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter({ url }))],
+    spanProcessors: url ? [new BatchSpanProcessor(new OTLPTraceExporter({ url }))] : [],
   });
   provider.register();
 

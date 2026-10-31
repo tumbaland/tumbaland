@@ -90,7 +90,7 @@ describe('connectDB', () => {
     expect(mongoose.connect).toHaveBeenCalledWith('mongodb://env-uri', expect.any(Object));
   });
 
-  it('keeps connections warm and retires idle ones, for a database across the internet', async () => {
+  it('keeps connections warm and opens them in parallel, for a database across the internet', async () => {
     process.env.MONGODB_URI = 'mongodb://env-uri';
     const { connectDB, mongoose } = await freshConnectDB();
 
@@ -98,7 +98,7 @@ describe('connectDB', () => {
 
     expect(mongoose.connect).toHaveBeenCalledWith(
       'mongodb://env-uri',
-      expect.objectContaining({ minPoolSize: 2, maxIdleTimeMS: 60_000 })
+      expect.objectContaining({ minPoolSize: 5, maxConnecting: 5, maxIdleTimeMS: 180_000, family: 4 })
     );
   });
 
@@ -225,21 +225,35 @@ describe('disconnectDB', () => {
 });
 
 describe('poolOptions', () => {
-  it('defaults to two warm connections and a minute of idleness', () => {
-    expect(poolOptions({})).toEqual({ minPoolSize: 2, maxIdleTimeMS: 60_000 });
+  it('defaults to a pool sized for opening a thread, opened in parallel, over IPv4', () => {
+    expect(poolOptions({})).toEqual({ minPoolSize: 5, maxConnecting: 5, maxIdleTimeMS: 180_000, family: 4 });
   });
 
   it('can be set per deployment', () => {
-    expect(poolOptions({ MONGODB_MIN_POOL_SIZE: '5', MONGODB_MAX_IDLE_MS: '30000' })).toEqual({
-      minPoolSize: 5,
-      maxIdleTimeMS: 30_000
-    });
+    expect(
+      poolOptions({
+        MONGODB_MIN_POOL_SIZE: '8',
+        MONGODB_MAX_CONNECTING: '3',
+        MONGODB_MAX_IDLE_MS: '30000',
+        MONGODB_IP_FAMILY: '0'
+      })
+    ).toEqual({ minPoolSize: 8, maxConnecting: 3, maxIdleTimeMS: 30_000, family: 0 });
+  });
+
+  it('allows IPv6 for a database that needs it', () => {
+    expect(poolOptions({ MONGODB_IP_FAMILY: '6' }).family).toBe(6);
   });
 
   it('ignores a value that is empty or not a number', () => {
-    expect(poolOptions({ MONGODB_MIN_POOL_SIZE: '', MONGODB_MAX_IDLE_MS: 'soon' })).toEqual({
-      minPoolSize: 2,
-      maxIdleTimeMS: 60_000
+    expect(poolOptions({ MONGODB_MIN_POOL_SIZE: '', MONGODB_MAX_IDLE_MS: 'soon', MONGODB_IP_FAMILY: 'x' })).toEqual({
+      minPoolSize: 5,
+      maxConnecting: 5,
+      maxIdleTimeMS: 180_000,
+      family: 4
     });
+  });
+
+  it('falls back to IPv4 for a family that is neither', () => {
+    expect(poolOptions({ MONGODB_IP_FAMILY: '5' }).family).toBe(4);
   });
 });

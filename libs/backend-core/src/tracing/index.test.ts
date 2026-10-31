@@ -70,12 +70,23 @@ describe('initTracer', () => {
     process.env = ORIGINAL_ENV;
   });
 
-  it('defaults to the in-cluster collector endpoint when no env var is set', async () => {
+  it('exports nowhere when no endpoint is configured, rather than to a host that may not exist', async () => {
     const { initTracer } = await loadTracing();
 
     initTracer('album-service');
 
-    expect(exporterCtorMock).toHaveBeenCalledWith({ url: 'http://jaeger-collector:4318/v1/traces' });
+    expect(exporterCtorMock).not.toHaveBeenCalled();
+    expect(spanProcessorCtorMock).not.toHaveBeenCalled();
+    expect(providerCtorMock).toHaveBeenCalledWith(expect.objectContaining({ spanProcessors: [] }));
+  });
+
+  it('still registers a provider and hands back a tracer with no endpoint, so spans carry on', async () => {
+    const { initTracer } = await loadTracing();
+
+    initTracer('album-service');
+
+    expect(registerMock).toHaveBeenCalled();
+    expect(getTracerMock).toHaveBeenCalledWith('album-service');
   });
 
   it('prefers OTEL_EXPORTER_OTLP_TRACES_ENDPOINT over JAEGER_ENDPOINT', async () => {
