@@ -39,6 +39,44 @@ describe('isCurrentSession', () => {
     expect(options).toMatchObject({ readPreference: 'primary' });
   });
 
+  it('asks the database once when several requests check the same session at the same moment', async () => {
+    let answer: (value: unknown) => void = () => {};
+    findOne.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+
+    const checks = Promise.all([1, 2, 3, 4].map(() => isCurrentSession({ id: USER_ID, sid: SESSION_ID })));
+    answer({ _id: SESSION_ID });
+
+    await expect(checks).resolves.toEqual([true, true, true, true]);
+    expect(findOne).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps nothing once it has answered, so a revocation holds from the next request', async () => {
+    findOne.mockResolvedValueOnce({ _id: SESSION_ID }).mockResolvedValueOnce(null);
+
+    await expect(isCurrentSession({ id: USER_ID, sid: SESSION_ID })).resolves.toBe(true);
+    await expect(isCurrentSession({ id: USER_ID, sid: SESSION_ID })).resolves.toBe(false);
+
+    expect(findOne).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not share an answer between two different sessions', async () => {
+    findOne.mockResolvedValue({ _id: SESSION_ID });
+
+    await Promise.all([
+      isCurrentSession({ id: USER_ID, sid: SESSION_ID }),
+      isCurrentSession({ id: USER_ID, sid: 'c'.repeat(24) })
+    ]);
+
+    expect(findOne).toHaveBeenCalledTimes(2);
+  });
+
+  it('lets a failed lookup be tried again rather than remembering the failure', async () => {
+    findOne.mockRejectedValueOnce(new Error('timeout')).mockResolvedValueOnce({ _id: SESSION_ID });
+
+    await expect(isCurrentSession({ id: USER_ID, sid: SESSION_ID })).rejects.toThrow('timeout');
+    await expect(isCurrentSession({ id: USER_ID, sid: SESSION_ID })).resolves.toBe(true);
+  });
+
   it('refuses a revoked or expired session', async () => {
     findOne.mockResolvedValue(null);
 

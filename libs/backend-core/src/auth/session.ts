@@ -16,6 +16,17 @@ const OBJECT_ID = /^[a-f\d]{24}$/i;
 type SessionCheck = (claims: unknown) => Promise<boolean>;
 
 /**
+ * Checks running right now, by session. Opening a thread sends several requests
+ * at once, each of which authenticates, and each would ask the database the same
+ * question across the internet. They share one answer instead.
+ *
+ * Only while the question is being asked: nothing is kept once it has been
+ * answered, so a session revoked a moment later is refused on the very next
+ * request, exactly as before.
+ */
+const inFlight = new Map<string, Promise<boolean>>();
+
+/**
  * Whether a verified session token still stands: for a token with a `sid`,
  * its session belongs to the token's user and has neither been revoked nor
  * expired. Read on the primary, uncached, so a revocation holds from the next
@@ -31,15 +42,24 @@ const checkSessionInDatabase: SessionCheck = async (claims) => {
   // Refuse rather than queue an authentication query while the database is down.
   if (mongoose.connection.readyState !== 1) return false;
 
-  const session = await mongoose.connection.collection(USER_SESSIONS_COLLECTION).findOne(
-    {
-      _id: new mongoose.Types.ObjectId(sid),
-      userId: new mongoose.Types.ObjectId(id),
-      expiresAt: { $gt: new Date() }
-    },
-    { projection: { _id: 1 }, readPreference: 'primary', maxTimeMS: 3000 }
-  );
-  return session !== null;
+  const key = `${id}:${sid}`;
+  const running = inFlight.get(key);
+  if (running) return running;
+
+  const lookup = mongoose.connection
+    .collection(USER_SESSIONS_COLLECTION)
+    .findOne(
+      {
+        _id: new mongoose.Types.ObjectId(sid),
+        userId: new mongoose.Types.ObjectId(id),
+        expiresAt: { $gt: new Date() }
+      },
+      { projection: { _id: 1 }, readPreference: 'primary', maxTimeMS: 3000 }
+    )
+    .then((session) => session !== null)
+    .finally(() => inFlight.delete(key));
+  inFlight.set(key, lookup);
+  return lookup;
 };
 
 let sessionCheck: SessionCheck = checkSessionInDatabase;

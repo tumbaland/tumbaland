@@ -20,7 +20,7 @@ jest.mock('mongoose', () => ({
 
 import mongoose from 'mongoose';
 import logger from '../logging/logger';
-import { disconnectDB } from './connection';
+import { disconnectDB, poolOptions } from './connection';
 
 /**
  * `connection.ts` keeps module-level `connected`/`pending` flags, so each
@@ -77,7 +77,7 @@ describe('connectDB', () => {
 
     await connectDB('my-service', 'mongodb://explicit-uri');
 
-    expect(mongoose.connect).toHaveBeenCalledWith('mongodb://explicit-uri');
+    expect(mongoose.connect).toHaveBeenCalledWith('mongodb://explicit-uri', expect.any(Object));
     expect(logger.info).toHaveBeenCalledWith('MongoDB connected', { service: 'my-service' });
   });
 
@@ -87,7 +87,44 @@ describe('connectDB', () => {
 
     await connectDB('my-service');
 
-    expect(mongoose.connect).toHaveBeenCalledWith('mongodb://env-uri');
+    expect(mongoose.connect).toHaveBeenCalledWith('mongodb://env-uri', expect.any(Object));
+  });
+
+  it('keeps connections warm and retires idle ones, for a database across the internet', async () => {
+    process.env.MONGODB_URI = 'mongodb://env-uri';
+    const { connectDB, mongoose } = await freshConnectDB();
+
+    await connectDB('my-service');
+
+    expect(mongoose.connect).toHaveBeenCalledWith(
+      'mongodb://env-uri',
+      expect.objectContaining({ minPoolSize: 2, maxIdleTimeMS: 60_000 })
+    );
+  });
+
+  it('logs how long a round trip to the database takes', async () => {
+    process.env.MONGODB_URI = 'mongodb://env-uri';
+    const { connectDB, mongoose, logger } = await freshConnectDB();
+    const ping = jest.fn().mockResolvedValue({ ok: 1 });
+    (mongoose.connection as unknown as { db: unknown }).db = { admin: () => ({ ping }) };
+
+    await connectDB('my-service');
+
+    expect(ping).toHaveBeenCalledTimes(1);
+    expect(logger.info).toHaveBeenCalledWith('MongoDB round trip', { service: 'my-service', ms: expect.any(Number) });
+    delete (mongoose.connection as unknown as { db?: unknown }).db;
+  });
+
+  it('does not fail a start because the measurement failed', async () => {
+    process.env.MONGODB_URI = 'mongodb://env-uri';
+    const { connectDB, mongoose, logger } = await freshConnectDB();
+    (mongoose.connection as unknown as { db: unknown }).db = {
+      admin: () => ({ ping: jest.fn().mockRejectedValue(new Error('slow')) })
+    };
+
+    await expect(connectDB('my-service')).resolves.toBeUndefined();
+    expect(logger.info).toHaveBeenCalledWith('MongoDB connected', { service: 'my-service' });
+    delete (mongoose.connection as unknown as { db?: unknown }).db;
   });
 
   it('is a no-op on a second call once already connected', async () => {
@@ -183,6 +220,26 @@ describe('disconnectDB', () => {
     expect(logger.error).toHaveBeenCalledWith('Error closing MongoDB connection', {
       service: 'my-service',
       error: 'close failed'
+    });
+  });
+});
+
+describe('poolOptions', () => {
+  it('defaults to two warm connections and a minute of idleness', () => {
+    expect(poolOptions({})).toEqual({ minPoolSize: 2, maxIdleTimeMS: 60_000 });
+  });
+
+  it('can be set per deployment', () => {
+    expect(poolOptions({ MONGODB_MIN_POOL_SIZE: '5', MONGODB_MAX_IDLE_MS: '30000' })).toEqual({
+      minPoolSize: 5,
+      maxIdleTimeMS: 30_000
+    });
+  });
+
+  it('ignores a value that is empty or not a number', () => {
+    expect(poolOptions({ MONGODB_MIN_POOL_SIZE: '', MONGODB_MAX_IDLE_MS: 'soon' })).toEqual({
+      minPoolSize: 2,
+      maxIdleTimeMS: 60_000
     });
   });
 });
